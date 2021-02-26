@@ -1,0 +1,664 @@
+nymea-plugins (0.26.0) xenial; urgency=medium
+
+  [ Michael Zanetti ]
+  * New Plugin: PushNotifications
+
+  [ Bernhard Trinnes ]
+  * Doorbird: Improve setup and reconfiguration
+
+  [ Michael Zanetti ]
+  * Thermostats: Adjust to new thermostat interface
+  * PhilipsHue: Add better support for the Hue Smart plug
+
+  [ Simon Stürz ]
+  * ZigbeeGeneric: Extend generic power socket
+
+  [ Michael Zanetti ]
+  * FlowerCare: Add missing unit to batteryLevel state
+  * Adjust to new logging and filter options
+  * 0.26
+  * Simulation: Add a simulated water sensor
+  * Simulation: Add simulated venetian blinds
+  * ZigbeePhilipsHue: Add support for the Hue Smart button
+
+  [ Bernhard Trinnes ]
+  * Keba: Rework plugin
+
+  [ Michael Zanetti ]
+  * GenericThings: Add a generic door/window sensor
+  * GPIO: Remove button interface from GPIO input
+
+  [ Bernhard Trinnes ]
+  * Fronius: Storage battery critical only when not charging
+
+  [ Michael Zanetti ]
+  * Snapd: Remove the snap plugin
+  * Tasmota: Add support for the gneric I/O mechanism
+
+  [ Herbert Paar ]
+  * Shelly: Add support for shelly i3
+
+  [ Bernhard Trinnes ]
+  * Simulation:  EV Charger update interface
+
+  [ Michael Zanetti ]
+  * Tuya: Poll the cloud even less frequently to avoid rate limits
+  * TP-Link: Add support for TP-Link Kasa Power Strip HS300
+  * GenericThings: Add unit Percentage to input value
+  * Shelly: Don't complete setup for childs when the parent setup fails
+  * Anel: Automatically update configuration when the IP changes
+  * Tuya: Add light device support
+  * Zigbee: Complete support for ZigBee Thermostats (generic)
+  * Update to renamed libnymea-dev
+
+  [ Bernhard Trinnes ]
+  * Denon: Added rediscovery on IP change
+
+  [ Michael Zanetti ]
+  * New Plugin: Telegram
+  * GenericThings: Add a generic light sensor
+  * ZigbeeLumi: Fix pressure for Lumi sensors
+  * New Plugin: Where the ISS at?
+
+ -- Jenkins <jenkins@nymea.io>  Fri, 26 Feb 2021 10:28:21 +0100
+
+nymea-plugins (0.25.0) xenial; urgency=medium
+
+  [ Bernhard Trinnes ]
+  * New Plugin: Home Connect
+  * Tado: Added dynamic API credential optaining
+
+  [ Michael Zanetti ]
+  * Hue: Fix motionsensor flickering with low intervals
+  * GenericThings: Add a generic thermostat
+
+  [ Bernhard Trinnes ]
+  * Simulated things: Sensors add ioType
+  * Onewire: Add iotype
+  * Netatmo: Add api key provider and custom api plugin settings
+  * Bose SoundTouch: Add alert interface and api key provider
+
+  [ Michael Zanetti ]
+  * Shelly: Add support for the Shelly Button 1
+  * Shelly: Add support for the Shelly 3EM
+  * Shelly: Add support for the Shelly 2
+  * Shelly: Add support for the Shelly H&T
+  * ZigBee: Add initial set of ZigBee plugins (Generic, Hue, Tradfri,
+    Lumi)
+  * 0.25 version bump
+
+  [ Bernhard Trinnes ]
+  * GenericThings: Add SG-Ready thingClassId
+
+  [ Michael Zanetti ]
+  * Tasmota: Fix wrong param types for channels
+  * Adjust media plugins to new interfaces
+  * Fix some plugins that fail the new, more strict param validation
+  * TCP Commander: Make the commander bidirectional
+  * Shelly: Fix occational crash when setup times out
+  * Shelly: Add support for the Shelly 1L
+  * Kodi: Fix a small leak when removing kodi things
+
+ -- Jenkins <jenkins@nymea.io>  Mon, 21 Dec 2020 18:01:57 +0100
+
+nymea-plugins (0.24.1) xenial; urgency=medium
+
+  [ Bernhard Trinnes ]
+  * New  Plugin: LIFX
+
+ -- Jenkins <jenkins@nymea.io>  Mon, 09 Nov 2020 15:07:05 +0100
+
+nymea-plugins (0.24.0) xenial; urgency=medium
+
+  [ Christian Fetzer ]
+  * New plugin: somfytahoma
+
+  [ Michael Zanetti ]
+  * 0.24
+  * PhilipsHue: Fix automatic rediscovery of the bridge if it changes IP
+  * New Plugin: Sun position
+  * New Plugin: Fastcom
+  * Make use of the wirelessconnectable interface across relevant
+    plugins
+  * Shelly & Hue: Implement update interface
+  * Shelly: Clean up a copy/paste error in the plugin JSON
+  * SolarLog: Fix units in json
+
+  [ Bernhard Trinnes ]
+  * Simulation plug-in: Added door/windows contact sensor
+
+  [ Michael Zanetti ]
+  * UDP Commander: Fix processing of multiple UDP datagrams in one go
+  * OpenWeatherMap: Use api key provider api
+  * BluOS: Fix undefined reference
+  * MQTTClient: Fix linking with more restrictive flags
+  * Tuya: Poll api less frequently to adhere to new API rate limits
+
+  [ Bernhard Trinnes ]
+  * AQI: Added API key provider
+
+  [ Michael Zanetti ]
+  * Don't use API deprecated in Qt 5.14
+
+  [ Bernhard Trinnes ]
+  * OneWire: Fixed W1 temperature sensor setup
+
+ -- Jenkins <jenkins@nymea.io>  Mon, 02 Nov 2020 18:48:15 +0100
+
+nymea-plugins (0.23.1) xenial; urgency=medium
+
+  [ Bernhard Trinnes ]
+  * Nanoleaf: Fix IPv6
+
+  [ Michael Zanetti ]
+  * Hue: Don't set invalid states to the hue color light
+
+  [ Bernhard Trinnes ]
+  * OneWire PlugIn: Add W1 support
+
+  [ Michael Zanetti ]
+  * AnelElektronik: Fix actions and add generic IO types
+  * Hue: Don't falsely emit button presses at startup
+
+ -- Jenkins <jenkins@nymea.io>  Mon, 14 Sep 2020 12:40:49 +0200
+
+nymea-plugins (0.23.0) xenial; urgency=medium
+
+  [ Bernhard Trinnes ]
+  * New Plugin: Fronius
+
+  [ Simon Stürz ]
+  * UsbRelay: Fix initialization of udev device watcher if no matching
+    device is connected
+
+  [ Bernhard Trinnes ]
+  * Generic things: Add extended smart meter
+
+  [ Michael Zanetti ]
+  * Bump version to 0.23
+  * Awattar: The token is not needed any more for AT
+  * Generic Things: Add generic pressure and co2 sensors
+  * Shelly: Allow setting the roller shutter percentage
+  * Generic Things: Add generic garagedoors
+
+ -- Jenkins <jenkins@nymea.io>  Tue, 25 Aug 2020 17:40:14 +0200
+
+nymea-plugins (0.22.0) xenial; urgency=medium
+
+  [ Michael Zanetti ]
+  * 
+  * Make use of generic IO support in smart plugs
+
+  [ Bernhard Trinnes ]
+  * New plugin: Solar-Log
+
+  [ Michael Zanetti ]
+  * Shelly: Add support for the Shelly Dimmer 2
+
+  [ Bernhard Trinnes ]
+  * Generic Things: Add venetian blind
+
+  [ Michael Zanetti ]
+  * Bump version to 0.22
+
+ -- Jenkins <jenkins@nymea.io>  Tue, 21 Jul 2020 10:22:13 +0200
+
+nymea-plugins (0.21.1) xenial; urgency=medium
+
+  [ Bernhard Trinnes ]
+  * Sonos Plug-In: Make playlist load & start right away
+  * Tado Plug-In: Fixed crash during thing pairing
+
+ -- Jenkins <jenkins@nymea.io>  Fri, 26 Jun 2020 10:23:38 +0200
+
+nymea-plugins (0.21.0) xenial; urgency=medium
+
+
+  [ Bernhard Trinnes ]
+  * New Plug-In: Doorbird
+  * Rework readmes
+  * New integration plug-in: BluOS
+  * Tado: Add heating interface
+
+  [ Michael Zanetti ]
+  * PhilipsHue: Add support for the Hue Smart Button
+  * New Plugin: Generic Things
+
+  [ Bernhard Trinnes ]
+  * Removed all 433MHz plug-ins
+
+  [ Michael Zanetti ]
+  * New Plugin: I²C devices
+  * Shelly: Add switch device to Shelly Dimmer
+  * All Plugins: Fix german translations to also work all german regions
+
+  [ Bernhard Trinnes ]
+  * Avahi Monitor: added address and port
+
+  [ Michael Zanetti ]
+  * Tuya: Fix devId parameter for blinds
+  * GPIO: Add support for generic IO connections
+
+  [ Bernhard Trinnes ]
+  * Denon Plug-in: Fixed discovery and added async actions
+  * Philips Hue: Additional discovery method
+
+ -- Jenkins <jenkins@nymea.io>  Tue, 09 Jun 2020 18:19:27 +0200
+
+nymea-plugins (0.20.0) xenial; urgency=medium
+
+
+  [ Bernhard Trinnes ]
+  * Denon Plug-In: Heos add browsing
+  * New Plugin: Air Quality Index
+  * New Plug-In: Dynatrace UFO
+  * Keba: add interfaces, async actions and async setup
+
+  [ Michael Zanetti ]
+  * Hue: Add support for scenes and cleanup removed devices
+  * aWATTar: Add support for aWATTar Germany
+  * Shelly: Fix channel parameter for generated switch on Shelly1
+  * OpenWeatherMap: Fix support for custom OWM API tokens
+  * Shelly: Fix connection status if a Shelly connects too fast
+  * FlowerCare: Fix rediscovery for reconfiguration
+
+  [ Bernhard Trinnes ]
+  * Netatmo: Added userandpassword setup method
+
+  [ Michael Zanetti ]
+  * PhilipsHue: Fix motion sensor timeout
+  * Shelly: Provide defaults for all parameters
+
+  [ Bernhard Trinnes ]
+  * Philips Hue: Fix bridge rediscovery
+
+  [ Michael Zanetti ]
+  * OneWire: Fix manual discovery of connected devices
+
+  [ Bernhard Trinnes ]
+  * CoinMarketCap: New API
+  * TCP Commander: Fix input with multiple incoming connections
+
+ -- Jenkins <jenkins@nymea.io>  Tue, 14 Apr 2020 17:29:29 +0200
+
+nymea-plugins (0.19.0) xenial; urgency=medium
+
+  [ Michael Zanetti ]
+  * Shelly: Add 2.5, 1PM, Dimmer, RGBW2 and Plug/PlugS
+
+  [ Bernhard Trinnes ]
+  * Bose: Add support for presets
+
+  [ Michael Zanetti ]
+  * TP-Link: Add support for HS100, HS103, HS105, HS200 and KP100
+
+ -- Jenkins <jenkins@nymea.io>  Tue, 25 Feb 2020 00:09:40 +0100
+
+nymea-plugins (0.18.1) xenial; urgency=medium
+
+  [ Michael Zanetti ]
+  * New Plugin: Tuya cloud
+  * Boblight: Fix behavior if color is changed very fast
+
+  [ Bernhard Trinnes ]
+  * New plugin: Tado
+  * New Plugin: Nanoleaf
+
+  [ Michael Zanetti ]
+  * HttpCommander: Build with more strict compiler settings
+
+  [ Bernhard Trinnes ]
+  * New Plug-In: OpenUV
+
+  [ Michael Zanetti ]
+  * New Plugin: tp-link Kasa
+  * TexasInstruments: Fix pressure unit for sensortag
+  * Kodi: Skip link-local IPv6 addresses
+  * New Plugin: UniFi network controller
+
+  [ Simon Stürz ]
+  * New plugin: Nuki
+  * New plugin: USB relay
+
+  [ Michael Zanetti ]
+  * All Plugins: Fix building in sbuild
+  * EQ-3: Fix connection to MAX! cube
+
+  [ Bernhard Trinnes ]
+  * Bose SoundTouch: Fix actions and add source browsing
+
+  [ Michael Zanetti ]
+  * Update copyright
+
+ -- Jenkins <jenkins@nymea.io>  Thu, 30 Jan 2020 17:24:51 +0100
+
+nymea-plugins (0.18.0) xenial; urgency=medium
+  [ Michael Zanetti ]
+  * New Plugin: Tuya cloud
+  * Boblight: Fix behavior if color is changed very fast
+
+  [ Bernhard Trinnes ]
+  * New plugin: Tado
+  * New Plugin: Nanoleaf
+
+  [ Michael Zanetti ]
+  * HttpCommander: Build with more strict compiler settings
+
+  [ Bernhard Trinnes ]
+  * New Plug-In: OpenUV
+
+  [ Michael Zanetti ]
+  * New Plugin: tp-link Kasa
+  * TexasInstruments: Fix pressure unit for sensortag
+  * Kodi: Skip link-local IPv6 addresses
+  * New Plugin: UniFi network controller
+
+  [ Simon Stürz ]
+  * New plugin: Nuki
+  * New plugin: USB relay
+
+  [ Michael Zanetti ]
+  * All Plugins: Fix building in sbuild
+  * EQ-3: Fix connection to MAX! cube
+
+  [ Bernhard Trinnes ]
+  * Bose SoundTouch: Fix actions and add source browsing
+
+ -- Jenkins <jenkins@nymea.io>  Sat, 18 Jan 2020 23:58:28 +0100
+
+nymea-plugins (0.17.0) xenial; urgency=medium
+
+  [ Michael Zanetti ]
+  * FlowerCare: Add a refresh rate setting
+  * Packaging: Fix dpkg clean target
+  * Simulation: Add a simulated barcode scanner device
+
+  [ Bernhard Trinnes ]
+  * Http commander: Add http server
+
+  [ Michael Zanetti ]
+  * DaylightSensor: Update README.md
+  * dweet.io: Update README
+  * Kodi: Automatically redetect Kodi when its IP address changes
+  * Various Plugins: Spelling fixes in README files
+  * Tasmota: Add Blinds support
+
+  [ Federico Leoni ]
+  * Update Tasmota readme
+
+  [ Michael Zanetti ]
+  * PhilipsHue: Fix the timeout setting
+
+ -- Jenkins <jenkins@nymea.io>  Mon, 09 Dec 2019 10:09:05 +0100
+
+nymea-plugins (0.16.0) xenial; urgency=medium
+
+  [ Bernhard Trinnes ]
+  * New Plugin: CoinMarketCap
+  * New plugin: Sonos
+
+  [ Michael Zanetti ]
+  * All Plugins: Devicemanager api rework
+  * Fix hertz wording
+  * New plugin: Shelly
+  * EQ-3: Some fixes for Eqiva Bluetooth Smart Radiator Thermostats
+  * PhilipsHue: Fix light intensity conversion to lux for the motion
+    sensor
+  * Anel: Add anel plugin to main plugin package
+  * NetworkDetector: Improve packaging and error handling
+  * Nuimo: Make it work with Bluez 5.48 (except battery service)
+  * Kodi: Fix active player not updating properly in some circumstances
+
+ -- Jenkins <jenkins@nymea.io>  Tue, 22 Oct 2019 01:09:57 +0200
+
+nymea-plugins (0.15.2) xenial; urgency=medium
+
+  [ Bernhard Trinnes ]
+  * Denon Plug-In: Add heos devices
+
+  [ George Yatsev ]
+  * Tasmota: Add support for 3ch devices
+
+  [ Bernhard Trinnes ]
+  * TcpCommander: Fixed input and output device class
+  * New plug-in: systemmonitor
+
+  [ Michael Zanetti ]
+  * PhilipsHue: Make use of the new alert interface
+
+  [ Bernhard Trinnes ]
+  * New plugin: One-Wire
+  * GPIO Plug-In: add counter device
+  * Senic: Fixed device clean up on a failed device setup
+
+  [ Michael Zanetti ]
+  * Remove Plugin: UniPi
+
+ -- Jenkins <jenkins@nymea.io>  Thu, 19 Sep 2019 12:28:02 +0200
+
+nymea-plugins (0.15.1) xenial; urgency=medium
+
+  [ Bernhard Trinnes ]
+  * New Plugin: WS2812FX
+
+  [ Michael Zanetti ]
+  * Tasmota: Use new powerswitch interface
+
+  [ Bernhard Trinnes ]
+  * Add plug-in bose soundtouch
+  * New plugin: generic interfaces
+
+  [ Michael Zanetti ]
+  * Kodi: Add support for media browsing
+
+  [ Bernhard Trinnes ]
+  * Fix senic
+
+  [ Michael Zanetti ]
+  * Fix hue outdoorsensor
+
+ -- Jenkins <jenkins@nymea.io>  Mon, 02 Sep 2019 18:02:07 +0200
+
+nymea-plugins (0.15.0) xenial; urgency=medium
+
+
+  [ Simon Stürz ]
+  * All Plugins: Update docs mechanism
+
+  [ Michael Zanetti ]
+  * NetworkDetector: Change grace period to be a setting instead of a
+    param
+  * Philips Hue: Add support for the hue indoor motion sensor
+  * All Plugins: Update according to new DeviceManager API
+  * Use the new nymea-plugininfocompiler for building
+  * GenericElements: Fix toggle button writable state
+
+ -- Jenkins <jenkins@nymea.io>  Mon, 22 Jul 2019 12:17:16 +0200
+
+nymea-plugins (0.12.3) xenial; urgency=medium
+
+  [ Michael Zanetti ]
+  * FlowerCare: Drop unneeded name parameter
+  * PhilipsHue: Improve discovery and fix reconfigure
+  * PhilipsHue: Drop deprecated old-style Hue Remote button events
+  * WeMo: Fix discovery if device has been renamed
+  * TexasInstruments: Fix Package dependencies
+  * PhilipsHue: Work around a bug in Osram LIGHTIFY RGBW LED stripes
+
+ -- Jenkins <jenkins@nymea.io>  Fri, 28 Jun 2019 12:45:50 +0200
+
+nymea-plugins (0.12.2) xenial; urgency=medium
+
+  [ Bernhard Trinnes ]
+  * Removed plugins: Orderbutton, Plantcare and ws2812
+  * renamed HTTP commander vendor, fixed segfault on device removed
+  * Fix serialportcommander
+
+  [ Michael Zanetti ]
+  * OpenWeatherMap: Add daylightsensor and allow loading custom API keys
+
+  [ Simon Stürz ]
+  * Update mail notifications plugin
+
+  [ Michael Zanetti ]
+  * Depend on pkg-config
+  * Kodi, AvahiMonitor: Update to new ZeroConf API
+
+ -- Jenkins <jenkins@nymea.io>  Wed, 19 Jun 2019 23:52:37 +0200
+
+nymea-plugins (0.12.1) xenial; urgency=medium
+
+  [ Michael Zanetti ]
+  * Rename vendor "guh GmbH" to "nymea"
+  * Don't use dpkg specific tools to set install path
+
+ -- Jenkins <jenkins@nymea.io>  Thu, 02 May 2019 11:56:17 +0200
+
+nymea-plugins (0.12.0) xenial; urgency=medium
+  [ Michael Zanetti ]
+  * aWATTar: Cleanup old unused code and use connectable interface
+
+  [ Simon Stürz ]
+  * PhilipsHue plugin: Add Hue Outdoor sensor
+
+  [ Michael Zanetti ]
+  * All Plugins: Update to API changes in core.
+  * Boblight: Build using internal plugins.pri
+  * New plugin: Pushbullet
+  * New Plugin: TexasInstruments, replaces MultiSensor plugin
+
+ -- Jenkins <jenkins@nymea.io>  Fri, 12 Apr 2019 13:42:46 +0200
+
+nymea-plugins (0.10.3) xenial; urgency=medium
+
+  [ Simon Stürz ]
+  * Netatmo: Update API changes and improve refresh behavior
+
+  [ Michael Zanetti ]
+  * Simulation: Update ev charger to new interface spec
+  * SonoffTasmota: Fix wrong IP settings in device setup
+  * NetworkDetector: Don't fail the entire discovery if one of the scan
+    targets fails
+  * PhilipsHue: Enable reconfiguring Hue bridges (Re-pairing)
+  * Elgato: Fix reading of color state
+  * Simulation: Add missing unit to heating plugins
+  * FlowerCare: Add unit to conductivity sensor
+  * Simulation: Make use of thermostat interface
+  * NetworkDetector: Improve monitoring, add a grace period parameter
+  * EQ-3: Add support for the Eqiva Bluetooth thermostat
+  * Update Plugins: Set deviceId in Descriptors on discovery
+  * Flower Care: Fix temperature reading for negative values
+
+  [ Bernhard Trinnes ]
+  * New Plugin: Serialport commander
+
+ -- Jenkins <jenkins@nymea.io>  Wed, 06 Mar 2019 21:13:53 +0100
+
+nymea-plugins (0.10.2) xenial; urgency=medium
+
+  [ Michael Zanetti ]
+  * Simulation: Make use of powersocket interface
+  * New Plugin: Boblight
+
+  [ Simon Stürz ]
+  * LG smart TV: General update (use of interfaces, improve connectivity
+    with TV)
+
+  [ Michael Zanetti ]
+  * New Plugin: ANEL Elektronik NET-PwrCtrl
+  * Networkdetector: Implement the presencesensor interface
+  * New Plugin: Daylight sensor which works offline and without any
+    hardware
+  * Sumulation: Fix action simulation for simulated blinds
+  * PhilipsHue: Fix hue tap button 4 param value typo
+  * Kodi: Implement new media interfaces
+
+ -- Jenkins <jenkins@nymea.io>  Thu, 17 Jan 2019 15:37:27 +0100
+
+nymea-plugins (0.10.1) xenial; urgency=medium
+
+  [ Michael Zanetti ]
+  * Elgato/Avea: Fix handling white channel in set color action
+  * New plugin: Generic MQTT client plugin (mqttclient)
+  * PhilipsHue: Improve naming of hue devices using nymea's system name
+    and syncing to bridge
+  * New plugin: Sonoff-Tasmota devices plugin (tasmota)
+  * Netatmo: fix after upstream API change, make use of new interfaces
+
+  [ Simon Stürz ]
+  * New plugin: UniPi
+
+ -- Jenkins <jenkins@nymea.io>  Wed, 12 Dec 2018 14:44:58 +0100
+
+nymea-plugins (0.10.0) xenial; urgency=medium
+
+  [ Michael Zanetti ]
+  * Elgato/Avea: Fix handling white channel in set color action
+  * New plugin: Generic MQTT client plugin (mqttclient)
+  * PhilipsHue: Improve naming of hue devices using nymea's system name
+    and syncing to bridge
+  * New plugin: Sonoff-Tasmota devices plugin (tasmota)
+  * Netatmo: fix after upstream API change, make use of new interfaces
+
+ -- Jenkins <jenkins@nymea.io>  Sun, 09 Dec 2018 18:56:19 +0100
+
+nymea-plugins (0.9.39) xenial; urgency=medium
+
+  [ Jenkins ]
+  * Prepare for release
+
+  [ Michael Zanetti ]
+  * use system interface in snapdcontrol
+  * update hue plugin
+  * change networkdetector discovery to do parallel scans...
+  * Make use of new heating/evcharger interfaces in the simulated
+    devices plugin
+
+ -- Jenkins <jenkins@nymea.io>  Tue, 20 Nov 2018 14:32:38 +0100
+
+nymea-plugins (0.9.38) xenial; urgency=medium
+
+  [ Jenkins ]
+  * Prepare for release
+
+  [ Michael Zanetti ]
+  * add some nicer curves to simulated values
+  * gateway now inherits connectable
+  * add simple blind simulation
+  * implement fingerprint interface in simulation plugin
+
+ -- Jenkins <jenkins@nymea.io>  Mon, 29 Oct 2018 14:19:53 +0100
+
+nymea-plugins (0.9.37) xenial; urgency=medium
+
+  [ Jenkins ]
+  * Prepare for release
+
+  [ Michael Zanetti ]
+  * Update all plugins using the new nymea-generateplugininfo
+
+ -- Jenkins <jenkins@nymea.io>  Wed, 10 Oct 2018 04:38:16 +0200
+
+nymea-plugins (0.9.36) bionic; urgency=medium
+
+  * Bump version to be in line with core
+
+ -- Michael Zanetti <michael.zanetti@nymea.io>  Wed, 10 Oct 2018 04:00:57 +0200
+
+nymea-plugins (0.2.0) bionic; urgency=medium
+
+  * rename to nymea
+
+ -- Michael Zanetti <michael.zanetti@nymea.io>  Wed, 10 Oct 2018 04:00:00 +0200
+
+guh-plugins (0.1.0) xenial; urgency=medium
+
+  * Add metapackages
+
+ -- Simon Stürz <simon.stuerz@guh.io>  Tue, 03 Oct 2017 17:07:31 +0200
+
+guh-plugins (0.1) UNRELEASED; urgency=medium
+
+  * Initial release. (Closes: #XXXXXX)
+
+ -- Michael Zanetti <michael.zanetti@guh.io>  Tue, 11 Jul 2017 15:23:34 +0200
