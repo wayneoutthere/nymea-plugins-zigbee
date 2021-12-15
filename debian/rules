@@ -1,0 +1,34 @@
+#!/usr/bin/make -f
+
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+
+PREPROCESS_FILES := $(wildcard debian/*.in)
+
+$(PREPROCESS_FILES:.in=): %: %.in
+	sed 's,/@DEB_HOST_MULTIARCH@,$(DEB_HOST_MULTIARCH:%=/%),g' $< > $@
+	chmod --reference=$< $@
+
+# Auto-generate install/remove hooks to fetch/cleanup python dependencies from requirements.txt
+PYTHON_REQUIREMENTS := $(shell find -name requirements.txt)
+$(PYTHON_REQUIREMENTS:.txt=): %: %.txt
+	$(eval PYTHON_PLUGIN=$(subst /requirements.txt,,$<))
+	echo "#DEBHELPER#" | tee debian/nymea-plugin-$(PYTHON_PLUGIN).postinst | tee debian/nymea-plugin-$(PYTHON_PLUGIN).prerm
+	echo "pip3 install --require-hashes --upgrade -r usr/lib/$(DEB_HOST_MULTIARCH)/nymea/plugins/$(PYTHON_PLUGIN)/requirements.txt -t usr/lib/$(DEB_HOST_MULTIARCH)/nymea/plugins/$(PYTHON_PLUGIN)/modules" >> debian/nymea-plugin-$(PYTHON_PLUGIN).postinst
+	echo "rm -rf usr/lib/$(DEB_HOST_MULTIARCH)/nymea/plugins/$(PYTHON_PLUGIN)/modules" >> debian/nymea-plugin-$(PYTHON_PLUGIN).prerm
+
+%:
+	dh $@ --parallel
+
+override_dh_auto_build:
+	dh_auto_build
+	make lrelease
+
+override_dh_install: $(PREPROCESS_FILES:.in=) $(PYTHON_REQUIREMENTS:.txt=)
+	dh_install --fail-missing
+
+override_dh_auto_clean:
+	dh_auto_clean
+	find -name *plugininfo.h -exec rm {} \;
+	find -name *.qm -exec rm {} \;
+	rm -rf $(PREPROCESS_FILES:.in=)
+
