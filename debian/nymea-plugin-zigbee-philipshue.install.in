@@ -1,1 +1,2 @@
 usr/lib/@DEB_HOST_MULTIARCH@/nymea/plugins/libnymea_integrationpluginzigbeephilipshue.so
+zigbeephilipshue/translations/*qm usr/share/nymea/translations/
