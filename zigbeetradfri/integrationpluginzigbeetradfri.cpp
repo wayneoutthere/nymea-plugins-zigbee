@@ -426,7 +426,7 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
                 qCDebug(dcZigbeeTradfri()) << thing << "button pressed" << command;
                 if (command == ZigbeeClusterOnOff::CommandToggle) {
                     qCDebug(dcZigbeeTradfri()) << thing << "pressed power";
-                    emit emitEvent(Event(soundRemotePressedEventTypeId, thing->id(), ParamList() << Param(soundRemotePressedEventButtonNameParamTypeId, "Power")));
+                    emit emitEvent(Event(soundRemotePressedEventTypeId, thing->id()));
                 }
             });
         }
@@ -436,20 +436,35 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
         if (!levelCluster) {
             qCWarning(dcZigbeeTradfri()) << "Could not find level client cluster on" << thing << endpoint;
         } else {
+            connect(levelCluster, &ZigbeeClusterLevelControl::commandMoveSent, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::MoveMode moveMode, quint8 rate = 0xff){
+                qCDebug(dcZigbeeTradfri()) << thing << "level cluster move command" << withOnOff << moveMode << rate;
+                int currentLevel = thing->stateValue(soundRemoteLevelStateTypeId).toUInt();
+                switch (moveMode) {
+                case ZigbeeClusterLevelControl::MoveModeUp: {
+                    uint newValue = currentLevel + thing->setting(soundRemoteSettingsStepSizeParamTypeId).toUInt();
+                    if (newValue > 100) {
+                        thing->setStateValue(soundRemoteLevelStateTypeId, 100);
+                    } else {
+                        thing->setStateValue(soundRemoteLevelStateTypeId, newValue);
+                    }
+                    emitEvent(Event(soundRemoteIncreaseEventTypeId, thing->id()));
+                    break;
+                }
+                case ZigbeeClusterLevelControl::MoveModeDown: {
+                    int newValue = currentLevel - thing->setting(soundRemoteSettingsStepSizeParamTypeId).toUInt();
+                    if (newValue < 0) {
+                        thing->setStateValue(soundRemoteLevelStateTypeId, 0);
+                    } else {
+                        thing->setStateValue(soundRemoteLevelStateTypeId, newValue);
+                    }
+                    emitEvent(Event(soundRemoteDecreaseEventTypeId, thing->id()));
+                    break;
+                }
+                }
+            });
+
             connect(levelCluster, &ZigbeeClusterLevelControl::commandSent, thing, [=](ZigbeeClusterLevelControl::Command command, const QByteArray &payload){
                 qCDebug(dcZigbeeTradfri()) << thing << "level cluster command sent" << command << payload.toHex();
-                //                switch (command) {
-                //                case ZigbeeClusterLevelControl::CommandMoveWithOnOff:
-                //                    qCDebug(dcZigbeeTradfri()) << thing << "long pressed ON";
-                //                    emit emitEvent(Event(onOffSwitchLongPressedEventTypeId, thing->id(), ParamList() << Param(onOffSwitchLongPressedEventButtonNameParamTypeId, "ON")));
-                //                    break;
-                //                case ZigbeeClusterLevelControl::CommandMove:
-                //                    qCDebug(dcZigbeeTradfri()) << thing << "long pressed OFF";
-                //                    emit emitEvent(Event(onOffSwitchLongPressedEventTypeId, thing->id(), ParamList() << Param(onOffSwitchLongPressedEventButtonNameParamTypeId, "OFF")));
-                //                    break;
-                //                default:
-                //                    break;
-                //                }
             });
         }
     }
@@ -594,19 +609,19 @@ void IntegrationPluginZigbeeTradfri::initOnOffSwitch(ZigbeeNode *node, ZigbeeNod
 void IntegrationPluginZigbeeTradfri::initRemote(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
 {
 
-//    if (endpoint->hasOutputCluster(ZigbeeClusterLibrary::ClusterIdGroups)) {
-//        qCDebug(dcZigbeeTradfri()) << "Try to add group...";
-//        ZigbeeClusterGroups *groupCluster = endpoint->outputCluster<ZigbeeClusterGroups>(ZigbeeClusterLibrary::ClusterIdGroups);
-//        ZigbeeClusterReply *reply = groupCluster->addGroup(0x0000, QString());
-//        connect(reply, &ZigbeeClusterReply::finished, node, [=](){
-//            if (reply->error()) {
-//                qCWarning(dcZigbeeTradfri()) << "Failed to add remote to group 0x0000";
-//                return;
-//            }
+    //    if (endpoint->hasOutputCluster(ZigbeeClusterLibrary::ClusterIdGroups)) {
+    //        qCDebug(dcZigbeeTradfri()) << "Try to add group...";
+    //        ZigbeeClusterGroups *groupCluster = endpoint->outputCluster<ZigbeeClusterGroups>(ZigbeeClusterLibrary::ClusterIdGroups);
+    //        ZigbeeClusterReply *reply = groupCluster->addGroup(0x0000, QString());
+    //        connect(reply, &ZigbeeClusterReply::finished, node, [=](){
+    //            if (reply->error()) {
+    //                qCWarning(dcZigbeeTradfri()) << "Failed to add remote to group 0x0000";
+    //                return;
+    //            }
 
 
-//        });
-//    }
+    //        });
+    //    }
 
     // Read battery, bind and configure attribute reporting for battery
     if (!endpoint->hasInputCluster(ZigbeeClusterLibrary::ClusterIdPowerConfiguration)) {
