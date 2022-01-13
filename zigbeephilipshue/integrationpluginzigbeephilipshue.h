@@ -69,7 +69,7 @@ private:
 
     void createThing(const ThingClassId &thingClassId, const QUuid &networkUuid, ZigbeeNode *node);
 
-    void initDimmerSwitch(ZigbeeNode *node);
+    void initDimmerSwitch(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void initMotionSensor(ZigbeeNode *node);
     void initSmartButton(ZigbeeNode *node);
     void initWallSwitchModule(ZigbeeNode *node);

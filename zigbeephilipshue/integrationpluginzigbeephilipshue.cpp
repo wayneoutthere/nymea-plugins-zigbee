@@ -38,26 +38,31 @@
 IntegrationPluginZigbeePhilipsHue::IntegrationPluginZigbeePhilipsHue()
 {
     m_ieeeAddressParamTypeIds[dimmerSwitchThingClassId] = dimmerSwitchThingIeeeAddressParamTypeId;
+    m_ieeeAddressParamTypeIds[dimmerSwitch2ThingClassId] = dimmerSwitch2ThingIeeeAddressParamTypeId;
     m_ieeeAddressParamTypeIds[smartButtonThingClassId] = smartButtonThingIeeeAddressParamTypeId;
     m_ieeeAddressParamTypeIds[motionSensorThingClassId] = motionSensorThingIeeeAddressParamTypeId;
     m_ieeeAddressParamTypeIds[wallSwitchModuleThingClassId] = wallSwitchModuleThingIeeeAddressParamTypeId;
 
     m_networkUuidParamTypeIds[dimmerSwitchThingClassId] = dimmerSwitchThingNetworkUuidParamTypeId;
+    m_networkUuidParamTypeIds[dimmerSwitch2ThingClassId] = dimmerSwitch2ThingNetworkUuidParamTypeId;
     m_networkUuidParamTypeIds[smartButtonThingClassId] = smartButtonThingNetworkUuidParamTypeId;
     m_networkUuidParamTypeIds[motionSensorThingClassId] = motionSensorThingNetworkUuidParamTypeId;
     m_networkUuidParamTypeIds[wallSwitchModuleThingClassId] = wallSwitchModuleThingNetworkUuidParamTypeId;
 
     m_connectedStateTypeIds[dimmerSwitchThingClassId] = dimmerSwitchConnectedStateTypeId;
+    m_connectedStateTypeIds[dimmerSwitch2ThingClassId] = dimmerSwitch2ConnectedStateTypeId;
     m_connectedStateTypeIds[smartButtonThingClassId] = smartButtonConnectedStateTypeId;
     m_connectedStateTypeIds[motionSensorThingClassId] = motionSensorConnectedStateTypeId;
     m_connectedStateTypeIds[wallSwitchModuleThingClassId] = wallSwitchModuleConnectedStateTypeId;
 
     m_signalStrengthStateTypeIds[dimmerSwitchThingClassId] = dimmerSwitchSignalStrengthStateTypeId;
+    m_signalStrengthStateTypeIds[dimmerSwitch2ThingClassId] = dimmerSwitch2SignalStrengthStateTypeId;
     m_signalStrengthStateTypeIds[smartButtonThingClassId] = smartButtonSignalStrengthStateTypeId;
     m_signalStrengthStateTypeIds[motionSensorThingClassId] = motionSensorSignalStrengthStateTypeId;
     m_signalStrengthStateTypeIds[wallSwitchModuleThingClassId] = wallSwitchModuleSignalStrengthStateTypeId;
 
     m_versionStateTypeIds[dimmerSwitchThingClassId] = dimmerSwitchVersionStateTypeId;
+    m_versionStateTypeIds[dimmerSwitch2ThingClassId] = dimmerSwitch2VersionStateTypeId;
     m_versionStateTypeIds[smartButtonThingClassId] = smartButtonVersionStateTypeId;
     m_versionStateTypeIds[motionSensorThingClassId] = motionSensorVersionStateTypeId;
     m_versionStateTypeIds[wallSwitchModuleThingClassId] = wallSwitchModuleVersionStateTypeId;
@@ -78,27 +83,27 @@ bool IntegrationPluginZigbeePhilipsHue::handleNode(ZigbeeNode *node, const QUuid
 
     if (node->endpoints().count() == 2 && node->hasEndpoint(0x01) && node->hasEndpoint(0x02)) {
         ZigbeeNodeEndpoint *endpointOne = node->getEndpoint(0x01);
-        ZigbeeNodeEndpoint *endpoinTwo = node->getEndpoint(0x02);
+        ZigbeeNodeEndpoint *endpointTwo = node->getEndpoint(0x02);
 
         // Dimmer switch
         if (endpointOne->profile() == Zigbee::ZigbeeProfileLightLink &&
                 endpointOne->deviceId() == Zigbee::LightLinkDeviceNonColourSceneController &&
-                endpoinTwo->profile() == Zigbee::ZigbeeProfileHomeAutomation &&
-                endpoinTwo->deviceId() == Zigbee::HomeAutomationDeviceSimpleSensor) {
+                endpointTwo->profile() == Zigbee::ZigbeeProfileHomeAutomation &&
+                endpointTwo->deviceId() == Zigbee::HomeAutomationDeviceSimpleSensor) {
 
-            qCDebug(dcZigbeePhilipsHue()) << "Handling Hue dimmer switch" << node << endpointOne << endpoinTwo;
+            qCDebug(dcZigbeePhilipsHue()) << "Handling Hue dimmer switch" << node << endpointOne << endpointTwo;
             createThing(dimmerSwitchThingClassId, networkUuid, node);
-            initDimmerSwitch(node);
+            initDimmerSwitch(node, endpointTwo);
             return true;
         }
 
         // Outdoor sensor
         if (endpointOne->profile() == Zigbee::ZigbeeProfileLightLink &&
                 endpointOne->deviceId() == Zigbee::LightLinkDeviceOnOffSensor &&
-                endpoinTwo->profile() == Zigbee::ZigbeeProfileHomeAutomation &&
-                endpoinTwo->deviceId() == Zigbee::HomeAutomationDeviceOccupacySensor) {
+                endpointTwo->profile() == Zigbee::ZigbeeProfileHomeAutomation &&
+                endpointTwo->deviceId() == Zigbee::HomeAutomationDeviceOccupacySensor) {
 
-            qCDebug(dcZigbeePhilipsHue()) << "Handling Hue outdoor sensor" << node << endpointOne << endpoinTwo;
+            qCDebug(dcZigbeePhilipsHue()) << "Handling Hue outdoor sensor" << node << endpointOne << endpointTwo;
             createThing(motionSensorThingClassId, networkUuid, node);
             initMotionSensor(node);
             return true;
@@ -107,6 +112,12 @@ bool IntegrationPluginZigbeePhilipsHue::handleNode(ZigbeeNode *node, const QUuid
 
     ZigbeeNodeEndpoint *endpointOne = node->getEndpoint(0x01);
     if (endpointOne) {
+
+        if (endpointOne->modelIdentifier() == "RWL022") {
+            createThing(dimmerSwitch2ThingClassId, networkUuid, node);
+            initDimmerSwitch(node, endpointOne);
+            return true;
+        }
 
         // Smart buttton
         if (endpointOne->profile() == Zigbee::ZigbeeProfileHomeAutomation &&
@@ -231,6 +242,63 @@ void IntegrationPluginZigbeePhilipsHue::setupThing(ThingSetupInfo *info)
             });
         }
     }
+
+    // Thing specific setup
+    if (thing->thingClassId() == dimmerSwitch2ThingClassId) {
+        ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
+
+        // Set the version
+        thing->setStateValue(m_versionStateTypeIds.value(thing->thingClassId()), endpoint->softwareBuildId());
+
+        ZigbeeClusterManufacturerSpecificPhilips *philipsCluster = endpoint->inputCluster<ZigbeeClusterManufacturerSpecificPhilips>(ZigbeeClusterLibrary::ClusterIdManufacturerSpecificPhilips);
+        if (!philipsCluster) {
+            qCWarning(dcZigbeePhilipsHue()) << "Could not find Manufacturer Specific (Philips) cluster on" << thing << endpoint;
+        } else {
+            connect(philipsCluster, &ZigbeeClusterManufacturerSpecificPhilips::buttonPressed, thing, [=](quint8 button, ZigbeeClusterManufacturerSpecificPhilips::Operation operation) {
+                qCDebug(dcZigbeePhilipsHue()) << "Button" << button << operation;
+                QHash<quint8, QString> buttonMap = {
+                    {1, "POWER"},
+                    {2, "DIM UP"},
+                    {3, "DIM DOWN"},
+                    {4, "HUE"}
+                };
+                switch (operation) {
+                case ZigbeeClusterManufacturerSpecificPhilips::OperationButtonPress:
+                    // This doesn't appear on very quick press/release. But we always get the short release, so let's use that instead
+                    break;
+                case ZigbeeClusterManufacturerSpecificPhilips::OperationButtonShortRelease:
+                    thing->emitEvent(dimmerSwitch2PressedEventTypeId, ParamList() << Param(dimmerSwitch2PressedEventButtonNameParamTypeId, buttonMap.value(button)));
+                    break;
+                case ZigbeeClusterManufacturerSpecificPhilips::OperationButtonHold:
+                    thing->emitEvent(dimmerSwitch2LongPressedEventTypeId, ParamList() << Param(dimmerSwitch2LongPressedEventButtonNameParamTypeId, buttonMap.value(button)));
+                    break;
+                case ZigbeeClusterManufacturerSpecificPhilips::OperationButtonLongRelease:
+                    // Release after a longpress. But for longpresses we always seem to get the Hold before, so we'll use that.
+                    break;
+                }
+            });
+        }
+
+
+        // Get battery level changes
+        ZigbeeClusterPowerConfiguration *powerCluster = endpoint->inputCluster<ZigbeeClusterPowerConfiguration>(ZigbeeClusterLibrary::ClusterIdPowerConfiguration);
+        if (!powerCluster) {
+            qCWarning(dcZigbeePhilipsHue()) << "Could not find power configuration cluster on" << thing << endpoint;
+        } else {
+            // Only set the initial state if the attribute already exists
+            if (powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining)) {
+                thing->setStateValue(dimmerSwitch2BatteryLevelStateTypeId, powerCluster->batteryPercentage());
+                thing->setStateValue(dimmerSwitch2BatteryCriticalStateTypeId, (powerCluster->batteryPercentage() < 10.0));
+            }
+
+            connect(powerCluster, &ZigbeeClusterPowerConfiguration::batteryPercentageChanged, thing, [=](double percentage){
+                qCDebug(dcZigbeePhilipsHue()) << "Battery percentage changed" << percentage << "%" << thing;
+                thing->setStateValue(dimmerSwitch2BatteryLevelStateTypeId, percentage);
+                thing->setStateValue(dimmerSwitch2BatteryCriticalStateTypeId, (percentage < 10.0));
+            });
+        }
+    }
+
 
     if (thing->thingClassId() == smartButtonThingClassId) {
         ZigbeeNodeEndpoint *endpointHa = node->getEndpoint(0x01);
@@ -493,10 +561,8 @@ void IntegrationPluginZigbeePhilipsHue::createThing(const ThingClassId &thingCla
     emit autoThingsAppeared({descriptor});
 }
 
-void IntegrationPluginZigbeePhilipsHue::initDimmerSwitch(ZigbeeNode *node)
+void IntegrationPluginZigbeePhilipsHue::initDimmerSwitch(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
 {
-    ZigbeeNodeEndpoint *endpointHa = node->getEndpoint(0x02);
-
     qCDebug(dcZigbeePhilipsHue()) << "Clearing binding table on node" << node;
     ZigbeeReply *removeBindingsReply = node->removeAllBindings();
     connect(removeBindingsReply, &ZigbeeReply::finished, node, [=](){
@@ -506,10 +572,10 @@ void IntegrationPluginZigbeePhilipsHue::initDimmerSwitch(ZigbeeNode *node)
             qCDebug(dcZigbeePhilipsHue()) << "Removed all bindings successfully from" << node;
         }
 
-        bindBatteryCluster(node, endpointHa);
+        bindBatteryCluster(node, endpoint);
 
         qCDebug(dcZigbeePhilipsHue()) << "Binding Manufacturer specific cluster to coordinator";
-        ZigbeeDeviceObjectReply *zdoReply = node->deviceObject()->requestBindGroupAddress(endpointHa->endpointId(), ZigbeeClusterLibrary::ClusterIdManufacturerSpecificPhilips, 0x0000);
+        ZigbeeDeviceObjectReply *zdoReply = node->deviceObject()->requestBindGroupAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdManufacturerSpecificPhilips, 0x0000);
         connect(zdoReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
             if (zdoReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
                 qCWarning(dcZigbeePhilipsHue()) << "Failed to bind manufacturer specific cluster to coordinator" << zdoReply->error();
