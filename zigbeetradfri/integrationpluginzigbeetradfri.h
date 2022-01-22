@@ -59,6 +59,7 @@ public:
 private:
     PluginTimer *m_presenceTimer = nullptr;
     QHash<Thing*, ZigbeeNode*> m_thingNodes;
+    quint8 m_lastReceivedTransactionSequenceNumber = 0;
 
     QHash<ThingClassId, ParamTypeId> m_ieeeAddressParamTypeIds;
     QHash<ThingClassId, ParamTypeId> m_networkUuidParamTypeIds;
@@ -75,6 +76,7 @@ private:
     void initRemote(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void initMotionSensor(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
 
+    bool isDuplicate(quint8 transactionSequenceNumber);
 };
 
 #endif // INTEGRATIONPLUGINZIGBEETRADFRI_H
