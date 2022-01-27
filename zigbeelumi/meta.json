@@ -10,7 +10,6 @@
     "categories": [
         "sensor",
         "switch",
-        "relay",
         "socket"
     ]
 }

@@ -8,6 +8,9 @@
         "zigbee"
     ],
     "categories": [
-        "socket"
+        "socket",
+        "heating",
+        "lock",
+        "sensor"
     ]
 }
