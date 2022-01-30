@@ -489,13 +489,47 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
             if (onOffCluster->hasAttribute(ZigbeeClusterOnOff::AttributeOnOff)) {
                 thing->setStateValue(lumiPowerSocketPowerStateTypeId, onOffCluster->power());
             }
-
             connect(onOffCluster, &ZigbeeClusterOnOff::powerChanged, thing, [thing](bool power){
-                qCDebug(dcZigbeeLumi()) << thing << "power changed" << power;
                 thing->setStateValue(lumiPowerSocketPowerStateTypeId, power);
             });
         } else {
-            qCWarning(dcZigbeeLumi()) << "Could not find the OnOff input cluster on" << thing << endpoint;
+            qCWarning(dcZigbeeLumi()) << "Could not find OnOff cluster on" << thing << endpoint;
+        }
+        if (node->hasEndpoint(0x02)) {
+            ZigbeeClusterAnalogInput *analogInputCluster = node->getEndpoint(0x02)->inputCluster<ZigbeeClusterAnalogInput>(ZigbeeClusterLibrary::ClusterIdAnalogInput);
+            if (analogInputCluster) {
+                // On very low power consumptions on the device (for instance with a fully charged laptop on it drawing virtually nothing),
+                // it seems to produce insanely huge values. Let's correct them down to 0
+                float presentValue = analogInputCluster->presentValue();
+                if (presentValue > 3000) {
+                    qCDebug(dcZigbeeLumi()) << "Discarding unrealistic value:" << presentValue;
+                    presentValue = 0;
+                }
+                thing->setStateValue(lumiPowerSocketCurrentPowerStateTypeId, presentValue);
+                thing->setProperty("lastTimestamp", QDateTime::currentDateTime());
+
+                connect(analogInputCluster, &ZigbeeClusterAnalogInput::presentValueChanged, thing, [thing](float presentValue){
+                    if (presentValue > 3000) {
+                        qCDebug(dcZigbeeLumi()) << "Discarding unrealistic value:" << presentValue;
+                        presentValue = 0;
+                    }
+                    double lastCurrentPower = thing->stateValue(lumiPowerSocketCurrentPowerStateTypeId).toDouble();
+                    QDateTime now = QDateTime::currentDateTime();
+                    QDateTime lastTimestamp = thing->property("lastTimestamp").toDateTime();
+                    if (lastTimestamp.isValid()) {
+                        double lastTotal = thing->stateValue(lumiPowerSocketTotalEnergyConsumedStateTypeId).toDouble();
+                        qint64 msecsSinceLast = lastTimestamp.msecsTo(now);
+                        double wattMs = lastCurrentPower / msecsSinceLast;
+                        double kwh = wattMs / 60 / 60;
+                        qCDebug(dcZigbeeLumi()) << "Updating total power" << msecsSinceLast << kwh << lastTotal;
+                        thing->setStateValue(lumiPowerSocketTotalEnergyConsumedStateTypeId, lastTotal + kwh);
+                    }
+                    thing->setStateValue(lumiPowerSocketCurrentPowerStateTypeId, presentValue);
+                    thing->setProperty("lastTimestamp", now);
+                });
+            } else {
+                qCWarning(dcZigbeeLumi()) << "Could not find AnalogInput cluster on" << thing << endpoint;
+            }
         }
     }
 

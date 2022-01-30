@@ -656,7 +656,7 @@
                     "id": "76afde12-e781-4723-94ca-5704e800e821",
                     "setupMethod": "JustAdd",
                     "createMethods": [ "Auto" ],
-                    "interfaces": [ "powersocket", "alert", "wirelessconnectable" ],
+                    "interfaces": [ "powersocket", "smartmeterconsumer", "alert", "wirelessconnectable" ],
                     "paramTypes": [
                         {
                             "id": "0ebea7b9-488d-490e-9d70-e04ec92efd67",
@@ -713,6 +713,24 @@
                             "defaultValue": false,
                             "writable": true,
                             "ioType": "digitalOutput"
+                        },
+                        {
+                            "id": "2c05bb81-3be9-46a9-8bc6-94d72ee4a668",
+                            "name": "currentPower",
+                            "displayName": "Current energy consumption",
+                            "displayNameEvent": "Current energy consumption changed",
+                            "type": "double",
+                            "unit": "Watt",
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "5616730e-6097-4bcb-8dfe-47667c5d197a",
+                            "name": "totalEnergyConsumed",
+                            "displayName": "Total consumed energy",
+                            "displayNameEvent": "Total consumed energy changed",
+                            "type": "double",
+                            "unit": "KiloWattHour",
+                            "defaultValue": 0
                         }
                     ],
                     "actionTypes": [
