@@ -1,6 +1,6 @@
 {
     "title": "ZigBee TRÅDFRI",
-    "tagline": "Connect and control ZigBee IKEA TRÅDFRI devices native.",
+    "tagline": "Connect and control ZigBee IKEA TRÅDFRI devices without TRÅDFRI gateway.",
     "icon": "ikea.svg",
     "stability": "consumer",
     "offline": true,

@@ -1,6 +1,6 @@
 {
     "title": "ZigBee Philips Hue",
-    "tagline": "Connect and control ZigBee Philips Hue devices native.",
+    "tagline": "Connect and use ZigBee Philips Hue devices without Hue bridge through ZigBee.",
     "icon": "philipshue.png",
     "stability": "consumer",
     "offline": true,
@@ -10,6 +10,7 @@
     "categories": [
         "light",
         "sensor",
-        "switch"
+        "switch",
+        "socket"
     ]
 }

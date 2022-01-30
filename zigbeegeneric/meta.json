@@ -1,6 +1,6 @@
 {
     "title": "ZigBee Generic",
-    "tagline": "Connect and control native ZigBee devices which can be handled in a generic way.",
+    "tagline": "Connect and control ZigBee compliant devices which don't require manufacturer specific extras.",
     "icon": "zigbee.svg",
     "stability": "consumer",
     "offline": true,
