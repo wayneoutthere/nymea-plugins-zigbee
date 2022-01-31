@@ -4,10 +4,6 @@ This plugin allows to interact with IKEA TRÅDFRI ZigBee devices using a native 
 
 ## Supported Things
 
-In order to bring a ZigBee device into the nymea ZigBee network, the network needs to be opened for joining before you perform the device pairing instructions. The joining process can take up to 30 seconds. If the device does not show up, please restart the pairing process.
-
-
-
 ### TRÅDFRI Wireless dimmer
 
 The [Wireless dimmer](https://www.ikea.com/us/en/p/tradfri-wireless-dimmer-white-10408598/) requires the latest firmware version in order to work properly with nymea. If the thing shows up in nymea once paired, but no button events will be recongized, please update the device to the latest firmware version and re-add it to nymea.
@@ -79,6 +75,6 @@ Tested and verified lights:
 * A compatible ZigBee controller and a running ZigBee network in nymea. You can find more information about supported controllers and ZigBee network configurations [here](https://nymea.io/documentation/users/usage/configuration#zigbee).
 
 
-## More
+## More information
 
 [IKEAD](https://www.ikea.com)

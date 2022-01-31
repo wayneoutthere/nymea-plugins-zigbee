@@ -1,36 +1,57 @@
 # Generic ZigBee
 
-This plugin allows to interact with ZigBee from many different manufacturers and different types using a native ZigBee network controller in nymea.
+This plugin adds support for ZigBee specification compliant devices which don't require manufacturer specific extras. Any certified ZigBee device should
+be supported by this. However, please note that many ZigBee devices out there either don't follow the specifiction or require manufacturer specific
+extra handling in which case they may not work or only work partially with this plugin.
 
-There is no specific list of supported manufacturers and models, because the plugin handles ZigBee certified devices in the most generic way possible. The manufacturer and model will be fetched from the ZigBee node and all requied information will be loaded dynamically from the ZigBee node according to the specifications.
+For such devices, please see the manufacturer specific ZigBee integration plugins.
 
-If no manufacturer specific plugin handles a new joined ZigBee node, this plugin will try to support the device. If the device can be handled in a generic way, this plugin will create an approriate thing in nymea.
+Installing a manufacturer specific integration plugin will have higher priorty to handle their devices in the nymea system.
 
 ## Supported Things
 
-In order to bring a ZigBee device into the nymea ZigBee network, the network needs to be opened for joining before you perform the device pairing instructions. The joining process can take up to 30 seconds. If the device does not show up, please restart the pairing process.
+> *IMPORTANT NOTE:* This list is non-exhaustive.
+
+The following list contains devices that are known to work with this plugin. If a ZigBee device is not included in the following 
+list, it does not necessarily imply that the device is not supported. It may still work if it follows the ZigBee specification.
+
+> Please report any other devices successfully tested with this plugin to nymea in one of the contact channels found in nymea:apps main menu.
 
 ### On/off power sockets
 
-Simple on/off power sockets.
+All smart plugs, relays, power sockets and switches that follow the ZigBee OnOff cluster specification.
 
-**Pairing instructions**: Open the ZigBee network for joining. Follow the manufacturer specific reset/pairing instruction.
+Known to work:
 
-> Most power sockets have a pairing button. Once the device is powered, it can be resetted / paired by clicking the button multiple times of keeping it pressed for several seconds.
+* Climax smart plug (PSS-29ZBSR, PSM-29ZBSR)
+* QS-Zigbee-D02-TRIAC-2C-LN
+* Sonoff ZBMINI Smart Switch (ZBMINI1)
+* Feibit Light Switch (ZSW01)
+* Dresden Electronics (FLS-PP3)
 
 ### Radiator thermostats
 
-Radiator thermostats that follow the ZigBee specification.
+All radiator thermostats that follow the ZigBee HVAC cluster specification.
+
+Known to work:
+
+* Eurotronic Spirit Zigbee Thermostat
 
 ### Door/window sensors
 
-Door/window that follow the ZigBee IAS Zone specification.
+All door/window that follow the ZigBee IAS Zone cluster specification.
+
+Known to work:
+
+* Samotech Door sensor
+* Sonoff Wireless Door/Window sensor
+* eWeLink door/window sensor (DS01)
 
 ### Motion sensors
 
-Door/window that follow the ZigBee IAS Zone specification.
+All motion that follow the ZigBee IAS Zone cluster specification.
 
-## Requirements
+Known to work:
 
-* A compatible ZigBee controller and a running ZigBee network in nymea. You can find more information about supported controllers and ZigBee network configurations [here](https://nymea.io/documentation/users/usage/configuration#zigbee).
+* SILVERCREST motion sensor
 

@@ -1,7 +1,7 @@
 {
     "title": "ZigBee Lumi / Aqara / Xiaomi Mi",
-    "tagline": "Connect and control ZigBee devices from Lumi / Aqara / Xiaomi Mi native.",
-    "icon": "zigbee.svg",
+    "tagline": "Connect and control ZigBee devices from Lumi / Aqara / Xiaomi Mi via ZigBee.",
+    "icon": "xiaomi.svg",
     "stability": "consumer",
     "offline": true,
     "technologies": [
