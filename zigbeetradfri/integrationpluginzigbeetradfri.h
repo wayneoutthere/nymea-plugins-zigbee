@@ -56,6 +56,9 @@ public:
     void executeAction(ThingActionInfo *info) override;
     void thingRemoved(Thing *thing) override;
 
+private slots:
+    void soundRemoteMove(Thing *thing, ZigbeeClusterLevelControl::MoveMode mode);
+
 private:
     PluginTimer *m_presenceTimer = nullptr;
     QHash<Thing*, ZigbeeNode*> m_thingNodes;
@@ -68,6 +71,8 @@ private:
     QHash<ThingClassId, StateTypeId> m_connectedStateTypeIds;
     QHash<ThingClassId, StateTypeId> m_signalStrengthStateTypeIds;
     QHash<ThingClassId, StateTypeId> m_versionStateTypeIds;
+
+    QHash<Thing*, QTimer*> m_soundRemoteMoveTimers;
 
     ZigbeeNodeEndpoint *findEndpoint(Thing *thing);
     void createThing(const ThingClassId &thingClassId, const QUuid &networkUuid, ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);

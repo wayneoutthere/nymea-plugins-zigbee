@@ -421,6 +421,13 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
     }
 
     if (thing->thingClassId() == soundRemoteThingClassId) {
+        QTimer *moveTimer = new QTimer(thing);
+        moveTimer->setInterval(1000);
+        m_soundRemoteMoveTimers.insert(thing, moveTimer);
+        connect(moveTimer, &QTimer::timeout, thing, [=](){
+            soundRemoteMove(thing, static_cast<ZigbeeClusterLevelControl::MoveMode>(moveTimer->property("direction").toInt()));
+        });
+
         // Get battery level changes
         ZigbeeClusterPowerConfiguration *powerCluster = endpoint->inputCluster<ZigbeeClusterPowerConfiguration>(ZigbeeClusterLibrary::ClusterIdPowerConfiguration);
         if (!powerCluster) {
@@ -462,38 +469,23 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
             qCWarning(dcZigbeeTradfri()) << "Could not find level client cluster on" << thing << endpoint;
         } else {
             connect(levelCluster, &ZigbeeClusterLevelControl::commandMoveSent, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::MoveMode moveMode, quint8 rate, quint8 transactionSequenceNumber){
+                Q_UNUSED(withOnOff)
+                Q_UNUSED(rate)
                 if (isDuplicate(transactionSequenceNumber)) {
                     return;
                 }
-
-                qCDebug(dcZigbeeTradfri()) << thing << "level cluster move command" << withOnOff << moveMode << rate;
-                int currentLevel = thing->stateValue(soundRemoteLevelStateTypeId).toUInt();
-                switch (moveMode) {
-                case ZigbeeClusterLevelControl::MoveModeUp: {
-                    uint newValue = currentLevel + thing->setting(soundRemoteSettingsStepSizeParamTypeId).toUInt();
-                    if (newValue > 100) {
-                        thing->setStateValue(soundRemoteLevelStateTypeId, 100);
-                    } else {
-                        thing->setStateValue(soundRemoteLevelStateTypeId, newValue);
-                    }
-                    emitEvent(Event(soundRemoteIncreaseEventTypeId, thing->id()));
-                    break;
-                }
-                case ZigbeeClusterLevelControl::MoveModeDown: {
-                    int newValue = currentLevel - thing->setting(soundRemoteSettingsStepSizeParamTypeId).toUInt();
-                    if (newValue < 0) {
-                        thing->setStateValue(soundRemoteLevelStateTypeId, 0);
-                    } else {
-                        thing->setStateValue(soundRemoteLevelStateTypeId, newValue);
-                    }
-                    emitEvent(Event(soundRemoteDecreaseEventTypeId, thing->id()));
-                    break;
-                }
-                }
+                qCDebug(dcZigbeeTradfri()) << thing->name() << "starting move timer";
+                soundRemoteMove(thing, moveMode);
+                m_soundRemoteMoveTimers.value(thing)->setProperty("direction", moveMode);
+                m_soundRemoteMoveTimers.value(thing)->start();
             });
 
             connect(levelCluster, &ZigbeeClusterLevelControl::commandSent, thing, [=](ZigbeeClusterLevelControl::Command command, const QByteArray &payload){
-                qCDebug(dcZigbeeTradfri()) << thing << "level cluster command sent" << command << payload.toHex();
+                Q_UNUSED(payload)
+                if (command == ZigbeeClusterLevelControl::CommandStop) {
+                    qCDebug(dcZigbeeTradfri()) << thing->name() << "stopping move timer";
+                    m_soundRemoteMoveTimers.value(thing)->stop();
+                }
             });
         }
     }
@@ -513,6 +505,37 @@ void IntegrationPluginZigbeeTradfri::thingRemoved(Thing *thing)
     if (node) {
         QUuid networkUuid = thing->paramValue(m_networkUuidParamTypeIds.value(thing->thingClassId())).toUuid();
         hardwareManager()->zigbeeResource()->removeNodeFromNetwork(networkUuid, node);
+    }
+
+    if (thing->thingClassId() == soundRemoteThingClassId) {
+        delete m_soundRemoteMoveTimers.take(thing);
+    }
+}
+
+void IntegrationPluginZigbeeTradfri::soundRemoteMove(Thing *thing, ZigbeeClusterLevelControl::MoveMode mode)
+{
+    int currentLevel = thing->stateValue(soundRemoteLevelStateTypeId).toUInt();
+    switch (mode) {
+    case ZigbeeClusterLevelControl::MoveModeUp: {
+        uint newValue = currentLevel + thing->setting(soundRemoteSettingsStepSizeParamTypeId).toUInt();
+        if (newValue > 100) {
+            thing->setStateValue(soundRemoteLevelStateTypeId, 100);
+        } else {
+            thing->setStateValue(soundRemoteLevelStateTypeId, newValue);
+        }
+        emitEvent(Event(soundRemoteIncreaseEventTypeId, thing->id()));
+        break;
+    }
+    case ZigbeeClusterLevelControl::MoveModeDown: {
+        int newValue = currentLevel - thing->setting(soundRemoteSettingsStepSizeParamTypeId).toUInt();
+        if (newValue < 0) {
+            thing->setStateValue(soundRemoteLevelStateTypeId, 0);
+        } else {
+            thing->setStateValue(soundRemoteLevelStateTypeId, newValue);
+        }
+        emitEvent(Event(soundRemoteDecreaseEventTypeId, thing->id()));
+        break;
+    }
     }
 }
 
