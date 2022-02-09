@@ -35,6 +35,8 @@
 #include "hardware/zigbee/zigbeehandler.h"
 #include "plugintimer.h"
 
+#include "extern-plugininfo.h"
+
 #include <QTimer>
 
 class IntegrationPluginZigbeeTradfri: public IntegrationPlugin, public ZigbeeHandler

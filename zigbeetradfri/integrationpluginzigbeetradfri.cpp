@@ -89,21 +89,21 @@ bool IntegrationPluginZigbeeTradfri::handleNode(ZigbeeNode *node, const QUuid &n
     foreach (ZigbeeNodeEndpoint *endpoint, node->endpoints()) {
         if (endpoint->modelIdentifier().contains("on/off switch")) {
             // "TRADFRI on/off switch"
-            qCDebug(dcZigbeeTradfri()) << "Handeling TRADFRI on/off switch" << node << endpoint;
+            qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI on/off switch" << node << endpoint;
             createThing(onOffSwitchThingClassId, networkUuid, node, endpoint);
             initOnOffSwitch(node, endpoint);
             handled = true;
         }
 
         if (endpoint->profile() == Zigbee::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceOnOffSensor) {
-            qCDebug(dcZigbeeTradfri()) << "Handeling TRADFRI motion sensor" << node << endpoint;
+            qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI motion sensor" << node << endpoint;
             createThing(motionSensorThingClassId, networkUuid, node, endpoint);
             initMotionSensor(node, endpoint);
             handled = true;
         }
 
         if (endpoint->modelIdentifier().contains("remote control")) {
-            qCDebug(dcZigbeeTradfri()) << "Handeling TRADFRI remote control" << node << endpoint;
+            qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI remote control" << node << endpoint;
             createThing(remoteThingClassId, networkUuid, node, endpoint);
             initRemote(node, endpoint);
             handled = true;
@@ -111,14 +111,14 @@ bool IntegrationPluginZigbeeTradfri::handleNode(ZigbeeNode *node, const QUuid &n
 
         if (endpoint->modelIdentifier().contains("SYMFONISK")) {
             // "SYMFONISK Sound Controller"
-            qCDebug(dcZigbeeTradfri()) << "Handeling TRADFRI Symfonisk sound remote" << node << endpoint;
+            qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI Symfonisk sound remote" << node << endpoint;
             createThing(soundRemoteThingClassId, networkUuid, node, endpoint);
             initOnOffSwitch(node, endpoint);
             handled = true;
         }
 
         if (endpoint->profile() == Zigbee::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceRangeExtender) {
-            qCDebug(dcZigbeeTradfri()) << "Handeling TRADFRI signal repeater" << node << endpoint;
+            qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI signal repeater" << node << endpoint;
             createThing(signalRepeaterThingClassId, networkUuid, node, endpoint);
             handled = true;
         }
@@ -144,6 +144,7 @@ void IntegrationPluginZigbeeTradfri::init()
     hardwareManager()->zigbeeResource()->registerHandler(this, ZigbeeHardwareResource::HandlerTypeVendor);
 }
 
+#include <QMetaMethod>
 void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
 {
     Thing *thing = info->thing();
@@ -335,22 +336,6 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
         if (!levelCluster) {
             qCWarning(dcZigbeeTradfri()) << "Could not find level client cluster on" << thing << endpoint;
         } else {
-            connect(levelCluster, &ZigbeeClusterLevelControl::commandSent, thing, [=](ZigbeeClusterLevelControl::Command command, const QByteArray &payload, quint8 transactionSequenceNumber){
-                if (isDuplicate(transactionSequenceNumber)) {
-                    return;
-                }
-                qCDebug(dcZigbeeTradfri()) << thing << "level command received" << command << payload.toHex();
-                switch (command) {
-                case ZigbeeClusterLevelControl::CommandMoveWithOnOff:
-                case ZigbeeClusterLevelControl::CommandStepWithOnOff:
-                    qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Up";
-                    emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Up")));
-                    break;
-                default:
-                    break;
-                }
-            });
-
             connect(levelCluster, &ZigbeeClusterLevelControl::commandMoveSent, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::MoveMode moveMode, quint8 rate, quint8 transactionSequenceNumber){
                 if (isDuplicate(transactionSequenceNumber)) {
                     return;
@@ -358,12 +343,12 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
                 qCDebug(dcZigbeeTradfri()) << "level command move received" << withOnOff << moveMode << rate;
                 switch (moveMode) {
                 case ZigbeeClusterLevelControl::MoveModeUp:
-                    qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Up";
-                    emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Up")));
+                    qCDebug(dcZigbeeTradfri()) << thing << "button longpressed: Up";
+                    emit emitEvent(Event(remoteLongPressedEventTypeId, thing->id(), ParamList() << Param(remoteLongPressedEventButtonNameParamTypeId, "Up")));
                     break;
                 case ZigbeeClusterLevelControl::MoveModeDown:
-                    qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Down";
-                    emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Down")));
+                    qCDebug(dcZigbeeTradfri()) << thing << "button longpressed: Down";
+                    emit emitEvent(Event(remoteLongPressedEventTypeId, thing->id(), ParamList() << Param(remoteLongPressedEventButtonNameParamTypeId, "Down")));
                     break;
                 }
             });
@@ -400,20 +385,20 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
 
                 // Note: these comands are not in the specs
                 if (command == 0x07) {
-                    if (groupId == 0x00) {
+                    if (groupId == 256) {
                         qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Right";
                         emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Right")));
-                    } else if (groupId == 0x01) {
+                    } else if (groupId == 257) {
                         qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Left";
                         emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Left")));
                     }
                 } else if (command == 0x08) {
-                    if (groupId == 0x00) {
+                    if (groupId == 3328) {
                         qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Right";
-                        emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Right")));
-                    } else if (groupId == 0x01) {
+                        emit emitEvent(Event(remoteLongPressedEventTypeId, thing->id(), ParamList() << Param(remoteLongPressedEventButtonNameParamTypeId, "Right")));
+                    } else if (groupId == 3329) {
                         qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Left";
-                        emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Left")));
+                        emit emitEvent(Event(remoteLongPressedEventTypeId, thing->id(), ParamList() << Param(remoteLongPressedEventButtonNameParamTypeId, "Left")));
                     }
                 }
             });

@@ -128,7 +128,7 @@
                     "id": "19ee3f56-f958-4b04-8ea3-747b72d7c7d6",
                     "setupMethod": "JustAdd",
                     "createMethods": [ "Auto" ],
-                    "interfaces": [ "multibutton", "battery", "wirelessconnectable" ],
+                    "interfaces": [ "longpressmultibutton", "battery", "wirelessconnectable" ],
                     "paramTypes": [
                         {
                             "id": "2ee18d3e-5fb8-4809-a52a-8e420b677f6e",
@@ -202,9 +202,6 @@
                             "defaultValue": false
                         }
                     ],
-                    "actionTypes": [
-
-                    ],
                     "eventTypes": [
                         {
                             "id": "4d671edd-d57c-4f72-a43a-d8e4eaa741cf",
@@ -217,6 +214,20 @@
                                     "displayName": "Button name",
                                     "type": "QString",
                                     "allowedValues": ["Power", "Up", "Down", "Left", "Right"]
+                                }
+                            ]
+                        },
+                        {
+                            "id": "1057a5ca-8201-4b51-b6bb-d050ca3b6ca3",
+                            "name": "longPressed",
+                            "displayName": "Button longpressed",
+                            "paramTypes": [
+                                {
+                                    "id": "e06054b0-15a6-4da8-a3fb-3bf8750bde7d",
+                                    "name": "buttonName",
+                                    "displayName": "Button name",
+                                    "type": "QString",
+                                    "allowedValues": ["Up", "Down", "Left", "Right"]
                                 }
                             ]
                         }
