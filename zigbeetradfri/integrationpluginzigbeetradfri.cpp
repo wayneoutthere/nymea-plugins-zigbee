@@ -407,7 +407,7 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
 
     if (thing->thingClassId() == soundRemoteThingClassId) {
         QTimer *moveTimer = new QTimer(thing);
-        moveTimer->setInterval(1000);
+        moveTimer->setInterval(500);
         m_soundRemoteMoveTimers.insert(thing, moveTimer);
         connect(moveTimer, &QTimer::timeout, thing, [=](){
             soundRemoteMove(thing, static_cast<ZigbeeClusterLevelControl::MoveMode>(moveTimer->property("direction").toInt()));
