@@ -34,6 +34,7 @@
 #include "zigbeeutils.h"
 #include "hardware/zigbee/zigbeehardwareresource.h"
 
+#include <qmath.h>
 
 IntegrationPluginZigbeeTradfri::IntegrationPluginZigbeeTradfri()
 {
@@ -500,24 +501,17 @@ void IntegrationPluginZigbeeTradfri::thingRemoved(Thing *thing)
 void IntegrationPluginZigbeeTradfri::soundRemoteMove(Thing *thing, ZigbeeClusterLevelControl::MoveMode mode)
 {
     int currentLevel = thing->stateValue(soundRemoteLevelStateTypeId).toUInt();
+    int stepSize = thing->setting(soundRemoteSettingsStepSizeParamTypeId).toUInt();
     switch (mode) {
     case ZigbeeClusterLevelControl::MoveModeUp: {
-        uint newValue = currentLevel + thing->setting(soundRemoteSettingsStepSizeParamTypeId).toUInt();
-        if (newValue > 100) {
-            thing->setStateValue(soundRemoteLevelStateTypeId, 100);
-        } else {
-            thing->setStateValue(soundRemoteLevelStateTypeId, newValue);
-        }
+        qCDebug(dcZigbeeTradfri()) << "sound remote move up!";
+        thing->setStateValue(soundRemoteLevelStateTypeId, qMin(100, currentLevel + stepSize));
         emitEvent(Event(soundRemoteIncreaseEventTypeId, thing->id()));
         break;
     }
     case ZigbeeClusterLevelControl::MoveModeDown: {
-        int newValue = currentLevel - thing->setting(soundRemoteSettingsStepSizeParamTypeId).toUInt();
-        if (newValue < 0) {
-            thing->setStateValue(soundRemoteLevelStateTypeId, 0);
-        } else {
-            thing->setStateValue(soundRemoteLevelStateTypeId, newValue);
-        }
+        qCDebug(dcZigbeeTradfri()) << "sound remote move down!";
+        thing->setStateValue(soundRemoteLevelStateTypeId, qMax(0, currentLevel - stepSize));
         emitEvent(Event(soundRemoteDecreaseEventTypeId, thing->id()));
         break;
     }
