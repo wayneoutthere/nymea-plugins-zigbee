@@ -385,8 +385,8 @@
                         {
                             "id": "fed7582b-c057-42ab-b7c0-d562a2e7917c",
                             "name": "isPresent",
-                            "displayName": "Present",
-                            "displayNameEvent": "Present changed",
+                            "displayName": "Presence",
+                            "displayNameEvent": "Presence changed",
                             "type": "bool",
                             "defaultValue": true,
                             "ioType": "digitalInput"
@@ -484,8 +484,8 @@
                         {
                             "id": "9a30ff91-64cb-432c-8db7-cf6a751e8601",
                             "name": "isPresent",
-                            "displayName": "Present",
-                            "displayNameEvent": "Present changed",
+                            "displayName": "Presence",
+                            "displayNameEvent": "Presence changed",
                             "type": "bool",
                             "defaultValue": true,
                             "ioType": "digitalInput"

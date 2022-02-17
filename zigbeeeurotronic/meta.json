@@ -1,0 +1,13 @@
+{
+    "title": "ZigBee Eurotronic",
+    "tagline": "Connect and control the Eurotronic SPIRIT ZigBee radiator thermostat.",
+    "icon": "eurotronic-logo.png",
+    "stability": "consumer",
+    "offline": true,
+    "technologies": [
+        "zigbee"
+    ],
+    "categories": [
+        "heating"
+    ]
+}

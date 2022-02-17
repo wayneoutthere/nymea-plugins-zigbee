@@ -20,6 +20,15 @@ Description: nymea integration plugin for Develco ZigBee devices
  made by Develco.
 
 
+Package: nymea-plugin-zigbee-eurotronic
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+Description: nymea integration plugin for Eurotronic devices
+ This package contains the nymea integration plugin for ZigBee based devices
+ made by Eurotronic.
+
+
 Package: nymea-plugin-zigbee-generic
 Architecture: any
 Depends: ${shlibs:Depends},
@@ -82,6 +91,7 @@ Package: nymea-plugins-zigbee
 Section: libs    
 Architecture: all
 Depends: nymea-plugin-zigbee-develco,
+         nymea-plugin-zigbee-eurotronic,
          nymea-plugin-zigbee-lumi,
          nymea-plugin-zigbee-generic,
          nymea-plugin-zigbee-generic-lights,

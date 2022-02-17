@@ -287,32 +287,12 @@ void IntegrationPluginZigbeeGeneric::setupThing(ThingSetupInfo *info)
         }
 
         // Read initial attribute values
-        ZigbeeClusterReply *reply = thermostatCluster->readAttributes({ZigbeeClusterThermostat::AttributeLocalTemperature,
-                                                                       ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint,
-                                                                       ZigbeeClusterThermostat::AttributePIHeatingDemand,
-                                                                       ZigbeeClusterThermostat::AttributePICoolingDemand});
-        connect(reply, &ZigbeeClusterReply::finished, thing, [=](){
-            if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(dcZigbeeGeneric()) << "Reading thermostat attributes finished with error" << reply->error();
-                return;
-            }
-
-            QList<ZigbeeClusterLibrary::ReadAttributeStatusRecord> attributeStatusRecords = ZigbeeClusterLibrary::parseAttributeStatusRecords(reply->responseFrame().payload);
-            foreach (const ZigbeeClusterLibrary::ReadAttributeStatusRecord &record, attributeStatusRecords) {
-                if (record.attributeId == ZigbeeClusterThermostat::AttributeLocalTemperature) {
-                    thing->setStateValue(thermostatTemperatureStateTypeId, record.dataType.toInt16() * 0.01);
-                }
-                if (record.attributeId == ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint) {
-                    thing->setStateValue(thermostatTargetTemperatureStateTypeId, record.dataType.toInt16() * 0.01);
-                }
-                if (record.attributeId == ZigbeeClusterThermostat::AttributePIHeatingDemand) {
-                    thing->setStateValue(thermostatHeatingOnStateTypeId, record.dataType.toUInt8() > 0);
-                }
-                if (record.attributeId == ZigbeeClusterThermostat::AttributePICoolingDemand) {
-                    thing->setStateValue(thermostatCoolingOnStateTypeId, record.dataType.toUInt8() > 0);
-                }
-            }
-        });
+        thermostatCluster->readAttributes({ZigbeeClusterThermostat::AttributeLocalTemperature,
+                                           ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint,
+                                           ZigbeeClusterThermostat::AttributeMinHeatSetpointLimit,
+                                           ZigbeeClusterThermostat::AttributeMaxHeatSetpointLimit,
+                                           ZigbeeClusterThermostat::AttributePIHeatingDemand,
+                                           ZigbeeClusterThermostat::AttributePICoolingDemand});
 
         // Connect to attribute changes
         connect(thermostatCluster, &ZigbeeClusterThermostat::attributeChanged, thing, [thing](const ZigbeeClusterAttribute &attribute){
@@ -328,6 +308,12 @@ void IntegrationPluginZigbeeGeneric::setupThing(ThingSetupInfo *info)
             }
             if (attribute.id() == ZigbeeClusterThermostat::AttributePICoolingDemand) {
                 thing->setStateValue(thermostatCoolingOnStateTypeId, attribute.dataType().toUInt8() > 0);
+            }
+            if (attribute.id() == ZigbeeClusterThermostat::AttributeMinHeatSetpointLimit) {
+                thing->setStateMinValue(thermostatTargetTemperatureStateTypeId, attribute.dataType().toUInt16() * 0.01);
+            }
+            if (attribute.id() == ZigbeeClusterThermostat::AttributeMaxHeatSetpointLimit) {
+                thing->setStateMaxValue(thermostatTargetTemperatureStateTypeId, attribute.dataType().toUInt16() * 0.01);
             }
         });
     }
@@ -453,20 +439,10 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
                 return;
             }
             qint16 targetTemp = qRound(info->action().paramValue(thermostatTargetTemperatureStateTypeId).toDouble() * 10) * 10;
-            // TODO: The following should probably move into libnymea-zibee prividing a
-            // thermostatCluster->writeOccupiedHeatingSetpoint(targetTemp);
-            ZigbeeDataType dataType(targetTemp);
-            QList<ZigbeeClusterLibrary::WriteAttributeRecord> attributes;
-            ZigbeeClusterLibrary::WriteAttributeRecord occupiedHeatingSetpointAttribute;
-            occupiedHeatingSetpointAttribute.attributeId = ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint;
-            occupiedHeatingSetpointAttribute.dataType = dataType.dataType();
-            occupiedHeatingSetpointAttribute.data = dataType.data();
-            attributes.append(occupiedHeatingSetpointAttribute);
-            qCDebug(dcZigbeeGeneric()) << "Writing target temp" << targetTemp << occupiedHeatingSetpointAttribute.data;
-            ZigbeeClusterReply *reply = thermostatCluster->writeAttributes(attributes);
+            ZigbeeClusterReply *reply = thermostatCluster->setOccupiedHeatingSetpoint(targetTemp);
             connect(reply, &ZigbeeClusterReply::finished, info, [info, reply](){
-                qCDebug(dcZigbeeGeneric()) << "Writing attributes finished:" << reply->error();
                 if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
+                    qCWarning(dcZigbeeGeneric()) << "Error setting target temperture:" << reply->error();
                     info->finish(Thing::ThingErrorHardwareFailure);
                     return;
                 }
