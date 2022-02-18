@@ -471,10 +471,13 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
     if (thing->thingClassId() == lumiButtonSensorThingClassId) {
         ZigbeeClusterOnOff *onOffCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
         if (onOffCluster) {
-            connect(onOffCluster, &ZigbeeClusterOnOff::powerChanged, thing, [this, thing](bool power){
-                qCDebug(dcZigbeeLumi()) << thing << "state changed" << (power ? "pressed" : "released");
-                if (!power) {
-                    emitEvent(Event(lumiButtonSensorPressedEventTypeId, thing->id()));
+            connect(onOffCluster, &ZigbeeClusterOnOff::attributeChanged, thing, [thing](const ZigbeeClusterAttribute &attribute){
+                qCDebug(dcZigbeeLumi()) << thing->name() << "Attribute changed:" << attribute;
+                if (attribute.id() == ZigbeeClusterOnOff::AttributeOnOff && attribute.dataType().toUInt8() == 0x01) {
+                    thing->emitEvent(lumiButtonSensorPressedEventTypeId, {Param(lumiButtonSensorPressedEventButtonNameParamTypeId, 1)});
+                } else if (attribute.id() == 0x8000) {
+                    quint8 count = attribute.dataType().toUInt8();
+                    thing->emitEvent(lumiButtonSensorPressedEventTypeId, {Param(lumiButtonSensorPressedEventButtonNameParamTypeId, count)});
                 }
             });
         } else {
