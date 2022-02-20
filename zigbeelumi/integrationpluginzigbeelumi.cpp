@@ -242,7 +242,22 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
                 thing->setStateValue(lumiMagnetSensorClosedStateTypeId, !power);
             });
         } else {
-            qCWarning(dcZigbeeLumi()) << "Could not find the OnOff input cluster on" << thing << endpoint;
+            qCDebug(dcZigbeeLumi()) << "Could not find the OnOff input cluster on" << thing->name() << endpoint;
+            // The lumi.sensor_magnet does not reply to endpoint introspection so the OnOff cluster may not exist directly after
+            // pairing yet. Once the sensor is actually opened/closed, it will create the cluster and we can connect to it.
+            connect(endpoint, &ZigbeeNodeEndpoint::inputClusterAdded, thing, [thing](ZigbeeCluster *cluster){
+                if (cluster->clusterId() == ZigbeeClusterLibrary::ClusterIdOnOff) {
+                    qCDebug(dcZigbeeLumi()) << "OnOff cluster appeared on" << thing->name();
+                    ZigbeeClusterOnOff *onOffCluster = qobject_cast<ZigbeeClusterOnOff*>(cluster);
+                    if (onOffCluster->hasAttribute(ZigbeeClusterOnOff::AttributeOnOff)) {
+                        thing->setStateValue(lumiMagnetSensorClosedStateTypeId, !onOffCluster->power());
+                    }
+                    connect(onOffCluster, &ZigbeeClusterOnOff::powerChanged, thing, [thing](bool power){
+                        qCDebug(dcZigbeeLumi()) << thing << "state changed" << (power ? "closed" : "open");
+                        thing->setStateValue(lumiMagnetSensorClosedStateTypeId, !power);
+                    });
+                }
+            });
         }
     }
 
