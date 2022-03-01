@@ -216,8 +216,7 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &n
 void IntegrationPluginZigbeeGeneric::handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid)
 {
     Q_UNUSED(networkUuid)
-    Thing *thing = m_thingNodes.key(node);
-    if (thing) {
+    foreach (Thing *thing, m_thingNodes.keys(node)) {
         qCDebug(dcZigbeeGeneric()) << node << "for" << thing << "has left the network.";
         emit autoThingDisappeared(thing->id());
 
