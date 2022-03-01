@@ -601,6 +601,33 @@ void IntegrationPluginZigbeeGeneric::initSimplePowerSocket(ZigbeeNode *node, Zig
             return;
         }
     });
+
+    ZigbeeDeviceObjectReply *bindPowerReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdOnOff,
+                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
+    connect(bindPowerReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+        if (bindPowerReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(dcZigbeeGeneric()) << "Failed to bind power configuration cluster" << bindPowerReply->error();
+        } else {
+            qCDebug(dcZigbeeGeneric()) << "Binding power configuration cluster finished successfully";
+        }
+
+        ZigbeeClusterLibrary::AttributeReportingConfiguration batteryPercentageConfig;
+        batteryPercentageConfig.attributeId = ZigbeeClusterOnOff::AttributeOnOff;
+        batteryPercentageConfig.dataType = Zigbee::Uint8;
+        batteryPercentageConfig.minReportingInterval = 60;
+        batteryPercentageConfig.maxReportingInterval = 120;
+        batteryPercentageConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+        qCDebug(dcZigbeeGeneric()) << "Configuring attribute reporting for OnOff cluster";
+        ZigbeeClusterReply *reportingReply = onOffCluster->configureReporting({batteryPercentageConfig});
+        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+                qCWarning(dcZigbeeGeneric()) << "Failed to configure OnOff cluster attribute reporting" << reportingReply->error();
+            } else {
+                qCDebug(dcZigbeeGeneric()) << "Attribute reporting configuration finished for OnOff cluster" << ZigbeeClusterLibrary::parseAttributeReportingStatusRecords(reportingReply->responseFrame().payload);
+            }
+        });
+    });
 }
 
 void IntegrationPluginZigbeeGeneric::initDoorLock(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
