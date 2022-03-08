@@ -299,7 +299,13 @@ void ZigbeeIntegrationPlugin::connectToThermostatCluster(Thing *thing, ZigbeeNod
 {
     ZigbeeClusterThermostat *thermostatCluster = endpoint->inputCluster<ZigbeeClusterThermostat>(ZigbeeClusterLibrary::ClusterIdThermostat);
     if (thermostatCluster) {
-        thermostatCluster->readAttributes({ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint});
+        thermostatCluster->readAttributes({ZigbeeClusterThermostat::AttributeLocalTemperature,
+                                           ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint,
+                                           ZigbeeClusterThermostat::AttributeMinHeatSetpointLimit,
+                                           ZigbeeClusterThermostat::AttributeMaxHeatSetpointLimit,
+                                           ZigbeeClusterThermostat::AttributePIHeatingDemand,
+                                           ZigbeeClusterThermostat::AttributePICoolingDemand});
+
         connect(thermostatCluster, &ZigbeeClusterThermostat::attributeChanged, thing, [thing](const ZigbeeClusterAttribute &attribute){
             if (attribute.id() == ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint) {
                 thing->setStateValue("targetTemperature", attribute.dataType().toUInt16() * 0.01);

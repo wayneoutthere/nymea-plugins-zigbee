@@ -37,76 +37,6 @@
 
 #include <QDebug>
 
-static QHash<ThingClassId, StateTypeId> batteryCriticalStateTypeIds = {
-    {thermostatThingClassId, thermostatBatteryCriticalStateTypeId},
-    {doorLockThingClassId, doorLockBatteryCriticalStateTypeId},
-    {doorSensorThingClassId, doorSensorBatteryCriticalStateTypeId},
-    {motionSensorThingClassId, motionSensorBatteryCriticalStateTypeId}
-};
-
-static QHash<ThingClassId, ParamTypeId> ieeeAddressParamTypeIds = {
-    {thermostatThingClassId, thermostatThingIeeeAddressParamTypeId},
-    {powerSocketThingClassId, powerSocketThingIeeeAddressParamTypeId},
-    {doorLockThingClassId, doorLockThingIeeeAddressParamTypeId},
-    {doorSensorThingClassId, doorSensorThingIeeeAddressParamTypeId},
-    {motionSensorThingClassId, motionSensorThingIeeeAddressParamTypeId}
-};
-
-static QHash<ThingClassId, ParamTypeId> networkUuidParamTypeIds = {
-    {thermostatThingClassId, thermostatThingNetworkUuidParamTypeId},
-    {powerSocketThingClassId, powerSocketThingNetworkUuidParamTypeId},
-    {doorLockThingClassId, doorLockThingNetworkUuidParamTypeId},
-    {doorSensorThingClassId, doorSensorThingNetworkUuidParamTypeId},
-    {motionSensorThingClassId, motionSensorThingNetworkUuidParamTypeId}
-};
-
-static QHash<ThingClassId, ParamTypeId> endpointIdParamTypeIds = {
-    {thermostatThingClassId, thermostatThingEndpointIdParamTypeId},
-    {powerSocketThingClassId, powerSocketThingEndpointIdParamTypeId},
-    {doorLockThingClassId, doorLockThingEndpointIdParamTypeId},
-    {doorSensorThingClassId, doorSensorThingEndpointIdParamTypeId},
-    {motionSensorThingClassId, motionSensorThingEndpointIdParamTypeId}
-};
-
-static QHash<ThingClassId, ParamTypeId> modelIdParamTypeIds = {
-    {thermostatThingClassId, thermostatThingManufacturerParamTypeId},
-    {powerSocketThingClassId, powerSocketThingManufacturerParamTypeId},
-    {doorLockThingClassId, doorLockThingManufacturerParamTypeId},
-    {doorSensorThingClassId, doorSensorThingManufacturerParamTypeId},
-    {motionSensorThingClassId, motionSensorThingManufacturerParamTypeId}
-};
-
-static QHash<ThingClassId, ParamTypeId> manufacturerIdParamTypeIds = {
-    {thermostatThingClassId, thermostatThingModelParamTypeId},
-    {powerSocketThingClassId, powerSocketThingModelParamTypeId},
-    {doorLockThingClassId, doorLockThingModelParamTypeId},
-    {doorSensorThingClassId, doorSensorThingModelParamTypeId},
-    {motionSensorThingClassId, motionSensorThingModelParamTypeId}
-};
-
-static QHash<ThingClassId, StateTypeId> connectedStateTypeIds = {
-    {thermostatThingClassId, thermostatConnectedStateTypeId},
-    {powerSocketThingClassId, powerSocketConnectedStateTypeId},
-    {doorLockThingClassId, doorLockConnectedStateTypeId},
-    {doorSensorThingClassId, doorSensorConnectedStateTypeId},
-    {motionSensorThingClassId, motionSensorConnectedStateTypeId}
-};
-
-static QHash<ThingClassId, StateTypeId> signalStrengthStateTypeIds = {
-    {thermostatThingClassId, thermostatSignalStrengthStateTypeId},
-    {powerSocketThingClassId, powerSocketSignalStrengthStateTypeId},
-    {doorLockThingClassId, doorLockSignalStrengthStateTypeId},
-    {doorSensorThingClassId, doorSensorSignalStrengthStateTypeId},
-    {motionSensorThingClassId, motionSensorSignalStrengthStateTypeId}
-};
-
-static QHash<ThingClassId, StateTypeId> versionStateTypeIds = {
-    {thermostatThingClassId, thermostatVersionStateTypeId},
-    {powerSocketThingClassId, powerSocketVersionStateTypeId},
-    {doorLockThingClassId, doorLockVersionStateTypeId}
-};
-
-
 IntegrationPluginZigbeeGeneric::IntegrationPluginZigbeeGeneric()
 {
 }
@@ -127,7 +57,8 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
                 endpoint->deviceId() == Zigbee::HomeAutomationDeviceThermostat) {
             qCDebug(dcZigbeeGeneric()) << "Handling thermostat endpoint for" << node << endpoint;
             createThing(thermostatThingClassId, node, {Param(thermostatThingEndpointIdParamTypeId, endpoint->endpointId())});
-            initThermostat(node, endpoint);
+            bindPowerConfigurationCluster(node, endpoint);
+            bindThermostatCluster(node, endpoint);
             handled = true;
         }
 
@@ -246,43 +177,7 @@ void IntegrationPluginZigbeeGeneric::setupThing(ThingSetupInfo *info)
 
     // Type specific setup
     if (thing->thingClassId() == thermostatThingClassId) {
-        ZigbeeClusterThermostat *thermostatCluster = endpoint->inputCluster<ZigbeeClusterThermostat>(ZigbeeClusterLibrary::ClusterIdThermostat);
-        if (!thermostatCluster) {
-            qCWarning(dcZigbeeGeneric()) << "Failed to read thermostat cluster";
-            info->finish(Thing::ThingErrorHardwareFailure);
-            return;
-        }
-
-        // Read initial attribute values
-        thermostatCluster->readAttributes({ZigbeeClusterThermostat::AttributeLocalTemperature,
-                                           ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint,
-                                           ZigbeeClusterThermostat::AttributeMinHeatSetpointLimit,
-                                           ZigbeeClusterThermostat::AttributeMaxHeatSetpointLimit,
-                                           ZigbeeClusterThermostat::AttributePIHeatingDemand,
-                                           ZigbeeClusterThermostat::AttributePICoolingDemand});
-
-        // Connect to attribute changes
-        connect(thermostatCluster, &ZigbeeClusterThermostat::attributeChanged, thing, [thing](const ZigbeeClusterAttribute &attribute){
-            qCDebug(dcZigbeeGeneric()) << "Thermostat attribute changed" << thing->name() << attribute.id() << attribute.dataType();
-            if (attribute.id() == ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint) {
-                thing->setStateValue(thermostatTargetTemperatureStateTypeId, attribute.dataType().toUInt16() * 0.01);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributeLocalTemperature) {
-                thing->setStateValue(thermostatTemperatureStateTypeId, attribute.dataType().toUInt16() * 0.01);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributePIHeatingDemand) {
-                thing->setStateValue(thermostatHeatingOnStateTypeId, attribute.dataType().toUInt8() > 0);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributePICoolingDemand) {
-                thing->setStateValue(thermostatCoolingOnStateTypeId, attribute.dataType().toUInt8() > 0);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributeMinHeatSetpointLimit) {
-                thing->setStateMinValue(thermostatTargetTemperatureStateTypeId, attribute.dataType().toUInt16() * 0.01);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributeMaxHeatSetpointLimit) {
-                thing->setStateMaxValue(thermostatTargetTemperatureStateTypeId, attribute.dataType().toUInt16() * 0.01);
-            }
-        });
+        connectToThermostatCluster(thing, endpoint);
     }
 
     if (thing->thingClassId() == powerSocketThingClassId) {
@@ -412,7 +307,7 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
             }
 
             ZigbeeClusterReply *reply = identifyCluster->identify(2);
-            connect(reply, &ZigbeeClusterReply::finished, this, [reply, info](){
+            connect(reply, &ZigbeeClusterReply::finished, info, [reply, info](){
                 info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError : Thing::ThingErrorHardwareFailure);
             });
             return;
@@ -429,6 +324,9 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
             bool power = info->action().param(powerSocketPowerActionPowerParamTypeId).value().toBool();
             ZigbeeClusterReply *reply = (power ? onOffCluster->commandOn() : onOffCluster->commandOff());
             connect(reply, &ZigbeeClusterReply::finished, info, [=](){
+                if (reply->error() == ZigbeeClusterReply::ErrorNoError) {
+                    thing->setStateValue(powerSocketPowerStateTypeId, power);
+                }
                 info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError : Thing::ThingErrorHardwareFailure);
             });
             return;
@@ -445,7 +343,7 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
             }
 
             ZigbeeClusterReply *reply = identifyCluster->identify(2);
-            connect(reply, &ZigbeeClusterReply::finished, this, [reply, info](){
+            connect(reply, &ZigbeeClusterReply::finished, info, [reply, info](){
                 info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError : Thing::ThingErrorHardwareFailure);
             });
             return;
@@ -463,6 +361,11 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
             ZigbeeClusterReply *reply = (power ? onOffCluster->commandOn() : onOffCluster->commandOff());
             connect(reply, &ZigbeeClusterReply::finished, info, [=](){
                 info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError : Thing::ThingErrorHardwareFailure);
+            });
+            connect(reply, &ZigbeeClusterReply::finished, thing, [=](){
+                if (reply->error() == ZigbeeClusterReply::ErrorNoError) {
+                    thing->setStateValue(powerMeterSocketPowerStateTypeId, power);
+                }
             });
             return;
         }
@@ -599,39 +502,6 @@ void IntegrationPluginZigbeeGeneric::initDoorLock(ZigbeeNode *node, ZigbeeNodeEn
                 qCWarning(dcZigbeeGeneric()) << "Failed to door lock cluster attribute reporting" << reportingReply->error();
             } else {
                 qCDebug(dcZigbeeGeneric()) << "Attribute reporting configuration finished for door lock cluster" << ZigbeeClusterLibrary::parseAttributeReportingStatusRecords(reportingReply->responseFrame().payload);
-            }
-        });
-    });
-}
-
-void IntegrationPluginZigbeeGeneric::initThermostat(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
-{
-    bindPowerConfigurationCluster(node, endpoint);
-
-    qCDebug(dcZigbeeGeneric()) << "Binding thermostat custer";
-    ZigbeeDeviceObjectReply *bindThermostatReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdThermostat,
-                                                                                     hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
-    connect(bindThermostatReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
-        if (bindThermostatReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
-            qCWarning(dcZigbeeGeneric()) << "Failed to bind thermostat cluster" << bindThermostatReply->error();
-        } else {
-            qCDebug(dcZigbeeGeneric()) << "Binding thermostat cluster finished successfully";
-        }
-
-        ZigbeeClusterLibrary::AttributeReportingConfiguration reportingOccupiedHeatingSetpointConfig;
-        reportingOccupiedHeatingSetpointConfig.attributeId = ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint;
-        reportingOccupiedHeatingSetpointConfig.dataType = Zigbee::Int16;
-        reportingOccupiedHeatingSetpointConfig.minReportingInterval = 300;
-        reportingOccupiedHeatingSetpointConfig.maxReportingInterval = 2700;
-        reportingOccupiedHeatingSetpointConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        qCDebug(dcZigbeeGeneric()) << "Configuring attribute reporting for thermostat cluster";
-        ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdThermostat)->configureReporting({reportingOccupiedHeatingSetpointConfig});
-        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
-            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(dcZigbeeGeneric()) << "Failed to configure thermostat cluster attribute reporting" << reportingReply->error();
-            } else {
-                qCDebug(dcZigbeeGeneric()) << "Attribute reporting configuration finished for thermostat cluster" << ZigbeeClusterLibrary::parseAttributeReportingStatusRecords(reportingReply->responseFrame().payload);
             }
         });
     });
