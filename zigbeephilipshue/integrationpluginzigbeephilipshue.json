@@ -64,8 +64,8 @@
                         {
                             "id": "3e28e0b3-fe23-4293-8876-8384def6c4fb",
                             "name": "batteryLevel",
-                            "displayName": "Battery",
-                            "displayNameEvent": "Battery changed",
+                            "displayName": "Battery level",
+                            "displayNameEvent": "Battery level changed",
                             "type": "int",
                             "unit": "Percentage",
                             "defaultValue": 0,
@@ -267,8 +267,8 @@
                         {
                             "id": "00a4450b-d2fe-4e2b-92c8-1ab3a98d1628",
                             "name": "batteryLevel",
-                            "displayName": "Battery",
-                            "displayNameEvent": "Battery changed",
+                            "displayName": "Battery level",
+                            "displayNameEvent": "Battery level changed",
                             "type": "int",
                             "unit": "Percentage",
                             "defaultValue": 0,
@@ -286,8 +286,8 @@
                         {
                             "id": "66e3b840-4f4c-4f4a-a71a-69fb751f2a3b",
                             "name": "isPresent",
-                            "displayName": "Present",
-                            "displayNameEvent": "Present changed",
+                            "displayName": "Presence",
+                            "displayNameEvent": "Presence changed",
                             "type": "bool",
                             "defaultValue": false,
                             "ioType": "digitalInput"
@@ -392,8 +392,8 @@
                         {
                             "id": "6a5f652c-5fa1-4477-a68c-ec1f2a3c1f91",
                             "name": "batteryLevel",
-                            "displayName": "Battery",
-                            "displayNameEvent": "Battery changed",
+                            "displayName": "Battery level",
+                            "displayNameEvent": "Battery level changed",
                             "type": "int",
                             "unit": "Percentage",
                             "defaultValue": 0,

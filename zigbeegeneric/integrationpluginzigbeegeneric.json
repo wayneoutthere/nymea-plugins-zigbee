@@ -60,8 +60,8 @@
                             "displayNameAction": "Set target temperature",
                             "type": "double",
                             "unit": "DegreeCelsius",
-                            "minValue": 0,
-                            "maxValue": 50,
+                            "minValue": 7,
+                            "maxValue": 30,
                             "defaultValue": 0,
                             "writable": true
                         },
@@ -122,8 +122,8 @@
                         {
                             "id": "3a733e99-850b-4c56-b058-d39850ef2fee",
                             "name": "batteryLevel",
-                            "displayName": "Battery",
-                            "displayNameEvent": "Battery changed",
+                            "displayName": "Battery level",
+                            "displayNameEvent": "Battery level changed",
                             "type": "int",
                             "unit": "Percentage",
                             "defaultValue": 0,
@@ -314,8 +314,8 @@
                         {
                             "id": "568e5bdd-47f3-4ccb-a1d8-ff3a5ea87ad8",
                             "name": "batteryLevel",
-                            "displayName": "Battery",
-                            "displayNameEvent": "Battery changed",
+                            "displayName": "Battery level",
+                            "displayNameEvent": "Battery level changed",
                             "type": "int",
                             "unit": "Percentage",
                             "defaultValue": 0,
@@ -441,7 +441,7 @@
                     "id": "500a8b65-ad34-4bf0-a35d-c167510999f2",
                     "name": "motionSensor",
                     "displayName": "Motion sensor",
-                    "interfaces": ["presencesensor"],
+                    "interfaces": ["presencesensor", "wirelessconnectable"],
                     "paramTypes": [
                         {
                             "id": "e1048378-8d3d-40ae-a2d4-070e291b9db8",

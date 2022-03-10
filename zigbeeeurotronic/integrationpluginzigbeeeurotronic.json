@@ -1,0 +1,149 @@
+{
+    "name": "ZigbeeEurotronic",
+    "displayName": "Zigbee Eurotronic",
+    "id": "1fa06c99-ddb8-4dd2-abf8-8fa1abfe6d48",
+    "vendors": [
+        {
+            "name": "eurotronic",
+            "displayName": "Eurotronic GmbH",
+            "id": "436cad23-136b-40d2-94d3-4d9af2789e60",
+            "thingClasses": [
+                {
+                    "id": "57ce4f62-d5a3-4e79-8352-96942c6e4425",
+                    "name": "spirit",
+                    "displayName": "SPIRIT ZigBee ",
+                    "createMethods": ["auto"],
+                    "interfaces": ["thermostat", "temperaturesensor", "battery",  "wirelessconnectable"],
+                    "paramTypes": [
+                        {
+                            "id": "5aff538a-f56d-4e36-b406-b24ef8ef198d",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "a9a55be3-6fb0-408e-9ce2-c984b3485766",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "20e9006f-09ec-43ea-a249-46e4894698d2",
+                            "name": "targetTemperature",
+                            "displayName": "Target temperature",
+                            "displayNameEvent": "Target temperature changed",
+                            "displayNameAction": "Set target temperature",
+                            "type": "double",
+                            "unit": "DegreeCelsius",
+                            "minValue": 5,
+                            "maxValue": 30,
+                            "defaultValue": 0,
+                            "writable": true
+                        },
+                        {
+                            "id": "68230bfe-ed04-49d6-b2ed-731fdfc35df2",
+                            "name": "temperature",
+                            "displayName": "Current temperature",
+                            "displayNameEvent": "Current temperature changed",
+                            "type": "double",
+                            "unit": "DegreeCelsius",
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "e52ad2fd-ef3e-4e99-8854-4db07281e658",
+                            "name": "heatingOn",
+                            "displayName": "Heating on",
+                            "displayNameEvent": "Heating turned on",
+                            "type": "bool",
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "ebd54153-68ec-4e3c-a370-5b0dca35741b",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "displayNameEvent": "Connected/disconnected",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "3bd33c04-37ca-4c26-b583-b6caf58b443d",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "displayNameEvent": "Signal strength changed",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "cached": false
+                        },
+                        {
+                            "id": "a6129509-e3dd-448f-8964-1817ca4c3888",
+                            "name": "batteryLevel",
+                            "displayName": "Battery level",
+                            "displayNameEvent": "Battery level changed",
+                            "type": "int",
+                            "unit": "Percentage",
+                            "defaultValue": 0,
+                            "minValue": 0,
+                            "maxValue": 100
+                        },
+                        {
+                            "id": "78e2e1b5-0de6-49f7-9b90-63d6922234af",
+                            "name": "batteryCritical",
+                            "displayName": "Battery critical",
+                            "displayNameEvent": "Battery critical changed",
+                            "type": "bool",
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "daeb8f1e-4637-406c-8b09-e441f2f53c9c",
+                            "name": "boost",
+                            "displayName": "Boost",
+                            "displayNameEvent": "Boost started/stopped",
+                            "displayNameAction": "Enable or disable boost",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "writable": true
+                        },
+                        {
+                            "id": "ddde7d49-19d4-4196-b09f-f614e04220b2",
+                            "name": "windowOpen",
+                            "displayName": "Window open lock",
+                            "displayNameEvent": "Window open lock changed",
+                            "displayNameAction": "Set window open lock",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "writable": true
+                        },
+                        {
+                            "id": "89cdbb14-d4b1-444a-a193-e760d6b6bd87",
+                            "name": "mirrorDisplay",
+                            "displayName": "Mirror display",
+                            "displayNameEvent": "Mirror display changed",
+                            "displayNameAction": "Set mirror display",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "writable": true
+                        },
+                        {
+                            "id": "e31bb876-cc60-4127-bb6b-7d3a4b07fa11",
+                            "name": "childLock",
+                            "displayName": "Child protection lock",
+                            "displayNameEvent": "Child protection lock enabled or disabled",
+                            "displayNameAction": "Set child protection lock",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "writable": true
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

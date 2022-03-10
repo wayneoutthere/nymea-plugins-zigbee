@@ -2,6 +2,7 @@ TEMPLATE = subdirs
 
 PLUGIN_DIRS = \
     zigbeedevelco       \
+    zigbeeeurotronic    \
     zigbeegeneric       \
     zigbeegenericlights \
     zigbeelumi          \
