@@ -1,3 +1,25 @@
+nymea-plugins-zigbee (1.0.0) xenial; urgency=medium
+
+  [ Michael Zanetti ]
+  * Update project/packaging files for the standalone repository
+
+  [ Simon Stürz ]
+  * Tradfri: Update ikea symfonisk
+  * Tradfri: Fix on/off button pressed event params
+
+  [ Michael Zanetti ]
+  * Lumi: Add support for energy metering on lumi plugs
+  * New Plugin: Eurotronic
+  * Lumi: Fix button multipress support
+  * Lumi: Fix connecting to the OnOff cluster directly after pairing
+  * Generic: Fixes in generic power socket handling (for Lidl power
+    strip)
+  * Lumi: Add support for the second variant of the lumi button
+
+  [ Jenkins ]
+
+ -- Jenkins <jenkins@nymea.io>  Thu, 10 Mar 2022 13:58:29 +0100
+
 nymea-plugins-zigbee (0.30.0) xenial; urgency=medium
 
   * Initial breakout of nymea-plugins repository
