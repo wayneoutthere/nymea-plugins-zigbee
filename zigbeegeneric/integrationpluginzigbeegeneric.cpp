@@ -216,8 +216,7 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &n
 void IntegrationPluginZigbeeGeneric::handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid)
 {
     Q_UNUSED(networkUuid)
-    Thing *thing = m_thingNodes.key(node);
-    if (thing) {
+    foreach (Thing *thing, m_thingNodes.keys(node)) {
         qCDebug(dcZigbeeGeneric()) << node << "for" << thing << "has left the network.";
         emit autoThingDisappeared(thing->id());
 
@@ -600,6 +599,33 @@ void IntegrationPluginZigbeeGeneric::initSimplePowerSocket(ZigbeeNode *node, Zig
             qCWarning(dcZigbeeGeneric()) << "Failed to read on/off cluster attribute from" << node << endpoint << reply->error();
             return;
         }
+    });
+
+    ZigbeeDeviceObjectReply *bindPowerReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdOnOff,
+                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
+    connect(bindPowerReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+        if (bindPowerReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(dcZigbeeGeneric()) << "Failed to bind power configuration cluster" << bindPowerReply->error();
+        } else {
+            qCDebug(dcZigbeeGeneric()) << "Binding power configuration cluster finished successfully";
+        }
+
+        ZigbeeClusterLibrary::AttributeReportingConfiguration batteryPercentageConfig;
+        batteryPercentageConfig.attributeId = ZigbeeClusterOnOff::AttributeOnOff;
+        batteryPercentageConfig.dataType = Zigbee::Uint8;
+        batteryPercentageConfig.minReportingInterval = 60;
+        batteryPercentageConfig.maxReportingInterval = 120;
+        batteryPercentageConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+        qCDebug(dcZigbeeGeneric()) << "Configuring attribute reporting for OnOff cluster";
+        ZigbeeClusterReply *reportingReply = onOffCluster->configureReporting({batteryPercentageConfig});
+        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+                qCWarning(dcZigbeeGeneric()) << "Failed to configure OnOff cluster attribute reporting" << reportingReply->error();
+            } else {
+                qCDebug(dcZigbeeGeneric()) << "Attribute reporting configuration finished for OnOff cluster" << ZigbeeClusterLibrary::parseAttributeReportingStatusRecords(reportingReply->responseFrame().payload);
+            }
+        });
     });
 }
 

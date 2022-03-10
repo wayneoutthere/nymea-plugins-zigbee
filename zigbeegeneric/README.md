@@ -13,9 +13,10 @@ Installing a manufacturer specific integration plugin will have higher priorty t
 > *IMPORTANT NOTE:* This list is non-exhaustive.
 
 The following list contains devices that are known to work with this plugin. If a ZigBee device is not included in the following 
-list, it does not necessarily imply that the device is not supported. It may still work if it follows the ZigBee specification.
+list, it does not necessarily imply that the device is not supported. Devices certified with the ZigBee logo are most likely to work
+regardless.
 
-> Please report any other devices successfully tested with this plugin to nymea in one of the contact channels found in nymea:apps main menu.
+> Got a device that works but is not listed here? Help us extend this list by letting us know in one of the community channels.
 
 ### On/off power sockets
 
@@ -28,6 +29,8 @@ Known to work:
 * Sonoff ZBMINI Smart Switch (ZBMINI1)
 * Feibit Light Switch (ZSW01)
 * Dresden Electronics (FLS-PP3)
+* Silvercrest (Lidl) Motion sensor (TZ1800)
+* Silvercrest (Lidl) power strip (TS011F)
 
 ### Radiator thermostats
 
