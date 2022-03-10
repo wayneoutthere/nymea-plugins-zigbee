@@ -41,6 +41,7 @@ IntegrationPluginZigbeeLumi::IntegrationPluginZigbeeLumi()
 {
     m_networkUuidParamTypeIds[lumiHTSensorThingClassId] = lumiHTSensorThingNetworkUuidParamTypeId;
     m_networkUuidParamTypeIds[lumiButtonSensorThingClassId] = lumiButtonSensorThingNetworkUuidParamTypeId;
+    m_networkUuidParamTypeIds[lumiLongpressButtonSensorThingClassId] = lumiLongpressButtonSensorThingNetworkUuidParamTypeId;
     m_networkUuidParamTypeIds[lumiMagnetSensorThingClassId] = lumiMagnetSensorThingNetworkUuidParamTypeId;
     m_networkUuidParamTypeIds[lumiMotionSensorThingClassId] = lumiMotionSensorThingNetworkUuidParamTypeId;
     m_networkUuidParamTypeIds[lumiWaterSensorThingClassId] = lumiWaterSensorThingNetworkUuidParamTypeId;
@@ -52,6 +53,7 @@ IntegrationPluginZigbeeLumi::IntegrationPluginZigbeeLumi()
 
     m_zigbeeAddressParamTypeIds[lumiHTSensorThingClassId] = lumiHTSensorThingIeeeAddressParamTypeId;
     m_zigbeeAddressParamTypeIds[lumiButtonSensorThingClassId] = lumiButtonSensorThingIeeeAddressParamTypeId;
+    m_zigbeeAddressParamTypeIds[lumiLongpressButtonSensorThingClassId] = lumiLongpressButtonSensorThingIeeeAddressParamTypeId;
     m_zigbeeAddressParamTypeIds[lumiMagnetSensorThingClassId] = lumiMagnetSensorThingIeeeAddressParamTypeId;
     m_zigbeeAddressParamTypeIds[lumiMotionSensorThingClassId] = lumiMotionSensorThingIeeeAddressParamTypeId;
     m_zigbeeAddressParamTypeIds[xiaomiMotionSensorThingClassId] = xiaomiMotionSensorThingIeeeAddressParamTypeId;
@@ -64,6 +66,7 @@ IntegrationPluginZigbeeLumi::IntegrationPluginZigbeeLumi()
 
     m_connectedStateTypeIds[lumiHTSensorThingClassId] = lumiHTSensorConnectedStateTypeId;
     m_connectedStateTypeIds[lumiButtonSensorThingClassId] = lumiButtonSensorConnectedStateTypeId;
+    m_connectedStateTypeIds[lumiLongpressButtonSensorThingClassId] = lumiLongpressButtonSensorConnectedStateTypeId;
     m_connectedStateTypeIds[lumiMagnetSensorThingClassId] = lumiMagnetSensorConnectedStateTypeId;
     m_connectedStateTypeIds[lumiMotionSensorThingClassId] = lumiMotionSensorConnectedStateTypeId;
     m_connectedStateTypeIds[xiaomiMotionSensorThingClassId] = xiaomiMotionSensorConnectedStateTypeId;
@@ -76,6 +79,7 @@ IntegrationPluginZigbeeLumi::IntegrationPluginZigbeeLumi()
 
     m_versionStateTypeIds[lumiHTSensorThingClassId] = lumiHTSensorVersionStateTypeId;
     m_versionStateTypeIds[lumiButtonSensorThingClassId] = lumiButtonSensorVersionStateTypeId;
+    m_versionStateTypeIds[lumiLongpressButtonSensorThingClassId] = lumiLongpressButtonSensorVersionStateTypeId;
     m_versionStateTypeIds[lumiMagnetSensorThingClassId] = lumiMagnetSensorVersionStateTypeId;
     m_versionStateTypeIds[lumiMotionSensorThingClassId] = lumiMotionSensorVersionStateTypeId;
     m_versionStateTypeIds[xiaomiMotionSensorThingClassId] = xiaomiMotionSensorVersionStateTypeId;
@@ -88,6 +92,7 @@ IntegrationPluginZigbeeLumi::IntegrationPluginZigbeeLumi()
 
     m_signalStrengthStateTypeIds[lumiHTSensorThingClassId] = lumiHTSensorSignalStrengthStateTypeId;
     m_signalStrengthStateTypeIds[lumiButtonSensorThingClassId] = lumiButtonSensorSignalStrengthStateTypeId;
+    m_signalStrengthStateTypeIds[lumiLongpressButtonSensorThingClassId] = lumiLongpressButtonSensorSignalStrengthStateTypeId;
     m_signalStrengthStateTypeIds[lumiMagnetSensorThingClassId] = lumiMagnetSensorSignalStrengthStateTypeId;
     m_signalStrengthStateTypeIds[lumiMotionSensorThingClassId] = lumiMotionSensorSignalStrengthStateTypeId;
     m_signalStrengthStateTypeIds[xiaomiMotionSensorThingClassId] = xiaomiMotionSensorSignalStrengthStateTypeId;
@@ -143,6 +148,17 @@ bool IntegrationPluginZigbeeLumi::handleNode(ZigbeeNode *node, const QUuid &netw
             } else {
                 thingClassId = xiaomiMotionSensorThingClassId;
             }
+
+        } if (endpoint->modelIdentifier() == "lumi.remote.b1acn01") {
+            // This is the only lumi.remote.* which is actually a button (the same case as lumi.sensor_switch.aq2)
+            // All the other lumi.remote.* are on/off rocker switches. So let's leave m_knownLumiDevices to map
+            // lumi.remote to switches, just special handle it here. Once we have more of such special cases
+            // which will sure arise, the m_knownLumiDevices mechanism probably needs a rework and use regular
+            // expressions or force listing every single supported device one by one for precise mapping.. We'll see...
+            // Also, this one supports longpress, unlike the regular lumi.button_sensor.aq2 and implements the multistate
+            // input cluster like the remotes.. Seems this is a chip for a on/off switch remote shoved into the button case
+            // and only connected one of the buttons...
+            thingClassId = lumiLongpressButtonSensorThingClassId;
 
         } else {
             foreach (const QString &knownLumi, m_knownLumiDevices.keys()) {
@@ -500,6 +516,27 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
         }
     }
 
+    if (thing->thingClassId() == lumiLongpressButtonSensorThingClassId) {
+        ZigbeeClusterMultistateInput *multistateInputCluster = endpoint->inputCluster<ZigbeeClusterMultistateInput>(ZigbeeClusterLibrary::ClusterIdMultistateInput);
+        connect(multistateInputCluster, &ZigbeeClusterMultistateInput::attributeChanged, thing, [thing](const ZigbeeClusterAttribute &attribute){
+            qCDebug(dcZigbeeLumi()) << thing->name() << "Attribute changed:" << attribute;
+            if (attribute.id() == ZigbeeClusterMultistateInput::AttributePresentValue) {
+                quint16 value = attribute.dataType().toUInt16();
+                switch (value) {
+                case 0:
+                    thing->emitEvent("longPressed", {Param(lumiLongpressButtonSensorLongPressedEventButtonNameParamTypeId, "1")});
+                    break;
+                case 1:
+                    thing->emitEvent("pressed", {Param(lumiLongpressButtonSensorPressedEventButtonNameParamTypeId, "1")});
+                    break;
+                case 2:
+                    thing->emitEvent("pressed", {Param(lumiLongpressButtonSensorPressedEventButtonNameParamTypeId, "2")});
+                    break;
+                // 0xff would be released, but nymeas longpressbutton interface doesn't use that
+                }
+            }
+        });
+    }
 
     if (thing->thingClassId() == lumiPowerSocketThingClassId) {
         ZigbeeClusterOnOff *onOffCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);

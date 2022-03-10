@@ -303,8 +303,6 @@
                             "defaultValue": ""
                         }
                     ],
-                    "actionTypes": [
-                    ],
                     "eventTypes": [
                         {
                             "id": "2515e40a-8146-4f11-8d79-2be9e20224e5",
@@ -317,6 +315,91 @@
                                     "displayName": "Count",
                                     "type": "QString",
                                     "allowedValues": ["1", "2", "3", "4"]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "name": "lumiLongpressButtonSensor",
+                    "displayName": "Button sensor",
+                    "id": "ae3c8713-4660-427b-8916-a08723183ba8",
+                    "setupMethod": "JustAdd",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "longpressmultibutton", "wirelessconnectable" ],
+                    "paramTypes": [
+                        {
+                            "id": "97e02264-deca-4968-b28e-52f7c72adade",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "5202dc9f-47aa-4169-894f-9cfb09e371d6",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "a4285c0e-52c5-47a3-9129-1454421bdd01",
+                            "name": "connected",
+                            "displayName": "Available",
+                            "displayNameEvent": "Available changed",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "d6f425ee-ff76-4e41-93c8-53efd828a169",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "displayNameEvent": "Signal strength changed",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage"
+                        },
+                        {
+                            "id": "db532b4b-2d0f-4d77-bbb5-6f81e1981161",
+                            "name": "version",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        }
+                    ],
+                    "eventTypes": [
+                        {
+                            "id": "8aa0a2e3-6338-4993-8b34-00839c2ed0c6",
+                            "name": "pressed",
+                            "displayName": "Pressed",
+                            "paramTypes": [
+                                {
+                                    "id": "b48536f9-7581-4a03-bbeb-fe8730211b27",
+                                    "name": "buttonName",
+                                    "displayName": "Count",
+                                    "type": "QString",
+                                    "allowedValues": ["1", "2"]
+                                }
+                            ]
+                        },
+                        {
+                            "id": "d8f3b35c-0834-432a-9cfc-958545e3ead2",
+                            "name": "longPressed",
+                            "displayName": "Long pressed",
+                            "paramTypes": [
+                                {
+                                    "id": "2582733c-753b-4adb-a1d2-5a58be37f3c8",
+                                    "name": "buttonName",
+                                    "displayName": "Count",
+                                    "type": "QString",
+                                    "allowedValues": ["1"]
                                 }
                             ]
                         }
