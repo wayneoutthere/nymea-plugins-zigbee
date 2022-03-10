@@ -215,10 +215,10 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
                 qCDebug(dcZigbeeTradfri()) << thing << "button pressed" << command;
                 if (command == ZigbeeClusterOnOff::CommandOn) {
                     qCDebug(dcZigbeeTradfri()) << thing << "pressed ON";
-                    emit emitEvent(Event(onOffSwitchPressedEventTypeId, thing->id(), ParamList() << Param(onOffSwitchLongPressedEventButtonNameParamTypeId, "ON")));
+                    emit emitEvent(Event(onOffSwitchPressedEventTypeId, thing->id(), ParamList() << Param(onOffSwitchPressedEventButtonNameParamTypeId, "ON")));
                 } else if (command == ZigbeeClusterOnOff::CommandOff) {
                     qCDebug(dcZigbeeTradfri()) << thing << "pressed OFF";
-                    emit emitEvent(Event(onOffSwitchPressedEventTypeId, thing->id(), ParamList() << Param(onOffSwitchLongPressedEventButtonNameParamTypeId, "OFF")));
+                    emit emitEvent(Event(onOffSwitchPressedEventTypeId, thing->id(), ParamList() << Param(onOffSwitchPressedEventButtonNameParamTypeId, "OFF")));
                 }
             });
         }
