@@ -1,0 +1,13 @@
+{
+    "title": "ZigBee Tuya",
+    "tagline": "Integrate ZigBee based devices from Tuya.",
+    "icon": "zigbee.svg",
+    "stability": "community",
+    "offline": true,
+    "technologies": [
+        "zigbee"
+    ],
+    "categories": [
+        "socket",
+    ]
+}

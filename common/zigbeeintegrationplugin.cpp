@@ -215,7 +215,21 @@ void ZigbeeIntegrationPlugin::bindElectricalMeasurementCluster(ZigbeeNodeEndpoin
         acTotalPowerConfig.maxReportingInterval = 30;
         acTotalPowerConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
 
-        ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdElectricalMeasurement)->configureReporting({acTotalPowerConfig});
+        ZigbeeClusterLibrary::AttributeReportingConfiguration rmsVoltageConfig;
+        rmsVoltageConfig.attributeId = ZigbeeClusterElectricalMeasurement::AttributeACPhaseAMeasurementRMSVoltage;
+        rmsVoltageConfig.dataType = Zigbee::Int16;
+        rmsVoltageConfig.minReportingInterval = 50;
+        rmsVoltageConfig.maxReportingInterval = 120;
+        rmsVoltageConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+        ZigbeeClusterLibrary::AttributeReportingConfiguration rmsCurrentConfig;
+        rmsCurrentConfig.attributeId = ZigbeeClusterElectricalMeasurement::AttributeACPhaseAMeasurementRMSCurrent;
+        rmsCurrentConfig.dataType = Zigbee::Int16;
+        rmsCurrentConfig.minReportingInterval = 10;
+        rmsCurrentConfig.maxReportingInterval = 120;
+        rmsCurrentConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+        ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdElectricalMeasurement)->configureReporting({acTotalPowerConfig, rmsVoltageConfig, rmsCurrentConfig});
         connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
             if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
                 qCWarning(dcZigbeeCluster()) << "Failed to configure electrical measurement cluster attribute reporting" << reportingReply->error();

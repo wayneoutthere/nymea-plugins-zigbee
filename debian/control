@@ -81,10 +81,19 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
 Description: nymea integration plugin for ZigBee based Ikea TRADRFI devices
- This package contains the nymeaintegration plugin for ZigBee based devices by
+ This package contains the nymea integration plugin for ZigBee based devices by
  Ikea, known as TRADFRI. Please note that this plugin does not work together
  with a TRADFRI bridge but instead connects to the devices directly via ZigBee
  without the need of a TRADFRI bridge.
+
+
+Package: nymea-plugin-zigbee-tuya
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+Description: nymea integration plugin for ZigBee based Tuya devices
+ This package contains the nymea integration plugin for ZigBee based devices by
+ Tuya and rebranded as various products.
 
 
 Package: nymea-plugins-zigbee
@@ -97,6 +106,7 @@ Depends: nymea-plugin-zigbee-develco,
          nymea-plugin-zigbee-generic-lights,
          nymea-plugin-zigbee-philipshue,
          nymea-plugin-zigbee-remotes,
-         nymea-plugin-zigbee-tradfri
+         nymea-plugin-zigbee-tradfri,
+         nymea-plugin-zigbee-tuya,
 Description: ZigBee integration plugins for nymea - meta package
  This package will install all ZigBee related integration plugins for nymea.

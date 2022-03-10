@@ -9,6 +9,7 @@ PLUGIN_DIRS = \
     zigbeephilipshue    \
     zigbeeremotes       \
     zigbeetradfri       \
+    zigbeetuya          \
 
 
 message(============================================)
