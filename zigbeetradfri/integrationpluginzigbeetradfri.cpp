@@ -34,6 +34,7 @@
 #include "zigbeeutils.h"
 #include "hardware/zigbee/zigbeehardwareresource.h"
 
+#include <qmath.h>
 
 IntegrationPluginZigbeeTradfri::IntegrationPluginZigbeeTradfri()
 {
@@ -89,21 +90,21 @@ bool IntegrationPluginZigbeeTradfri::handleNode(ZigbeeNode *node, const QUuid &n
     foreach (ZigbeeNodeEndpoint *endpoint, node->endpoints()) {
         if (endpoint->modelIdentifier().contains("on/off switch")) {
             // "TRADFRI on/off switch"
-            qCDebug(dcZigbeeTradfri()) << "Handeling TRADFRI on/off switch" << node << endpoint;
+            qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI on/off switch" << node << endpoint;
             createThing(onOffSwitchThingClassId, networkUuid, node, endpoint);
             initOnOffSwitch(node, endpoint);
             handled = true;
         }
 
         if (endpoint->profile() == Zigbee::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceOnOffSensor) {
-            qCDebug(dcZigbeeTradfri()) << "Handeling TRADFRI motion sensor" << node << endpoint;
+            qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI motion sensor" << node << endpoint;
             createThing(motionSensorThingClassId, networkUuid, node, endpoint);
             initMotionSensor(node, endpoint);
             handled = true;
         }
 
         if (endpoint->modelIdentifier().contains("remote control")) {
-            qCDebug(dcZigbeeTradfri()) << "Handeling TRADFRI remote control" << node << endpoint;
+            qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI remote control" << node << endpoint;
             createThing(remoteThingClassId, networkUuid, node, endpoint);
             initRemote(node, endpoint);
             handled = true;
@@ -111,14 +112,14 @@ bool IntegrationPluginZigbeeTradfri::handleNode(ZigbeeNode *node, const QUuid &n
 
         if (endpoint->modelIdentifier().contains("SYMFONISK")) {
             // "SYMFONISK Sound Controller"
-            qCDebug(dcZigbeeTradfri()) << "Handeling TRADFRI Symfonisk sound remote" << node << endpoint;
+            qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI Symfonisk sound remote" << node << endpoint;
             createThing(soundRemoteThingClassId, networkUuid, node, endpoint);
             initOnOffSwitch(node, endpoint);
             handled = true;
         }
 
         if (endpoint->profile() == Zigbee::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceRangeExtender) {
-            qCDebug(dcZigbeeTradfri()) << "Handeling TRADFRI signal repeater" << node << endpoint;
+            qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI signal repeater" << node << endpoint;
             createThing(signalRepeaterThingClassId, networkUuid, node, endpoint);
             handled = true;
         }
@@ -144,6 +145,7 @@ void IntegrationPluginZigbeeTradfri::init()
     hardwareManager()->zigbeeResource()->registerHandler(this, ZigbeeHardwareResource::HandlerTypeVendor);
 }
 
+#include <QMetaMethod>
 void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
 {
     Thing *thing = info->thing();
@@ -206,7 +208,10 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
         if (!onOffCluster) {
             qCWarning(dcZigbeeTradfri()) << "Could not find on/off client cluster on" << thing << endpoint;
         } else {
-            connect(onOffCluster, &ZigbeeClusterOnOff::commandSent, thing, [=](ZigbeeClusterOnOff::Command command){
+            connect(onOffCluster, &ZigbeeClusterOnOff::commandSent, thing, [=](ZigbeeClusterOnOff::Command command, const QByteArray &/*payload*/, quint8 transactionSequenceNumber){
+                if (isDuplicate(transactionSequenceNumber)) {
+                    return;
+                }
                 qCDebug(dcZigbeeTradfri()) << thing << "button pressed" << command;
                 if (command == ZigbeeClusterOnOff::CommandOn) {
                     qCDebug(dcZigbeeTradfri()) << thing << "pressed ON";
@@ -223,7 +228,10 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
         if (!levelCluster) {
             qCWarning(dcZigbeeTradfri()) << "Could not find level client cluster on" << thing << endpoint;
         } else {
-            connect(levelCluster, &ZigbeeClusterLevelControl::commandSent, thing, [=](ZigbeeClusterLevelControl::Command command, const QByteArray &payload){
+            connect(levelCluster, &ZigbeeClusterLevelControl::commandSent, thing, [=](ZigbeeClusterLevelControl::Command command, const QByteArray &payload, quint8 transactionSequenceNumber){
+                if (isDuplicate(transactionSequenceNumber)) {
+                    return;
+                }
                 qCDebug(dcZigbeeTradfri()) << thing << "button pressed" << command << payload.toHex();
                 switch (command) {
                 case ZigbeeClusterLevelControl::CommandMoveWithOnOff:
@@ -312,7 +320,10 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
         if (!onOffCluster) {
             qCWarning(dcZigbeeTradfri()) << "Could not find on/off client cluster on" << thing << endpoint;
         } else {
-            connect(onOffCluster, &ZigbeeClusterOnOff::commandSent, thing, [=](ZigbeeClusterOnOff::Command command){
+            connect(onOffCluster, &ZigbeeClusterOnOff::commandSent, thing, [=](ZigbeeClusterOnOff::Command command, const QByteArray &/*parameters*/, quint8 transactionSequenceNumber){
+                if (isDuplicate(transactionSequenceNumber)) {
+                    return;
+                }
                 qCDebug(dcZigbeeTradfri()) << thing << "power command received" << command;
                 if (command == ZigbeeClusterOnOff::CommandToggle) {
                     qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Power";
@@ -326,34 +337,27 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
         if (!levelCluster) {
             qCWarning(dcZigbeeTradfri()) << "Could not find level client cluster on" << thing << endpoint;
         } else {
-            connect(levelCluster, &ZigbeeClusterLevelControl::commandSent, thing, [=](ZigbeeClusterLevelControl::Command command, const QByteArray &payload){
-                qCDebug(dcZigbeeTradfri()) << thing << "level command received" << command << payload.toHex();
-                switch (command) {
-                case ZigbeeClusterLevelControl::CommandMoveWithOnOff:
-                case ZigbeeClusterLevelControl::CommandStepWithOnOff:
-                    qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Up";
-                    emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Up")));
-                    break;
-                default:
-                    break;
+            connect(levelCluster, &ZigbeeClusterLevelControl::commandMoveSent, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::MoveMode moveMode, quint8 rate, quint8 transactionSequenceNumber){
+                if (isDuplicate(transactionSequenceNumber)) {
+                    return;
                 }
-            });
-
-            connect(levelCluster, &ZigbeeClusterLevelControl::commandMoveSent, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::MoveMode moveMode, quint8 rate){
                 qCDebug(dcZigbeeTradfri()) << "level command move received" << withOnOff << moveMode << rate;
                 switch (moveMode) {
                 case ZigbeeClusterLevelControl::MoveModeUp:
-                    qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Up";
-                    emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Up")));
+                    qCDebug(dcZigbeeTradfri()) << thing << "button longpressed: Up";
+                    emit emitEvent(Event(remoteLongPressedEventTypeId, thing->id(), ParamList() << Param(remoteLongPressedEventButtonNameParamTypeId, "Up")));
                     break;
                 case ZigbeeClusterLevelControl::MoveModeDown:
-                    qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Down";
-                    emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Down")));
+                    qCDebug(dcZigbeeTradfri()) << thing << "button longpressed: Down";
+                    emit emitEvent(Event(remoteLongPressedEventTypeId, thing->id(), ParamList() << Param(remoteLongPressedEventButtonNameParamTypeId, "Down")));
                     break;
                 }
             });
 
-            connect(levelCluster, &ZigbeeClusterLevelControl::commandStepSent, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::StepMode stepMode, quint8 stepSize, quint16 transitionTime){
+            connect(levelCluster, &ZigbeeClusterLevelControl::commandStepSent, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::StepMode stepMode, quint8 stepSize, quint16 transitionTime, quint8 transactionSequenceNumber){
+                if (isDuplicate(transactionSequenceNumber)) {
+                    return;
+                }
                 qCDebug(dcZigbeeTradfri()) << "level command step received" << withOnOff << stepMode << stepSize << transitionTime;
                 switch (stepMode) {
                 case ZigbeeClusterLevelControl::StepModeUp:
@@ -373,25 +377,29 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
         if (!scenesCluster) {
             qCWarning(dcZigbeeTradfri()) << "Could not find scenes client cluster on" << thing << endpoint;
         } else {
-            connect(scenesCluster, &ZigbeeClusterScenes::commandSent, thing, [=](ZigbeeClusterScenes::Command command, quint16 groupId, quint8 sceneId){
+            connect(scenesCluster, &ZigbeeClusterScenes::commandSent, thing, [=](ZigbeeClusterScenes::Command command, quint16 groupId, quint8 sceneId, quint8 transactionSequenceNumber){
+                if (isDuplicate(transactionSequenceNumber)) {
+                    return;
+                }
+
                 qCDebug(dcZigbeeTradfri()) << thing << "scene command received" << command << groupId << sceneId;
 
                 // Note: these comands are not in the specs
                 if (command == 0x07) {
-                    if (groupId == 0x00) {
+                    if (groupId == 256) {
                         qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Right";
                         emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Right")));
-                    } else if (groupId == 0x01) {
+                    } else if (groupId == 257) {
                         qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Left";
                         emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Left")));
                     }
                 } else if (command == 0x08) {
-                    if (groupId == 0x00) {
+                    if (groupId == 3328) {
                         qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Right";
-                        emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Right")));
-                    } else if (groupId == 0x01) {
+                        emit emitEvent(Event(remoteLongPressedEventTypeId, thing->id(), ParamList() << Param(remoteLongPressedEventButtonNameParamTypeId, "Right")));
+                    } else if (groupId == 3329) {
                         qCDebug(dcZigbeeTradfri()) << thing << "button pressed: Left";
-                        emit emitEvent(Event(remotePressedEventTypeId, thing->id(), ParamList() << Param(remotePressedEventButtonNameParamTypeId, "Left")));
+                        emit emitEvent(Event(remoteLongPressedEventTypeId, thing->id(), ParamList() << Param(remoteLongPressedEventButtonNameParamTypeId, "Left")));
                     }
                 }
             });
@@ -399,6 +407,13 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
     }
 
     if (thing->thingClassId() == soundRemoteThingClassId) {
+        QTimer *moveTimer = new QTimer(thing);
+        moveTimer->setInterval(500);
+        m_soundRemoteMoveTimers.insert(thing, moveTimer);
+        connect(moveTimer, &QTimer::timeout, thing, [=](){
+            soundRemoteMove(thing, static_cast<ZigbeeClusterLevelControl::MoveMode>(moveTimer->property("direction").toInt()));
+        });
+
         // Get battery level changes
         ZigbeeClusterPowerConfiguration *powerCluster = endpoint->inputCluster<ZigbeeClusterPowerConfiguration>(ZigbeeClusterLibrary::ClusterIdPowerConfiguration);
         if (!powerCluster) {
@@ -422,11 +437,14 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
         if (!onOffCluster) {
             qCWarning(dcZigbeeTradfri()) << "Could not find on/off client cluster on" << thing << endpoint;
         } else {
-            connect(onOffCluster, &ZigbeeClusterOnOff::commandSent, thing, [=](ZigbeeClusterOnOff::Command command){
-                qCDebug(dcZigbeeTradfri()) << thing << "button pressed" << command;
+            connect(onOffCluster, &ZigbeeClusterOnOff::commandSent, thing, [=](ZigbeeClusterOnOff::Command command, const QByteArray &payload, quint8 transactionSequenceNumber){
+                if (isDuplicate(transactionSequenceNumber)) {
+                    return;
+                }
+                qCDebug(dcZigbeeTradfri()) << thing << "button pressed" << command << payload;
                 if (command == ZigbeeClusterOnOff::CommandToggle) {
                     qCDebug(dcZigbeeTradfri()) << thing << "pressed power";
-                    emit emitEvent(Event(soundRemotePressedEventTypeId, thing->id(), ParamList() << Param(soundRemotePressedEventButtonNameParamTypeId, "Power")));
+                    emit emitEvent(Event(soundRemotePressedEventTypeId, thing->id()));
                 }
             });
         }
@@ -436,20 +454,24 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
         if (!levelCluster) {
             qCWarning(dcZigbeeTradfri()) << "Could not find level client cluster on" << thing << endpoint;
         } else {
+            connect(levelCluster, &ZigbeeClusterLevelControl::commandMoveSent, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::MoveMode moveMode, quint8 rate, quint8 transactionSequenceNumber){
+                Q_UNUSED(withOnOff)
+                Q_UNUSED(rate)
+                if (isDuplicate(transactionSequenceNumber)) {
+                    return;
+                }
+                qCDebug(dcZigbeeTradfri()) << thing->name() << "starting move timer";
+                soundRemoteMove(thing, moveMode);
+                m_soundRemoteMoveTimers.value(thing)->setProperty("direction", moveMode);
+                m_soundRemoteMoveTimers.value(thing)->start();
+            });
+
             connect(levelCluster, &ZigbeeClusterLevelControl::commandSent, thing, [=](ZigbeeClusterLevelControl::Command command, const QByteArray &payload){
-                qCDebug(dcZigbeeTradfri()) << thing << "level cluster command sent" << command << payload.toHex();
-                //                switch (command) {
-                //                case ZigbeeClusterLevelControl::CommandMoveWithOnOff:
-                //                    qCDebug(dcZigbeeTradfri()) << thing << "long pressed ON";
-                //                    emit emitEvent(Event(onOffSwitchLongPressedEventTypeId, thing->id(), ParamList() << Param(onOffSwitchLongPressedEventButtonNameParamTypeId, "ON")));
-                //                    break;
-                //                case ZigbeeClusterLevelControl::CommandMove:
-                //                    qCDebug(dcZigbeeTradfri()) << thing << "long pressed OFF";
-                //                    emit emitEvent(Event(onOffSwitchLongPressedEventTypeId, thing->id(), ParamList() << Param(onOffSwitchLongPressedEventButtonNameParamTypeId, "OFF")));
-                //                    break;
-                //                default:
-                //                    break;
-                //                }
+                Q_UNUSED(payload)
+                if (command == ZigbeeClusterLevelControl::CommandStop) {
+                    qCDebug(dcZigbeeTradfri()) << thing->name() << "stopping move timer";
+                    m_soundRemoteMoveTimers.value(thing)->stop();
+                }
             });
         }
     }
@@ -469,6 +491,30 @@ void IntegrationPluginZigbeeTradfri::thingRemoved(Thing *thing)
     if (node) {
         QUuid networkUuid = thing->paramValue(m_networkUuidParamTypeIds.value(thing->thingClassId())).toUuid();
         hardwareManager()->zigbeeResource()->removeNodeFromNetwork(networkUuid, node);
+    }
+
+    if (thing->thingClassId() == soundRemoteThingClassId) {
+        delete m_soundRemoteMoveTimers.take(thing);
+    }
+}
+
+void IntegrationPluginZigbeeTradfri::soundRemoteMove(Thing *thing, ZigbeeClusterLevelControl::MoveMode mode)
+{
+    int currentLevel = thing->stateValue(soundRemoteLevelStateTypeId).toUInt();
+    int stepSize = thing->setting(soundRemoteSettingsStepSizeParamTypeId).toUInt();
+    switch (mode) {
+    case ZigbeeClusterLevelControl::MoveModeUp: {
+        qCDebug(dcZigbeeTradfri()) << "sound remote move up!";
+        thing->setStateValue(soundRemoteLevelStateTypeId, qMin(100, currentLevel + stepSize));
+        emitEvent(Event(soundRemoteIncreaseEventTypeId, thing->id()));
+        break;
+    }
+    case ZigbeeClusterLevelControl::MoveModeDown: {
+        qCDebug(dcZigbeeTradfri()) << "sound remote move down!";
+        thing->setStateValue(soundRemoteLevelStateTypeId, qMax(0, currentLevel - stepSize));
+        emitEvent(Event(soundRemoteDecreaseEventTypeId, thing->id()));
+        break;
+    }
     }
 }
 
@@ -594,19 +640,19 @@ void IntegrationPluginZigbeeTradfri::initOnOffSwitch(ZigbeeNode *node, ZigbeeNod
 void IntegrationPluginZigbeeTradfri::initRemote(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
 {
 
-//    if (endpoint->hasOutputCluster(ZigbeeClusterLibrary::ClusterIdGroups)) {
-//        qCDebug(dcZigbeeTradfri()) << "Try to add group...";
-//        ZigbeeClusterGroups *groupCluster = endpoint->outputCluster<ZigbeeClusterGroups>(ZigbeeClusterLibrary::ClusterIdGroups);
-//        ZigbeeClusterReply *reply = groupCluster->addGroup(0x0000, QString());
-//        connect(reply, &ZigbeeClusterReply::finished, node, [=](){
-//            if (reply->error()) {
-//                qCWarning(dcZigbeeTradfri()) << "Failed to add remote to group 0x0000";
-//                return;
-//            }
+    //    if (endpoint->hasOutputCluster(ZigbeeClusterLibrary::ClusterIdGroups)) {
+    //        qCDebug(dcZigbeeTradfri()) << "Try to add group...";
+    //        ZigbeeClusterGroups *groupCluster = endpoint->outputCluster<ZigbeeClusterGroups>(ZigbeeClusterLibrary::ClusterIdGroups);
+    //        ZigbeeClusterReply *reply = groupCluster->addGroup(0x0000, QString());
+    //        connect(reply, &ZigbeeClusterReply::finished, node, [=](){
+    //            if (reply->error()) {
+    //                qCWarning(dcZigbeeTradfri()) << "Failed to add remote to group 0x0000";
+    //                return;
+    //            }
 
 
-//        });
-//    }
+    //        });
+    //    }
 
     // Read battery, bind and configure attribute reporting for battery
     if (!endpoint->hasInputCluster(ZigbeeClusterLibrary::ClusterIdPowerConfiguration)) {
@@ -760,5 +806,15 @@ void IntegrationPluginZigbeeTradfri::initMotionSensor(ZigbeeNode *node, ZigbeeNo
             });
         });
     });
+}
+
+bool IntegrationPluginZigbeeTradfri::isDuplicate(quint8 transactionSequenceNumber)
+{
+    if (m_lastReceivedTransactionSequenceNumber == transactionSequenceNumber) {
+        qCDebug(dcZigbeeTradfri()) << "Duplicate packet detected. TSN:" << transactionSequenceNumber;
+        return true;
+    }
+    m_lastReceivedTransactionSequenceNumber = transactionSequenceNumber;
+    return false;
 }
 

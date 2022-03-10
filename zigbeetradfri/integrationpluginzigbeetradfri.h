@@ -35,6 +35,8 @@
 #include "hardware/zigbee/zigbeehandler.h"
 #include "plugintimer.h"
 
+#include "extern-plugininfo.h"
+
 #include <QTimer>
 
 class IntegrationPluginZigbeeTradfri: public IntegrationPlugin, public ZigbeeHandler
@@ -56,9 +58,13 @@ public:
     void executeAction(ThingActionInfo *info) override;
     void thingRemoved(Thing *thing) override;
 
+private slots:
+    void soundRemoteMove(Thing *thing, ZigbeeClusterLevelControl::MoveMode mode);
+
 private:
     PluginTimer *m_presenceTimer = nullptr;
     QHash<Thing*, ZigbeeNode*> m_thingNodes;
+    quint8 m_lastReceivedTransactionSequenceNumber = 0;
 
     QHash<ThingClassId, ParamTypeId> m_ieeeAddressParamTypeIds;
     QHash<ThingClassId, ParamTypeId> m_networkUuidParamTypeIds;
@@ -68,6 +74,8 @@ private:
     QHash<ThingClassId, StateTypeId> m_signalStrengthStateTypeIds;
     QHash<ThingClassId, StateTypeId> m_versionStateTypeIds;
 
+    QHash<Thing*, QTimer*> m_soundRemoteMoveTimers;
+
     ZigbeeNodeEndpoint *findEndpoint(Thing *thing);
     void createThing(const ThingClassId &thingClassId, const QUuid &networkUuid, ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
 
@@ -75,6 +83,7 @@ private:
     void initRemote(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void initMotionSensor(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
 
+    bool isDuplicate(quint8 transactionSequenceNumber);
 };
 
 #endif // INTEGRATIONPLUGINZIGBEETRADFRI_H
