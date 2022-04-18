@@ -77,7 +77,7 @@ private:
     // Action help methods since they work all the same
     void executeAlertAction(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);
     void executePowerAction(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint, const StateTypeId &powerStateTypeId, bool power);
-    void executeBrightnessAction(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint, const StateTypeId &powerStateTypeId, const StateTypeId &brightnessStateTypeId, int brightness, quint8 level);
+    void executeBrightnessAction(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint, const StateTypeId &brightnessStateTypeId, int brightness, quint8 level);
     void executeColorTemperatureAction(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint, const StateTypeId &colorTemperatureStateTypeId, int colorTemperatureScaled);
     void executeColorAction(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint, const StateTypeId &colorStateTypeId, const QColor &color);
 
