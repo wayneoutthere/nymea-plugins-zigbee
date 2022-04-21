@@ -35,7 +35,8 @@
 
 Q_DECLARE_LOGGING_CATEGORY(dcZigbeeCluster)
 
-ZigbeeIntegrationPlugin::ZigbeeIntegrationPlugin()
+ZigbeeIntegrationPlugin::ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerType handlerType):
+    m_handlerType(handlerType)
 {
 
 }
@@ -43,6 +44,11 @@ ZigbeeIntegrationPlugin::ZigbeeIntegrationPlugin()
 ZigbeeIntegrationPlugin::~ZigbeeIntegrationPlugin()
 {
 
+}
+
+void ZigbeeIntegrationPlugin::init()
+{
+    hardwareManager()->zigbeeResource()->registerHandler(this, m_handlerType);
 }
 
 void ZigbeeIntegrationPlugin::handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid)
@@ -126,7 +132,7 @@ void ZigbeeIntegrationPlugin::bindPowerConfigurationCluster(ZigbeeNode *node, Zi
 {
     ZigbeeDeviceObjectReply *bindPowerReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdPowerConfiguration,
                                                                                            hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
-    connect(bindPowerReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+    connect(bindPowerReply, &ZigbeeDeviceObjectReply::finished, endpoint, [=](){
         if (bindPowerReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
             qCWarning(dcZigbeeCluster()) << "Failed to bind power configuration cluster" << bindPowerReply->error();
         }
@@ -194,6 +200,20 @@ void ZigbeeIntegrationPlugin::bindOnOffCluster(ZigbeeNode *node, ZigbeeNodeEndpo
                 qCWarning(dcZigbeeCluster()) << "Failed to configure OnOff cluster attribute reporting" << reportingReply->error();
             }
         });
+    });
+}
+
+void ZigbeeIntegrationPlugin::bindOnOffOutputCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint, int retries)
+{
+    ZigbeeDeviceObjectReply *bindOnOffClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdOnOff,
+                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
+    connect(bindOnOffClusterReply, &ZigbeeDeviceObjectReply::finished, endpoint, [=](){
+        if (bindOnOffClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(dcZigbeeCluster()) << "Failed to bind OnOff cluster" << bindOnOffClusterReply->error();
+            if (retries > 0) {
+                bindOnOffOutputCluster(node, endpoint, retries - 1);
+            }
+        }
     });
 }
 
@@ -343,17 +363,17 @@ void ZigbeeIntegrationPlugin::connectToThermostatCluster(Thing *thing, ZigbeeNod
     }
 }
 
-void ZigbeeIntegrationPlugin::connectToOnOffCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+void ZigbeeIntegrationPlugin::connectToOnOffCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName)
 {
     ZigbeeClusterOnOff *onOffCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
     if (onOffCluster) {
         if (onOffCluster->hasAttribute(ZigbeeClusterOnOff::AttributeOnOff)) {
-            thing->setStateValue("power", onOffCluster->power());
+            thing->setStateValue(stateName, onOffCluster->power());
         } else {
             onOffCluster->readAttributes({ZigbeeClusterOnOff::AttributeOnOff});
         }
-        connect(onOffCluster, &ZigbeeClusterOnOff::powerChanged, thing, [thing](bool power){
-            thing->setStateValue("power", power);
+        connect(onOffCluster, &ZigbeeClusterOnOff::powerChanged, thing, [thing, stateName](bool power){
+            thing->setStateValue(stateName, power);
         });
     }
 }

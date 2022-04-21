@@ -25,7 +25,7 @@ Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
 Description: nymea integration plugin for Eurotronic devices
- This package contains the nymea integration plugin for ZigBee based devices
+ This package contains the nymea integration plugin for ZigBee devices
  made by Eurotronic.
 
 
@@ -46,6 +46,15 @@ Depends: ${shlibs:Depends},
 Description: nymea integration plugin for ZigBee Spec compliant lighting devices
  This package contains the nymea integration plugin for ZigBee lighting devices
  which adhere to the ZigBee Cluster Library specification for lighting devices.
+
+
+Package: nymea-plugin-zigbee-gewiss
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+Description: nymea integration plugin for ZigBee devices by Gewiss
+ This package contains the nymea integration plugin for ZigBee devices
+ made by Gewiss.
 
 
 Package: nymea-plugin-zigbee-lumi

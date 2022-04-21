@@ -58,7 +58,6 @@ public:
     QString name() const override;
     bool handleNode(ZigbeeNode *node, const QUuid &networkUuid) override;
 
-    void init() override;
     void setupThing(ThingSetupInfo *info) override;
     void executeAction(ThingActionInfo *info) override;
 };
