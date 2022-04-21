@@ -28,26 +28,24 @@
 *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef INTEGRATIONPLUGINZIGBEEGENERIC_H
-#define INTEGRATIONPLUGINZIGBEEGENERIC_H
+#ifndef INTEGRATIONPLUGINZIGBEEGEWISS_H
+#define INTEGRATIONPLUGINZIGBEEGEWISS_H
 
 #include "../common/zigbeeintegrationplugin.h"
+
 #include "extern-plugininfo.h"
 
-#include <plugintimer.h>
+class PluginTimer;
 
-#include <QTimer>
-
-
-class IntegrationPluginZigbeeGeneric: public ZigbeeIntegrationPlugin
+class IntegrationPluginZigbeeGewiss: public ZigbeeIntegrationPlugin
 {
     Q_OBJECT
 
-    Q_PLUGIN_METADATA(IID "io.nymea.IntegrationPlugin" FILE "integrationpluginzigbeegeneric.json")
+    Q_PLUGIN_METADATA(IID "io.nymea.IntegrationPlugin" FILE "integrationpluginzigbeegewiss.json")
     Q_INTERFACES(IntegrationPlugin)
 
 public:
-    explicit IntegrationPluginZigbeeGeneric();
+    explicit IntegrationPluginZigbeeGewiss();
 
     QString name() const override;
     bool handleNode(ZigbeeNode *node, const QUuid &networkUuid) override;
@@ -56,11 +54,13 @@ public:
     void executeAction(ThingActionInfo *info) override;
 
 private:
-    ZigbeeNodeEndpoint *findEndpoint(Thing *thing);
+    bool initTemperatureCluster(ZigbeeNode *node, Thing *thing);
 
-    void initSimplePowerSocket(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void initDoorLock(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void initIASSensor(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
+    void connectToOnOffOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &toggleButton, const QString &onButton, const QString &offButton, const QString &powerStateName);
+
+    void bindBinaryInputCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
+    void bindLevelControlOutputCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
+    bool initWindowSensor(ZigbeeNode *node);
 };
 
-#endif // INTEGRATIONPLUGINZIGBEEGENERIC_H
+#endif // INTEGRATIONPLUGINZIGBEEGEWISS_H

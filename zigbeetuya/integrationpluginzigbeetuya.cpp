@@ -39,7 +39,7 @@
 
 #define ATTRIBUTE_ID_SOCKET_POWER_ON_DEFAULT_MODE 0x8002
 
-IntegrationPluginZigbeeTuya::IntegrationPluginZigbeeTuya()
+IntegrationPluginZigbeeTuya::IntegrationPluginZigbeeTuya(): ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor)
 {
 }
 
@@ -69,11 +69,6 @@ bool IntegrationPluginZigbeeTuya::handleNode(ZigbeeNode *node, const QUuid &/*ne
     }
 
     return false;
-}
-
-void IntegrationPluginZigbeeTuya::init()
-{
-    hardwareManager()->zigbeeResource()->registerHandler(this, ZigbeeHardwareResource::HandlerTypeVendor);
 }
 
 void IntegrationPluginZigbeeTuya::setupThing(ThingSetupInfo *info)

@@ -38,18 +38,13 @@
 #include <QDebug>
 
 
-IntegrationPluginZigbeeEurotronic::IntegrationPluginZigbeeEurotronic(): ZigbeeIntegrationPlugin()
+IntegrationPluginZigbeeEurotronic::IntegrationPluginZigbeeEurotronic(): ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor)
 {
 }
 
 QString IntegrationPluginZigbeeEurotronic::name() const
 {
     return "Eurotronic";
-}
-
-void IntegrationPluginZigbeeEurotronic::init()
-{
-    hardwareManager()->zigbeeResource()->registerHandler(this, ZigbeeHardwareResource::HandlerTypeVendor);
 }
 
 bool IntegrationPluginZigbeeEurotronic::handleNode(ZigbeeNode *node, const QUuid &networkUuid)
