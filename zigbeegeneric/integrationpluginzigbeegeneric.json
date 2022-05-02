@@ -647,6 +647,98 @@
                             "defaultValue": 0
                         }
                     ]
+                },
+                {
+                    "id": "6b49bd7e-4331-4e1b-bc1b-7860906fda15",
+                    "name": "fireSensor",
+                    "displayName": "Fire sensor",
+                    "interfaces": ["wirelessconnectable"],
+                    "paramTypes": [
+                        {
+                            "id": "77a75423-3415-4be1-b6b4-ac947d28a717",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "02cf3fe4-7cca-4ebe-adfd-0d38d36bd475",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "3fb48f53-2a5c-441f-8c5f-84edde11fd76",
+                            "name": "endpointId",
+                            "displayName": "Endpoint ID",
+                            "type": "uint",
+                            "defaultValue": 1
+                        },
+                        {
+                            "id": "e3a4418e-28f1-4354-828b-793242fb57e3",
+                            "name": "manufacturer",
+                            "displayName": "Manufacturer",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "66024922-2442-47f1-a6d0-60fd6419bd38",
+                            "name": "model",
+                            "displayName": "Model",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "d139200e-a6b8-4dcd-a891-35a448461fcb",
+                            "name": "fireDetected",
+                            "displayName": "Fire detected",
+                            "displayNameEvent": "Fire detected changed",
+                            "type": "bool",
+                            "defaultValue": "false"
+                        },
+                        {
+                            "id": "75ffe8ff-7dd7-4fcf-9e37-459aedf1467d",
+                            "name": "batteryLevel",
+                            "displayName": "Battery level",
+                            "displayNameEvent": "Battery level changed",
+                            "type": "int",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "6d0a6178-5e86-4bb5-b1a2-929a6d732195",
+                            "name": "batteryCritical",
+                            "displayName": "Battery critical",
+                            "displayNameEvent": "Battery critical changed",
+                            "type": "bool",
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "0b393a8a-3d4c-47fe-aeea-c9e201841901",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "displayNameEvent": "Connected or disconnected",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "cached": false
+                        },
+                        {
+                            "id": "80dfad41-ecdf-4f4d-a63f-77611b107818",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "displayNameEvent": "Signal strength changed",
+                            "type": "uint",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": 0
+                        }
+                    ]
                 }
             ]
         }

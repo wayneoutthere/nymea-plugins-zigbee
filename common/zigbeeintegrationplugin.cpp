@@ -326,6 +326,8 @@ void ZigbeeIntegrationPlugin::connectToPowerConfigurationCluster(Thing *thing, Z
             thing->setStateValue("batteryLevel", percentage);
             thing->setStateValue("batteryCritical", (percentage < 10.0));
         });
+    } else {
+        qCWarning(dcZigbeeCluster()) << "No power configuration cluster on" << thing->name() << "and endpoint" << endpoint->endpointId();
     }
 }
 
