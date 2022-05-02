@@ -59,9 +59,14 @@ QString IntegrationPluginZigbeeDevelco::name() const
 
 bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &networkUuid)
 {
+    qCDebug(dcZigbeeDevelco()) << "**************" << node->getEndpoint(0x01)->profile();
     // Filter for develco manufacturer code
-    if (node->nodeDescriptor().manufacturerCode != Zigbee::Develco)
+    // Develco devices have an endpoint 0x01 with Develco profile
+    ZigbeeNodeEndpoint *endpoint1 = node->getEndpoint(0x01);
+    if (!endpoint1 || endpoint1->profile() != Zigbee::ZigbeeProfileDevelco) {
+        qCDebug(dcZigbeeDevelco()) << "Develco Profile Endpoint not present on this node.";
         return false;
+    }
 
     bool handled = false;
     if (node->modelName() == "IOMZB-110" || node->modelName() == "DIOZB-110") {
