@@ -50,13 +50,19 @@ protected:
     Thing *thingForNode(ZigbeeNode *node);
     ZigbeeNode *nodeForThing(Thing *thing);
 
-    void createThing(const ThingClassId &thingClassId, ZigbeeNode *node);
+    void createThing(const ThingClassId &thingClassId, ZigbeeNode *node, const ParamList &additionalParams = ParamList());
 
     void bindPowerConfigurationCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void bindThermostatCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
+    void bindOnOffCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
+    void bindElectricalMeasurementCluster(ZigbeeNodeEndpoint *endpoint);
+    void bindMeteringCluster(ZigbeeNodeEndpoint *endpoint);
 
     void connectToPowerConfigurationCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToThermostatCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
+    void connectToOnOffCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
+    void connectToElectricalMeasurementCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
+    void connectToMeteringCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
 
 private:
     QHash<Thing*, ZigbeeNode*> m_thingNodes;

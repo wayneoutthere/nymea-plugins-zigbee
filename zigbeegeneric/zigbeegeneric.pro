@@ -3,10 +3,12 @@ include(../plugins.pri)
 PKGCONFIG += nymea-zigbee
 
 SOURCES += \
-    integrationpluginzigbeegeneric.cpp
+    integrationpluginzigbeegeneric.cpp \
+    ../common/zigbeeintegrationplugin.cpp
 
 HEADERS += \
-    integrationpluginzigbeegeneric.h
+    integrationpluginzigbeegeneric.h \
+    ../common/zigbeeintegrationplugin.h
 
 
 

@@ -11,6 +11,7 @@
         "socket",
         "heating",
         "door",
-        "sensor"
+        "sensor",
+        "energy"
     ]
 }

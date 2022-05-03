@@ -29,7 +29,9 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "zigbeeintegrationplugin.h"
-#include "hardware/zigbee/zigbeehardwareresource.h"
+#include <hardware/zigbee/zigbeehardwareresource.h>
+#include <zcl/measurement/zigbeeclusterelectricalmeasurement.h>
+#include <zcl/smartenergy/zigbeeclustermetering.h>
 
 Q_DECLARE_LOGGING_CATEGORY(dcZigbeeCluster)
 
@@ -46,9 +48,10 @@ ZigbeeIntegrationPlugin::~ZigbeeIntegrationPlugin()
 void ZigbeeIntegrationPlugin::handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid)
 {
     Q_UNUSED(networkUuid)
-    Thing *thing = m_thingNodes.key(node);
-    if (thing) {
+    foreach (Thing *thing, m_thingNodes.keys(node)) {
         emit autoThingDisappeared(thing->id());
+
+        // Removing it from our map to prevent a loop that would ask the zigbee network to remove this node (see thingRemoved())
         m_thingNodes.remove(thing);
     }
 }
@@ -104,7 +107,7 @@ ZigbeeNode *ZigbeeIntegrationPlugin::nodeForThing(Thing *thing)
     return m_thingNodes.value(thing);
 }
 
-void ZigbeeIntegrationPlugin::createThing(const ThingClassId &thingClassId, ZigbeeNode *node)
+void ZigbeeIntegrationPlugin::createThing(const ThingClassId &thingClassId, ZigbeeNode *node, const ParamList &additionalParams)
 {
     ThingDescriptor descriptor(thingClassId);
     QString deviceClassName = supportedThings().findById(thingClassId).displayName();
@@ -114,6 +117,7 @@ void ZigbeeIntegrationPlugin::createThing(const ThingClassId &thingClassId, Zigb
     ThingClass tc = supportedThings().findById(thingClassId);
     params.append(Param(tc.paramTypes().findByName("networkUuid").id(), node->networkUuid().toString()));
     params.append(Param(tc.paramTypes().findByName("ieeeAddress").id(), node->extendedAddress().toString()));
+    params.append(additionalParams);
     descriptor.setParams(params);
     emit autoThingsAppeared({descriptor});
 }
@@ -168,6 +172,101 @@ void ZigbeeIntegrationPlugin::bindThermostatCluster(ZigbeeNode *node, ZigbeeNode
     });
 }
 
+void ZigbeeIntegrationPlugin::bindOnOffCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeDeviceObjectReply *bindOnOffClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdOnOff,
+                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
+    connect(bindOnOffClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+        if (bindOnOffClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(dcZigbeeCluster()) << "Failed to bind OnOff cluster" << bindOnOffClusterReply->error();
+        }
+
+        ZigbeeClusterLibrary::AttributeReportingConfiguration onOffConfig;
+        onOffConfig.attributeId = ZigbeeClusterOnOff::AttributeOnOff;
+        onOffConfig.dataType = Zigbee::Uint8;
+        onOffConfig.minReportingInterval = 60;
+        onOffConfig.maxReportingInterval = 120;
+        onOffConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+        ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdOnOff)->configureReporting({onOffConfig});
+        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+                qCWarning(dcZigbeeCluster()) << "Failed to configure OnOff cluster attribute reporting" << reportingReply->error();
+            }
+        });
+    });
+}
+
+void ZigbeeIntegrationPlugin::bindElectricalMeasurementCluster(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeNode *node = endpoint->node();
+    ZigbeeDeviceObjectReply *bindElectricalMeasurementClusterReply = node->deviceObject()->requestBindGroupAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdElectricalMeasurement, 0x0000);
+    connect(bindElectricalMeasurementClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+        if (bindElectricalMeasurementClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(dcZigbeeCluster()) << "Failed to bind electrical measurement cluster" << bindElectricalMeasurementClusterReply->error();
+        } else {
+            qCDebug(dcZigbeeCluster()) << "Bound electrical measurement cluster successfully";
+        }
+
+        ZigbeeClusterLibrary::AttributeReportingConfiguration acTotalPowerConfig;
+        acTotalPowerConfig.attributeId = ZigbeeClusterElectricalMeasurement::AttributeACPhaseAMeasurementActivePower;
+        acTotalPowerConfig.dataType = Zigbee::Int16;
+        acTotalPowerConfig.minReportingInterval = 1; // we want currentPower asap
+        acTotalPowerConfig.maxReportingInterval = 30;
+        acTotalPowerConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+        ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdElectricalMeasurement)->configureReporting({acTotalPowerConfig});
+        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+                qCWarning(dcZigbeeCluster()) << "Failed to configure electrical measurement cluster attribute reporting" << reportingReply->error();
+            } else {
+                qCDebug(dcZigbeeCluster()) << "Enabled attribute reporting successfully";
+            }
+        });
+    });
+}
+
+void ZigbeeIntegrationPlugin::bindMeteringCluster(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeNode *node = endpoint->node();
+
+    ZigbeeClusterMetering* meteringCluster = endpoint->inputCluster<ZigbeeClusterMetering>(ZigbeeClusterLibrary::ClusterIdMetering);
+    if (!meteringCluster) {
+        qCWarning(dcZigbeeCluster()) << "No metering cluster on this endpoint";
+        return;
+    }
+    meteringCluster->readFormatting();
+
+    ZigbeeDeviceObjectReply *bindMeteringClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdMetering,
+                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
+    connect(bindMeteringClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+        if (bindMeteringClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(dcZigbeeCluster()) << "Failed to bind metering cluster" << bindMeteringClusterReply->error();
+        }
+
+        ZigbeeClusterLibrary::AttributeReportingConfiguration instantaneousDemandConfig;
+        instantaneousDemandConfig.attributeId = ZigbeeClusterMetering::AttributeInstantaneousDemand;
+        instantaneousDemandConfig.dataType = Zigbee::Int24;
+        instantaneousDemandConfig.minReportingInterval = 1; // We want currentPower asap
+        instantaneousDemandConfig.maxReportingInterval = 120;
+        instantaneousDemandConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+        ZigbeeClusterLibrary::AttributeReportingConfiguration currentSummationConfig;
+        currentSummationConfig.attributeId = ZigbeeClusterMetering::AttributeCurrentSummationDelivered;
+        currentSummationConfig.dataType = Zigbee::Uint48;
+        currentSummationConfig.minReportingInterval = 5;
+        currentSummationConfig.maxReportingInterval = 120;
+        currentSummationConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+        ZigbeeClusterReply *reportingReply = meteringCluster->configureReporting({instantaneousDemandConfig, currentSummationConfig});
+        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+                qCWarning(dcZigbeeCluster()) << "Failed to configure OnOff cluster attribute reporting" << reportingReply->error();
+            }
+        });
+    });
+}
+
 void ZigbeeIntegrationPlugin::connectToPowerConfigurationCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeClusterPowerConfiguration *powerCluster = endpoint->inputCluster<ZigbeeClusterPowerConfiguration>(ZigbeeClusterLibrary::ClusterIdPowerConfiguration);
@@ -200,7 +299,13 @@ void ZigbeeIntegrationPlugin::connectToThermostatCluster(Thing *thing, ZigbeeNod
 {
     ZigbeeClusterThermostat *thermostatCluster = endpoint->inputCluster<ZigbeeClusterThermostat>(ZigbeeClusterLibrary::ClusterIdThermostat);
     if (thermostatCluster) {
-        thermostatCluster->readAttributes({ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint});
+        thermostatCluster->readAttributes({ZigbeeClusterThermostat::AttributeLocalTemperature,
+                                           ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint,
+                                           ZigbeeClusterThermostat::AttributeMinHeatSetpointLimit,
+                                           ZigbeeClusterThermostat::AttributeMaxHeatSetpointLimit,
+                                           ZigbeeClusterThermostat::AttributePIHeatingDemand,
+                                           ZigbeeClusterThermostat::AttributePICoolingDemand});
+
         connect(thermostatCluster, &ZigbeeClusterThermostat::attributeChanged, thing, [thing](const ZigbeeClusterAttribute &attribute){
             if (attribute.id() == ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint) {
                 thing->setStateValue("targetTemperature", attribute.dataType().toUInt16() * 0.01);
@@ -220,6 +325,47 @@ void ZigbeeIntegrationPlugin::connectToThermostatCluster(Thing *thing, ZigbeeNod
             if (attribute.id() == ZigbeeClusterThermostat::AttributeMaxHeatSetpointLimit) {
                 thing->setStateMaxValue("targetTemperature", attribute.dataType().toUInt16() * 0.01);
             }
+        });
+    }
+}
+
+void ZigbeeIntegrationPlugin::connectToOnOffCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterOnOff *onOffCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
+    if (onOffCluster) {
+        if (onOffCluster->hasAttribute(ZigbeeClusterOnOff::AttributeOnOff)) {
+            thing->setStateValue("power", onOffCluster->power());
+        } else {
+            onOffCluster->readAttributes({ZigbeeClusterOnOff::AttributeOnOff});
+        }
+        connect(onOffCluster, &ZigbeeClusterOnOff::powerChanged, thing, [thing](bool power){
+            thing->setStateValue("power", power);
+        });
+    }
+}
+
+void ZigbeeIntegrationPlugin::connectToElectricalMeasurementCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterElectricalMeasurement *electricalMeasurementCluster = endpoint->inputCluster<ZigbeeClusterElectricalMeasurement>(ZigbeeClusterLibrary::ClusterIdElectricalMeasurement);
+    if (electricalMeasurementCluster) {
+        connect(electricalMeasurementCluster, &ZigbeeClusterElectricalMeasurement::activePowerPhaseAChanged, thing, [thing](qint16 activePowerPhaseA){
+            thing->setStateValue("currentPower", activePowerPhaseA);
+        });
+    }
+}
+
+void ZigbeeIntegrationPlugin::connectToMeteringCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterMetering *meteringCluster = endpoint->inputCluster<ZigbeeClusterMetering>(ZigbeeClusterLibrary::ClusterIdMetering);
+    if (meteringCluster) {
+        meteringCluster->readFormatting();
+
+        connect(meteringCluster, &ZigbeeClusterMetering::currentSummationDeliveredChanged, thing, [=](quint64 currentSummationDelivered){
+            thing->setStateValue("totalEnergyConsumed", 1.0 * currentSummationDelivered * meteringCluster->multiplier() / meteringCluster->divisor());
+        });
+
+        connect(meteringCluster, &ZigbeeClusterMetering::instantaneousDemandChanged, thing, [=](qint32 instantaneousDemand){
+            thing->setStateValue("currentPower", instantaneousDemand);
         });
     }
 }

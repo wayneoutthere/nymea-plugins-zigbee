@@ -31,15 +31,15 @@
 #ifndef INTEGRATIONPLUGINZIGBEEGENERIC_H
 #define INTEGRATIONPLUGINZIGBEEGENERIC_H
 
-#include "integrations/integrationplugin.h"
-#include "hardware/zigbee/zigbeehandler.h"
-#include "plugintimer.h"
+#include "../common/zigbeeintegrationplugin.h"
+#include "extern-plugininfo.h"
+
+#include <plugintimer.h>
 
 #include <QTimer>
 
-#include "extern-plugininfo.h"
 
-class IntegrationPluginZigbeeGeneric: public IntegrationPlugin, public ZigbeeHandler
+class IntegrationPluginZigbeeGeneric: public ZigbeeIntegrationPlugin
 {
     Q_OBJECT
 
@@ -51,28 +51,17 @@ public:
 
     QString name() const override;
     bool handleNode(ZigbeeNode *node, const QUuid &networkUuid) override;
-    void handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid) override;
 
     void init() override;
     void setupThing(ThingSetupInfo *info) override;
     void executeAction(ThingActionInfo *info) override;
-    void thingRemoved(Thing *thing) override;
 
 private:
-    QHash<Thing*, ZigbeeNode*> m_thingNodes;
-
-    // Get the endpoint for the given thing
     ZigbeeNodeEndpoint *findEndpoint(Thing *thing);
-    void createThing(const ThingClassId &thingClassId, const QUuid &networkUuid, ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
 
     void initSimplePowerSocket(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void initDoorLock(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void initThermostat(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void initIASSensor(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-
-    void bindPowerConfigurationCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-
-    void connectToPowerConfigurationCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
 };
 
 #endif // INTEGRATIONPLUGINZIGBEEGENERIC_H

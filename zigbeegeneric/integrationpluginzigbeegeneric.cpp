@@ -37,83 +37,6 @@
 
 #include <QDebug>
 
-static QHash<ThingClassId, StateTypeId> batteryLevelStateTypeIds = {
-    {thermostatThingClassId, thermostatBatteryLevelStateTypeId},
-    {doorLockThingClassId, doorLockBatteryLevelStateTypeId},
-    {doorSensorThingClassId, doorSensorBatteryLevelStateTypeId},
-    {motionSensorThingClassId, motionSensorBatteryLevelStateTypeId}
-};
-
-static QHash<ThingClassId, StateTypeId> batteryCriticalStateTypeIds = {
-    {thermostatThingClassId, thermostatBatteryCriticalStateTypeId},
-    {doorLockThingClassId, doorLockBatteryCriticalStateTypeId},
-    {doorSensorThingClassId, doorSensorBatteryCriticalStateTypeId},
-    {motionSensorThingClassId, motionSensorBatteryCriticalStateTypeId}
-};
-
-static QHash<ThingClassId, ParamTypeId> ieeeAddressParamTypeIds = {
-    {thermostatThingClassId, thermostatThingIeeeAddressParamTypeId},
-    {powerSocketThingClassId, powerSocketThingIeeeAddressParamTypeId},
-    {doorLockThingClassId, doorLockThingIeeeAddressParamTypeId},
-    {doorSensorThingClassId, doorSensorThingIeeeAddressParamTypeId},
-    {motionSensorThingClassId, motionSensorThingIeeeAddressParamTypeId}
-};
-
-static QHash<ThingClassId, ParamTypeId> networkUuidParamTypeIds = {
-    {thermostatThingClassId, thermostatThingNetworkUuidParamTypeId},
-    {powerSocketThingClassId, powerSocketThingNetworkUuidParamTypeId},
-    {doorLockThingClassId, doorLockThingNetworkUuidParamTypeId},
-    {doorSensorThingClassId, doorSensorThingNetworkUuidParamTypeId},
-    {motionSensorThingClassId, motionSensorThingNetworkUuidParamTypeId}
-};
-
-static QHash<ThingClassId, ParamTypeId> endpointIdParamTypeIds = {
-    {thermostatThingClassId, thermostatThingEndpointIdParamTypeId},
-    {powerSocketThingClassId, powerSocketThingEndpointIdParamTypeId},
-    {doorLockThingClassId, doorLockThingEndpointIdParamTypeId},
-    {doorSensorThingClassId, doorSensorThingEndpointIdParamTypeId},
-    {motionSensorThingClassId, motionSensorThingEndpointIdParamTypeId}
-};
-
-static QHash<ThingClassId, ParamTypeId> modelIdParamTypeIds = {
-    {thermostatThingClassId, thermostatThingManufacturerParamTypeId},
-    {powerSocketThingClassId, powerSocketThingManufacturerParamTypeId},
-    {doorLockThingClassId, doorLockThingManufacturerParamTypeId},
-    {doorSensorThingClassId, doorSensorThingManufacturerParamTypeId},
-    {motionSensorThingClassId, motionSensorThingManufacturerParamTypeId}
-};
-
-static QHash<ThingClassId, ParamTypeId> manufacturerIdParamTypeIds = {
-    {thermostatThingClassId, thermostatThingModelParamTypeId},
-    {powerSocketThingClassId, powerSocketThingModelParamTypeId},
-    {doorLockThingClassId, doorLockThingModelParamTypeId},
-    {doorSensorThingClassId, doorSensorThingModelParamTypeId},
-    {motionSensorThingClassId, motionSensorThingModelParamTypeId}
-};
-
-static QHash<ThingClassId, StateTypeId> connectedStateTypeIds = {
-    {thermostatThingClassId, thermostatConnectedStateTypeId},
-    {powerSocketThingClassId, powerSocketConnectedStateTypeId},
-    {doorLockThingClassId, doorLockConnectedStateTypeId},
-    {doorSensorThingClassId, doorSensorConnectedStateTypeId},
-    {motionSensorThingClassId, motionSensorConnectedStateTypeId}
-};
-
-static QHash<ThingClassId, StateTypeId> signalStrengthStateTypeIds = {
-    {thermostatThingClassId, thermostatSignalStrengthStateTypeId},
-    {powerSocketThingClassId, powerSocketSignalStrengthStateTypeId},
-    {doorLockThingClassId, doorLockSignalStrengthStateTypeId},
-    {doorSensorThingClassId, doorSensorSignalStrengthStateTypeId},
-    {motionSensorThingClassId, motionSensorSignalStrengthStateTypeId}
-};
-
-static QHash<ThingClassId, StateTypeId> versionStateTypeIds = {
-    {thermostatThingClassId, thermostatVersionStateTypeId},
-    {powerSocketThingClassId, powerSocketVersionStateTypeId},
-    {doorLockThingClassId, doorLockVersionStateTypeId}
-};
-
-
 IntegrationPluginZigbeeGeneric::IntegrationPluginZigbeeGeneric()
 {
 }
@@ -123,7 +46,7 @@ QString IntegrationPluginZigbeeGeneric::name() const
     return "Generic";
 }
 
-bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &networkUuid)
+bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/*networkUuid*/)
 {
     bool handled = false;
     foreach (ZigbeeNodeEndpoint *endpoint, node->endpoints()) {
@@ -133,8 +56,9 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &n
         if (endpoint->profile() == Zigbee::ZigbeeProfile::ZigbeeProfileHomeAutomation &&
                 endpoint->deviceId() == Zigbee::HomeAutomationDeviceThermostat) {
             qCDebug(dcZigbeeGeneric()) << "Handling thermostat endpoint for" << node << endpoint;
-            createThing(thermostatThingClassId, networkUuid, node, endpoint);
-            initThermostat(node, endpoint);
+            createThing(thermostatThingClassId, node, {Param(thermostatThingEndpointIdParamTypeId, endpoint->endpointId())});
+            bindPowerConfigurationCluster(node, endpoint);
+            bindThermostatCluster(node, endpoint);
             handled = true;
         }
 
@@ -146,10 +70,18 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &n
 
             // Simple on/off device
             if (endpoint->hasInputCluster(ZigbeeClusterLibrary::ClusterIdOnOff)) {
-                // FIXME: create powersocket with metering for SmartPlug device ID
-                qCDebug(dcZigbeeGeneric()) << "Handling power socket endpoint for" << node << endpoint;
-                createThing(powerSocketThingClassId, networkUuid, node, endpoint);
-                initSimplePowerSocket(node, endpoint);
+
+                if (endpoint->hasInputCluster(ZigbeeClusterLibrary::ClusterIdMetering)) {
+                    qCDebug(dcZigbeeGeneric()) << "Handling power socket with energy metering for" << node << endpoint;
+                    createThing(powerMeterSocketThingClassId, node, {Param(powerMeterSocketThingEndpointIdParamTypeId, endpoint->endpointId())});
+                    bindMeteringCluster(endpoint);
+
+                } else {
+                    qCDebug(dcZigbeeGeneric()) << "Handling power socket endpoint for" << node << endpoint;
+                    createThing(powerSocketThingClassId, node, {Param(powerSocketThingEndpointIdParamTypeId, endpoint->endpointId())});
+                }
+
+                bindOnOffCluster(node, endpoint);
                 handled = true;
             }
         }
@@ -161,7 +93,7 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &n
                 qCWarning(dcZigbeeGeneric()) << "Endpoint claims to be a door lock, but the appropriate input clusters could not be found" << node << endpoint;
             } else {
                 qCDebug(dcZigbeeGeneric()) << "Handling door lock endpoint for" << node << endpoint;
-                createThing(doorLockThingClassId, networkUuid, node, endpoint);
+                createThing(doorLockThingClassId, node, {Param(doorLockThingEndpointIdParamTypeId, endpoint->endpointId())});
                 // Initialize bindings and cluster attributes
                 initDoorLock(node, endpoint);
                 handled = true;
@@ -193,11 +125,11 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &n
                 switch (iasZoneTypeRecord.dataType.toUInt16()) {
                 case ZigbeeClusterIasZone::ZoneTypeContactSwitch:
                     qCInfo(dcZigbeeGeneric()) << "Creating contact switch thing";
-                    createThing(doorSensorThingClassId, networkUuid, node, endpoint);
+                    createThing(doorSensorThingClassId, node, {Param(doorSensorThingEndpointIdParamTypeId, endpoint->endpointId())});
                     break;
                 case ZigbeeClusterIasZone::ZoneTypeMotionSensor:
                     qCInfo(dcZigbeeGeneric()) << "Creating motion sensor thing";
-                    createThing(motionSensorThingClassId, networkUuid, node, endpoint);
+                    createThing(motionSensorThingClassId, node, {Param(motionSensorThingEndpointIdParamTypeId, endpoint->endpointId())});
                     break;
                 default:
                     qCWarning(dcZigbeeGeneric()) << "Unhandled IAS Zone device type:" << "0x" + QString::number(iasZoneTypeRecord.dataType.toUInt16(), 16);
@@ -213,18 +145,6 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &n
     return handled;
 }
 
-void IntegrationPluginZigbeeGeneric::handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid)
-{
-    Q_UNUSED(networkUuid)
-    foreach (Thing *thing, m_thingNodes.keys(node)) {
-        qCDebug(dcZigbeeGeneric()) << node << "for" << thing << "has left the network.";
-        emit autoThingDisappeared(thing->id());
-
-        // Removing it from our map to prevent a loop that would ask the zigbee network to remove this node (see thingRemoved())
-        m_thingNodes.remove(thing);
-    }
-}
-
 void IntegrationPluginZigbeeGeneric::init()
 {
     hardwareManager()->zigbeeResource()->registerHandler(this, ZigbeeHardwareResource::HandlerTypeCatchAll);
@@ -233,20 +153,12 @@ void IntegrationPluginZigbeeGeneric::init()
 void IntegrationPluginZigbeeGeneric::setupThing(ThingSetupInfo *info)
 {
     Thing *thing = info->thing();
-    QUuid networkUuid = thing->paramValue(networkUuidParamTypeIds.value(thing->thingClassId())).toUuid();
-    qCDebug(dcZigbeeGeneric()) << "Setting up generic zigbee thing";
-    ZigbeeAddress zigbeeAddress = ZigbeeAddress(thing->paramValue(ieeeAddressParamTypeIds.value(thing->thingClassId())).toString());
-    ZigbeeNode *node = m_thingNodes.value(thing);
-    if (!node) {
-        node = hardwareManager()->zigbeeResource()->claimNode(this, networkUuid, zigbeeAddress);
-    }
 
-    if (!node) {
-        qCWarning(dcZigbeeGeneric()) << "Zigbee node for" << info->thing()->name() << "not found.´";
+    if (!manageNode(thing)) {
+        qCWarning(dcZigbeeGeneric()) << "Failed to claim node during setup.";
         info->finish(Thing::ThingErrorHardwareNotAvailable);
         return;
     }
-    m_thingNodes.insert(thing, node);
 
     ZigbeeNodeEndpoint *endpoint = findEndpoint(thing);
     if (!endpoint) {
@@ -255,93 +167,26 @@ void IntegrationPluginZigbeeGeneric::setupThing(ThingSetupInfo *info)
         return;
     }
 
-    // Update connected state
-    thing->setStateValue(connectedStateTypeIds.value(thing->thingClassId()), node->reachable());
-    connect(node, &ZigbeeNode::reachableChanged, thing, [thing, this](bool reachable){
-        thing->setStateValue(connectedStateTypeIds.value(thing->thingClassId()), reachable);
-    });
-
-    // Update signal strength
-    thing->setStateValue(signalStrengthStateTypeIds.value(thing->thingClassId()), qRound(node->lqi() * 100.0 / 255.0));
-    connect(node, &ZigbeeNode::lqiChanged, thing, [this, thing](quint8 lqi){
-        uint signalStrength = qRound(lqi * 100.0 / 255.0);
-        qCDebug(dcZigbeeGeneric()) << thing << "signal strength changed" << signalStrength << "%";
-        thing->setStateValue(signalStrengthStateTypeIds.value(thing->thingClassId()), signalStrength);
-    });
 
     // Set the version
-    thing->setStateValue(versionStateTypeIds.value(thing->thingClassId()), endpoint->softwareBuildId());
+    thing->setStateValue("version", endpoint->softwareBuildId());
 
-    if (batteryLevelStateTypeIds.contains(thing->thingClassId())) {
+    if (thing->hasState("batteryLevel")) {
         connectToPowerConfigurationCluster(thing, endpoint);
     }
 
     // Type specific setup
     if (thing->thingClassId() == thermostatThingClassId) {
-        ZigbeeClusterThermostat *thermostatCluster = endpoint->inputCluster<ZigbeeClusterThermostat>(ZigbeeClusterLibrary::ClusterIdThermostat);
-        if (!thermostatCluster) {
-            qCWarning(dcZigbeeGeneric()) << "Failed to read thermostat cluster";
-            info->finish(Thing::ThingErrorHardwareFailure);
-            return;
-        }
-
-        // Read initial attribute values
-        thermostatCluster->readAttributes({ZigbeeClusterThermostat::AttributeLocalTemperature,
-                                           ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint,
-                                           ZigbeeClusterThermostat::AttributeMinHeatSetpointLimit,
-                                           ZigbeeClusterThermostat::AttributeMaxHeatSetpointLimit,
-                                           ZigbeeClusterThermostat::AttributePIHeatingDemand,
-                                           ZigbeeClusterThermostat::AttributePICoolingDemand});
-
-        // Connect to attribute changes
-        connect(thermostatCluster, &ZigbeeClusterThermostat::attributeChanged, thing, [thing](const ZigbeeClusterAttribute &attribute){
-            qCDebug(dcZigbeeGeneric()) << "Thermostat attribute changed" << thing->name() << attribute.id() << attribute.dataType();
-            if (attribute.id() == ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint) {
-                thing->setStateValue(thermostatTargetTemperatureStateTypeId, attribute.dataType().toUInt16() * 0.01);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributeLocalTemperature) {
-                thing->setStateValue(thermostatTemperatureStateTypeId, attribute.dataType().toUInt16() * 0.01);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributePIHeatingDemand) {
-                thing->setStateValue(thermostatHeatingOnStateTypeId, attribute.dataType().toUInt8() > 0);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributePICoolingDemand) {
-                thing->setStateValue(thermostatCoolingOnStateTypeId, attribute.dataType().toUInt8() > 0);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributeMinHeatSetpointLimit) {
-                thing->setStateMinValue(thermostatTargetTemperatureStateTypeId, attribute.dataType().toUInt16() * 0.01);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributeMaxHeatSetpointLimit) {
-                thing->setStateMaxValue(thermostatTargetTemperatureStateTypeId, attribute.dataType().toUInt16() * 0.01);
-            }
-        });
+        connectToThermostatCluster(thing, endpoint);
     }
 
     if (thing->thingClassId() == powerSocketThingClassId) {
-        ZigbeeClusterOnOff *onOffCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
-        if (onOffCluster) {
-            if (onOffCluster->hasAttribute(ZigbeeClusterOnOff::AttributeOnOff)) {
-                thing->setStateValue(powerSocketPowerStateTypeId, onOffCluster->power());
-            }
-            connect(onOffCluster, &ZigbeeClusterOnOff::powerChanged, thing, [thing](bool power){
-                qCDebug(dcZigbeeGeneric()) << thing << "power changed" << power;
-                thing->setStateValue(powerSocketPowerStateTypeId, power);
-            });
+        connectToOnOffCluster(thing, endpoint);
+    }
 
-            connect(node, &ZigbeeNode::reachableChanged, thing, [=](bool reachable){
-                if (reachable) {
-                    ZigbeeClusterReply *reply = onOffCluster->readAttributes({ZigbeeClusterOnOff::AttributeOnOff});
-                    connect(reply, &ZigbeeClusterReply::finished, thing, [=](){
-                        if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
-                            qCWarning(dcZigbeeGeneric()) << "Reading attribute from" << thing << "finished with error" << reply->error();
-                        }
-                        // Note: the state will be updated using the power changed signal from the cluster
-                    });
-                }
-            });
-        } else {
-            qCWarning(dcZigbeeGeneric()) << "Could not find the OnOff input cluster on" << thing << endpoint;
-        }
+    if (thing->thingClassId() == powerMeterSocketThingClassId) {
+        connectToOnOffCluster(thing, endpoint);
+        connectToMeteringCluster(thing, endpoint);
     }
 
     if (thing->thingClassId() == doorLockThingClassId) {
@@ -416,7 +261,7 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
 
     // Get the node
     Thing *thing = info->thing();
-    ZigbeeNode *node = m_thingNodes.value(thing);
+    ZigbeeNode *node = nodeForThing(info->thing());
     if (!node->reachable()) {
         info->finish(Thing::ThingErrorHardwareNotAvailable);
         return;
@@ -456,20 +301,14 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
         if (info->action().actionTypeId() == powerSocketAlertActionTypeId) {
             ZigbeeClusterIdentify *identifyCluster = endpoint->inputCluster<ZigbeeClusterIdentify>(ZigbeeClusterLibrary::ClusterIdIdentify);
             if (!identifyCluster) {
-                qCWarning(dcZigbeeGeneric()) << "Could not find identify cluster for" << thing << "in" << m_thingNodes.value(thing);
+                qCWarning(dcZigbeeGeneric()) << "Could not find identify cluster for" << thing << "in" << node;
                 info->finish(Thing::ThingErrorHardwareFailure);
                 return;
             }
 
-            // Send the command trough the network
             ZigbeeClusterReply *reply = identifyCluster->identify(2);
-            connect(reply, &ZigbeeClusterReply::finished, this, [reply, info](){
-                // Note: reply will be deleted automatically
-                if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
-                    info->finish(Thing::ThingErrorHardwareFailure);
-                } else {
-                    info->finish(Thing::ThingErrorNoError);
-                }
+            connect(reply, &ZigbeeClusterReply::finished, info, [reply, info](){
+                info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError : Thing::ThingErrorHardwareFailure);
             });
             return;
         }
@@ -482,19 +321,50 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
                 return;
             }
 
-            // Send the command trough the network
             bool power = info->action().param(powerSocketPowerActionPowerParamTypeId).value().toBool();
-            qCDebug(dcZigbeeGeneric()) << "Set power for" << thing << "to" << power;
             ZigbeeClusterReply *reply = (power ? onOffCluster->commandOn() : onOffCluster->commandOff());
             connect(reply, &ZigbeeClusterReply::finished, info, [=](){
-                // Note: reply will be deleted automatically
-                if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
-                    qCWarning(dcZigbeeGeneric()) << "Failed to set power on" << thing << reply->error();
-                    info->finish(Thing::ThingErrorHardwareFailure);
-                } else {
-                    info->finish(Thing::ThingErrorNoError);
-                    qCDebug(dcZigbeeGeneric()) << "Set power finished successfully for" << thing;
+                if (reply->error() == ZigbeeClusterReply::ErrorNoError) {
                     thing->setStateValue(powerSocketPowerStateTypeId, power);
+                }
+                info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError : Thing::ThingErrorHardwareFailure);
+            });
+            return;
+        }
+    }
+
+    if (thing->thingClassId() == powerMeterSocketThingClassId) {
+        if (info->action().actionTypeId() == powerMeterSocketAlertActionTypeId) {
+            ZigbeeClusterIdentify *identifyCluster = endpoint->inputCluster<ZigbeeClusterIdentify>(ZigbeeClusterLibrary::ClusterIdIdentify);
+            if (!identifyCluster) {
+                qCWarning(dcZigbeeGeneric()) << "Could not find identify cluster for" << thing << "in" << node;
+                info->finish(Thing::ThingErrorHardwareFailure);
+                return;
+            }
+
+            ZigbeeClusterReply *reply = identifyCluster->identify(2);
+            connect(reply, &ZigbeeClusterReply::finished, info, [reply, info](){
+                info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError : Thing::ThingErrorHardwareFailure);
+            });
+            return;
+        }
+
+        if (info->action().actionTypeId() == powerMeterSocketPowerActionTypeId) {
+            ZigbeeClusterOnOff *onOffCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
+            if (!onOffCluster) {
+                qCWarning(dcZigbeeGeneric()) << "Could not find on/off cluster for" << thing << "in" << endpoint;
+                info->finish(Thing::ThingErrorHardwareFailure);
+                return;
+            }
+
+            bool power = info->action().param(powerMeterSocketPowerActionPowerParamTypeId).value().toBool();
+            ZigbeeClusterReply *reply = (power ? onOffCluster->commandOn() : onOffCluster->commandOff());
+            connect(reply, &ZigbeeClusterReply::finished, info, [=](){
+                info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError : Thing::ThingErrorHardwareFailure);
+            });
+            connect(reply, &ZigbeeClusterReply::finished, thing, [=](){
+                if (reply->error() == ZigbeeClusterReply::ErrorNoError) {
+                    thing->setStateValue(powerMeterSocketPowerStateTypeId, power);
                 }
             });
             return;
@@ -505,7 +375,7 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
         if (info->action().actionTypeId() == doorLockOpenActionTypeId) {
             ZigbeeClusterDoorLock *doorLockCluster = endpoint->inputCluster<ZigbeeClusterDoorLock>(ZigbeeClusterLibrary::ClusterIdDoorLock);
             if (!doorLockCluster) {
-                qCWarning(dcZigbeeGeneric()) << "Could not find door lock cluster for" << thing << "in" << m_thingNodes.value(thing);
+                qCWarning(dcZigbeeGeneric()) << "Could not find door lock cluster for" << thing << "in" << node;
                 info->finish(Thing::ThingErrorHardwareFailure);
                 return;
             }
@@ -526,7 +396,7 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
         if (info->action().actionTypeId() == doorLockCloseActionTypeId) {
             ZigbeeClusterDoorLock *doorLockCluster = endpoint->inputCluster<ZigbeeClusterDoorLock>(ZigbeeClusterLibrary::ClusterIdDoorLock);
             if (!doorLockCluster) {
-                qCWarning(dcZigbeeGeneric()) << "Could not find door lock cluster for" << thing << "in" << m_thingNodes.value(thing);
+                qCWarning(dcZigbeeGeneric()) << "Could not find door lock cluster for" << thing << "in" << node;
                 info->finish(Thing::ThingErrorHardwareFailure);
                 return;
             }
@@ -548,41 +418,16 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
     info->finish(Thing::ThingErrorUnsupportedFeature);
 }
 
-void IntegrationPluginZigbeeGeneric::thingRemoved(Thing *thing)
-{
-    ZigbeeNode *node = m_thingNodes.take(thing);
-    if (node) {
-        QUuid networkUuid = thing->paramValue(networkUuidParamTypeIds.value(thing->thingClassId())).toUuid();
-        hardwareManager()->zigbeeResource()->removeNodeFromNetwork(networkUuid, node);
-    }
-}
-
 ZigbeeNodeEndpoint *IntegrationPluginZigbeeGeneric::findEndpoint(Thing *thing)
 {
-    ZigbeeNode *node = m_thingNodes.value(thing);
+    ZigbeeNode *node = nodeForThing(thing);
     if (!node) {
         qCWarning(dcZigbeeGeneric()) << "Could not find the node for" << thing;
         return nullptr;
     }
 
-    quint8 endpointId = thing->paramValue(endpointIdParamTypeIds.value(thing->thingClassId())).toUInt();
+    quint8 endpointId = thing->paramValue("endpointId").toUInt();
     return node->getEndpoint(endpointId);
-}
-
-void IntegrationPluginZigbeeGeneric::createThing(const ThingClassId &thingClassId, const QUuid &networkUuid, ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
-{
-    ThingDescriptor descriptor(thingClassId);
-    QString deviceClassName = supportedThings().findById(thingClassId).displayName();
-    descriptor.setTitle(QString("%1 (%2 - %3)").arg(deviceClassName).arg(endpoint->manufacturerName()).arg(endpoint->modelIdentifier()));
-
-    ParamList params;
-    params.append(Param(networkUuidParamTypeIds[thingClassId], networkUuid.toString()));
-    params.append(Param(ieeeAddressParamTypeIds[thingClassId], node->extendedAddress().toString()));
-    params.append(Param(endpointIdParamTypeIds[thingClassId], endpoint->endpointId()));
-    params.append(Param(modelIdParamTypeIds[thingClassId], endpoint->modelIdentifier()));
-    params.append(Param(manufacturerIdParamTypeIds[thingClassId], endpoint->manufacturerName()));
-    descriptor.setParams(params);
-    emit autoThingsAppeared({descriptor});
 }
 
 void IntegrationPluginZigbeeGeneric::initSimplePowerSocket(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
@@ -662,39 +507,6 @@ void IntegrationPluginZigbeeGeneric::initDoorLock(ZigbeeNode *node, ZigbeeNodeEn
     });
 }
 
-void IntegrationPluginZigbeeGeneric::initThermostat(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
-{
-    bindPowerConfigurationCluster(node, endpoint);
-
-    qCDebug(dcZigbeeGeneric()) << "Binding thermostat custer";
-    ZigbeeDeviceObjectReply *bindThermostatReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdThermostat,
-                                                                                     hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
-    connect(bindThermostatReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
-        if (bindThermostatReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
-            qCWarning(dcZigbeeGeneric()) << "Failed to bind thermostat cluster" << bindThermostatReply->error();
-        } else {
-            qCDebug(dcZigbeeGeneric()) << "Binding thermostat cluster finished successfully";
-        }
-
-        ZigbeeClusterLibrary::AttributeReportingConfiguration reportingOccupiedHeatingSetpointConfig;
-        reportingOccupiedHeatingSetpointConfig.attributeId = ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint;
-        reportingOccupiedHeatingSetpointConfig.dataType = Zigbee::Int16;
-        reportingOccupiedHeatingSetpointConfig.minReportingInterval = 300;
-        reportingOccupiedHeatingSetpointConfig.maxReportingInterval = 2700;
-        reportingOccupiedHeatingSetpointConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        qCDebug(dcZigbeeGeneric()) << "Configuring attribute reporting for thermostat cluster";
-        ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdThermostat)->configureReporting({reportingOccupiedHeatingSetpointConfig});
-        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
-            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(dcZigbeeGeneric()) << "Failed to configure thermostat cluster attribute reporting" << reportingReply->error();
-            } else {
-                qCDebug(dcZigbeeGeneric()) << "Attribute reporting configuration finished for thermostat cluster" << ZigbeeClusterLibrary::parseAttributeReportingStatusRecords(reportingReply->responseFrame().payload);
-            }
-        });
-    });
-}
-
 void IntegrationPluginZigbeeGeneric::initIASSensor(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
 {
     bindPowerConfigurationCluster(node, endpoint);
@@ -763,63 +575,4 @@ void IntegrationPluginZigbeeGeneric::initIASSensor(ZigbeeNode *node, ZigbeeNodeE
             });
         });
     });
-}
-
-void IntegrationPluginZigbeeGeneric::bindPowerConfigurationCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
-{
-    ZigbeeDeviceObjectReply *bindPowerReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdPowerConfiguration,
-                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
-    connect(bindPowerReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
-        if (bindPowerReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
-            qCWarning(dcZigbeeGeneric()) << "Failed to bind power configuration cluster" << bindPowerReply->error();
-        } else {
-            qCDebug(dcZigbeeGeneric()) << "Binding power configuration cluster finished successfully";
-        }
-
-        ZigbeeClusterLibrary::AttributeReportingConfiguration batteryPercentageConfig;
-        batteryPercentageConfig.attributeId = ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining;
-        batteryPercentageConfig.dataType = Zigbee::Uint8;
-        batteryPercentageConfig.minReportingInterval = 60; // for production use 300;
-        batteryPercentageConfig.maxReportingInterval = 120; // for production use 2700;
-        batteryPercentageConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        qCDebug(dcZigbeeGeneric()) << "Configuring attribute reporting for power configuration cluster";
-        ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdPowerConfiguration)->configureReporting({batteryPercentageConfig});
-        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
-            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(dcZigbeeGeneric()) << "Failed to configure power configuration cluster attribute reporting" << reportingReply->error();
-            } else {
-                qCDebug(dcZigbeeGeneric()) << "Attribute reporting configuration finished for power configuration cluster" << ZigbeeClusterLibrary::parseAttributeReportingStatusRecords(reportingReply->responseFrame().payload);
-            }
-        });
-    });
-}
-
-void IntegrationPluginZigbeeGeneric::connectToPowerConfigurationCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
-{
-    // Get battery level changes
-    ZigbeeClusterPowerConfiguration *powerCluster = endpoint->inputCluster<ZigbeeClusterPowerConfiguration>(ZigbeeClusterLibrary::ClusterIdPowerConfiguration);
-    if (powerCluster) {
-        // If the power cluster attributes are already available, read values now
-        if (powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining)) {
-            thing->setStateValue(batteryLevelStateTypeIds.value(thing->thingClassId()), powerCluster->batteryPercentage());
-            thing->setStateValue(batteryCriticalStateTypeIds.value(thing->thingClassId()), (powerCluster->batteryPercentage() < 10.0));
-        }
-        // Refresh power cluster attributes in any case
-        ZigbeeClusterReply *reply = powerCluster->readAttributes({ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining});
-        connect(reply, &ZigbeeClusterReply::finished, thing, [=](){
-            if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(dcZigbeeGeneric()) << "Reading power configuration cluster attributes finished with error" << reply->error();
-                return;
-            }
-            thing->setStateValue(batteryLevelStateTypeIds.value(thing->thingClassId()), powerCluster->batteryPercentage());
-            thing->setStateValue(batteryCriticalStateTypeIds.value(thing->thingClassId()), (powerCluster->batteryPercentage() < 10.0));
-        });
-
-        // Connect to battery level changes
-        connect(powerCluster, &ZigbeeClusterPowerConfiguration::batteryPercentageChanged, thing, [=](double percentage){
-            thing->setStateValue(batteryLevelStateTypeIds.value(thing->thingClassId()), percentage);
-            thing->setStateValue(batteryCriticalStateTypeIds.value(thing->thingClassId()), (percentage < 10.0));
-        });
-    }
 }
