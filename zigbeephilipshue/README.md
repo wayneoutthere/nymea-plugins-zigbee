@@ -15,7 +15,7 @@ The [Hue outdoor sensor](https://www.philips-hue.com/en-us/p/hue-outdoor-sensor/
 
 ### Hue dimmer switch
 
-The [Hue dimmer switch](https://www.philips-hue.com/en-us/p/hue-dimmer-switch/046677473372) is fully supported.
+The [Hue dimmer switch](https://www.philips-hue.com/en-us/p/hue-dimmer-switch--latest-model-/046677562779) (including the older model version) is fully supported.
 
 **Pairing instructions**: Open the ZigBee network for joining. Press the setup button for 5 seconds until the LED start blinking in different colors.
 
