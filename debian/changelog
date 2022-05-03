@@ -1,3 +1,14 @@
+nymea-plugins-zigbee (1.1.0) jammy; urgency=medium
+
+  [ Michael Zanetti ]
+  * Hue: Add support for the dimmer switch v2
+  * Generic: Add support for energy metering on smart plugs
+  * New Plugin: Tuya
+  * GenerlicLights: Add DimmableColorLight cluster
+  * ZigbeeGeneric: Add OnOffOutput profile to generic power switch
+
+ -- jenkins <developer@nymea.io>  Tue, 03 May 2022 12:52:54 +0200
+
 nymea-plugins-zigbee (1.0.0) xenial; urgency=medium
 
   [ Michael Zanetti ]
