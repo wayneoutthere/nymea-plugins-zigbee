@@ -1,0 +1,107 @@
+{
+    "name": "ZigbeeTuya",
+    "displayName": "Zigbee Tuya",
+    "id": "02948158-2e0a-4c8a-8a13-0b3d8cfdf4da",
+    "vendors": [
+        {
+            "name": "nymea",
+            "displayName": "nymea",
+            "id": "2062d64d-3232-433c-88bc-0d33c0ba2ba6",
+            "thingClasses": [
+                {
+                    "id": "760ecd1b-7365-4142-993b-9e4a3dc6f83f",
+                    "name": "powerSocket",
+                    "displayName": "Power socket with energy metering",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "powersocket", "smartmeterconsumer", "wirelessconnectable" ],
+                    "paramTypes": [
+                        {
+                            "id": "4f05c9b2-7639-4769-9a35-7fd04984e01c",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "ddb44405-9e21-4a28-9868-3da4b7d27e1f",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "0dec4a3c-8812-4cd3-9622-2d1656e63c15",
+                            "name": "endpointId",
+                            "displayName": "Endpoint ID",
+                            "type": "uint",
+                            "defaultValue": 1
+                        }
+                    ],
+                    "settingsTypes": [
+                        {
+                            "id": "a809ce98-545a-4297-9ada-7c452dcd910a",
+                            "name": "defaultPowerState",
+                            "displayName": "Default power state",
+                            "type": "QString",
+                            "allowedValues": ["On", "Off", "Restore"],
+                            "defaultValue": "On"
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "d4e2983a-f4a3-401f-853e-8b0e2f1d245e",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "displayNameEvent": "Connected changed",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "0d200118-f5fc-4c88-851f-6c9440830b21",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "displayNameEvent": "Signal strength changed",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "cached": false
+                        },
+                        {
+                            "id": "799129a5-8f4f-4836-822f-d2f26465288b",
+                            "name": "power",
+                            "displayName": "Power",
+                            "displayNameEvent": "Power changed",
+                            "displayNameAction": "Set power",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "writable": true,
+                            "ioType": "digitalOutput"
+                        },
+                        {
+                            "id": "e98e7f15-31b1-44cd-ab9d-cce14a2d2df9",
+                            "name": "currentPower",
+                            "displayName": "Current power consumption",
+                            "displayNameEvent": "Current power consumption changed",
+                            "type": "double",
+                            "unit": "Watt",
+                            "defaultValue": 0,
+                            "cached": false
+                        },
+                        {
+                            "id": "dd36b0be-f34f-406b-be27-0fc374b333f9",
+                            "name": "totalEnergyConsumed",
+                            "displayName": "Total consumed energy",
+                            "displayNameEvent": "Total energy consumed changed",
+                            "type": "double",
+                            "unit": "KiloWattHour",
+                            "defaultValue": 0
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
