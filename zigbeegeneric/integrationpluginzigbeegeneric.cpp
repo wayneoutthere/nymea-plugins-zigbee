@@ -144,6 +144,10 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
                     qCInfo(dcZigbeeGeneric()) << "Fire sensor thing";
                     createThing(fireSensorThingClassId, node, {Param(fireSensorThingEndpointIdParamTypeId, endpoint->endpointId())});
                     break;
+                case ZigbeeClusterIasZone::ZoneTypeWaterSensor:
+                    qCInfo(dcZigbeeGeneric()) << "Water sensor thing";
+                    createThing(waterSensorThingClassId, node, {Param(waterSensorThingEndpointIdParamTypeId, endpoint->endpointId())});
+                    break;
                 default:
                     qCWarning(dcZigbeeGeneric()) << "Unhandled IAS Zone device type:" << "0x" + QString::number(iasZoneTypeRecord.dataType.toUInt16(), 16);
 
@@ -155,10 +159,18 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
         }
 
         if (endpoint->profile() == Zigbee::ZigbeeProfile::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceTemperatureSensor) {
-            qCInfo(dcZigbeeGeneric()) << "Temperature sensor device found!";
             bindPowerConfigurationCluster(endpoint);
-            bindTemperatureSensorInputCluster(endpoint);
-            createThing(temperatureSensorThingClassId, node, {Param(temperatureSensorThingEndpointIdParamTypeId, endpoint->endpointId())});
+            bindTemperatureMeasurementInputCluster(endpoint);
+
+            if (endpoint->hasInputCluster(ZigbeeClusterLibrary::ClusterIdRelativeHumidityMeasurement)) {
+                qCInfo(dcZigbeeGeneric()) << "H/T sensor device found!";
+                createThing(htSensorThingClassId, node, {Param(htSensorThingEndpointIdParamTypeId, endpoint->endpointId())});
+                bindRelativeHumidityMeasurementInputCluster(endpoint);
+            } else {
+                qCInfo(dcZigbeeGeneric()) << "Temperature sensor device found!";
+                createThing(temperatureSensorThingClassId, node, {Param(temperatureSensorThingEndpointIdParamTypeId, endpoint->endpointId())});
+            }
+
             handled = true;
         }
     }
@@ -187,7 +199,7 @@ void IntegrationPluginZigbeeGeneric::setupThing(ThingSetupInfo *info)
     // Set the version
     thing->setStateValue("version", endpoint->softwareBuildId());
 
-    if (thing->hasState("batteryLevel")) {
+    if (thing->hasState("battery")) {
         connectToPowerConfigurationCluster(thing, endpoint);
     }
 
@@ -256,6 +268,22 @@ void IntegrationPluginZigbeeGeneric::setupThing(ThingSetupInfo *info)
     if (thing->thingClassId() == temperatureSensorThingClassId) {
         qCDebug(dcZigbeeGeneric()) << "Setting up temperature sensor" << thing->name() << endpoint->endpointId();;
         connectToTemperatureMeasurementInputCluster(thing, endpoint);
+    }
+
+    if (thing->thingClassId() == htSensorThingClassId) {
+        qCDebug(dcZigbeeGeneric()) << "Setting up h/t sensor" << thing->name() << endpoint->endpointId();;
+        connectToTemperatureMeasurementInputCluster(thing, endpoint);
+        connectToRelativeHumidityMeasurementInputCluster(thing, endpoint);
+    }
+
+    if (thing->thingClassId() == waterSensorThingClassId) {
+        qCDebug(dcZigbeeGeneric()) << "Setting up water sensor" << endpoint->endpointId();;
+        connectToIasZoneInputCluster(thing, endpoint, "waterDetected");
+    }
+
+    if (thing->thingClassId() == lightSensorThingClassId) {
+        qCDebug(dcZigbeeGeneric()) << "Setting up light sensor" << thing->name() << endpoint->endpointId();;
+        connectToIlluminanceMeasurementInputCluster(thing, endpoint);
     }
 
     info->finish(Thing::ThingErrorNoError);

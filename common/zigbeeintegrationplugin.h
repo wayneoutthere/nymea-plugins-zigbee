@@ -60,7 +60,8 @@ protected:
     void bindOnOffOutputCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint, int retries = 3);
     void bindElectricalMeasurementCluster(ZigbeeNodeEndpoint *endpoint);
     void bindMeteringCluster(ZigbeeNodeEndpoint *endpoint);
-    void bindTemperatureSensorInputCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
+    void bindTemperatureMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
+    void bindRelativeHumidityMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
     void bindIasZoneInputCluster(ZigbeeNodeEndpoint *endpoint);
     void bindIlluminanceMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
 
@@ -70,6 +71,7 @@ protected:
     void connectToElectricalMeasurementCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToMeteringCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToTemperatureMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
+    void connectToRelativeHumidityMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToIasZoneInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &alarmStateName, bool inverted = false);
     void connectToIlluminanceMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
 

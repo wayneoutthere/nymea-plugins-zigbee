@@ -39,6 +39,7 @@
 #include <zcl/measurement/zigbeeclusterelectricalmeasurement.h>
 #include <zcl/measurement/zigbeeclustertemperaturemeasurement.h>
 #include <zcl/measurement/zigbeeclusterilluminancemeasurement.h>
+#include <zcl/measurement/zigbeeclusterrelativehumiditymeasurement.h>
 #include <zcl/security/zigbeeclusteriaszone.h>
 
 ZigbeeIntegrationPlugin::ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerType handlerType, const QLoggingCategory &loggingCategory):
@@ -321,13 +322,13 @@ void ZigbeeIntegrationPlugin::bindMeteringCluster(ZigbeeNodeEndpoint *endpoint)
     });
 }
 
-void ZigbeeIntegrationPlugin::bindTemperatureSensorInputCluster(ZigbeeNodeEndpoint *endpoint, int retries)
+void ZigbeeIntegrationPlugin::bindTemperatureMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries)
 {
     ZigbeeNode *node = endpoint->node();
 
     ZigbeeClusterTemperatureMeasurement* temperatureMeasurementCluster = endpoint->inputCluster<ZigbeeClusterTemperatureMeasurement>(ZigbeeClusterLibrary::ClusterIdTemperatureMeasurement);
     if (!temperatureMeasurementCluster) {
-        qCWarning(m_dc) << "No metering cluster on this endpoint";
+        qCWarning(m_dc) << "No temperature measurement cluster on this endpoint";
         return;
     }
 
@@ -339,7 +340,7 @@ void ZigbeeIntegrationPlugin::bindTemperatureSensorInputCluster(ZigbeeNodeEndpoi
         if (bindTemperatureMeasurementClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
             qCWarning(m_dc) << "Failed to bind temperature measurement cluster" << bindTemperatureMeasurementClusterReply->error();
             if (retries > 0) {
-                bindTemperatureSensorInputCluster(endpoint, retries - 1);
+                bindTemperatureMeasurementInputCluster(endpoint, retries - 1);
                 return;
             }
             // Intentionally falling through... Still trying to configure attribute reporting, just in case
@@ -353,6 +354,46 @@ void ZigbeeIntegrationPlugin::bindTemperatureSensorInputCluster(ZigbeeNodeEndpoi
         measuredValueReportingConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
 
         ZigbeeClusterReply *reportingReply = temperatureMeasurementCluster->configureReporting({measuredValueReportingConfig});
+        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+                qCWarning(m_dc) << "Failed to configure temperature measurement cluster attribute reporting" << reportingReply->error();
+            }
+        });
+    });
+}
+
+void ZigbeeIntegrationPlugin::bindRelativeHumidityMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries)
+{
+    ZigbeeNode *node = endpoint->node();
+
+    ZigbeeClusterRelativeHumidityMeasurement* relativeHumidityMeasurementCluster = endpoint->inputCluster<ZigbeeClusterRelativeHumidityMeasurement>(ZigbeeClusterLibrary::ClusterIdRelativeHumidityMeasurement);
+    if (!relativeHumidityMeasurementCluster) {
+        qCWarning(m_dc) << "No relative humidity cluster on this endpoint";
+        return;
+    }
+
+    relativeHumidityMeasurementCluster->readAttributes({ZigbeeClusterRelativeHumidityMeasurement::AttributeMeasuredValue});
+
+    ZigbeeDeviceObjectReply *bindRelativeHumidityMeasurementClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdRelativeHumidityMeasurement,
+                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
+    connect(bindRelativeHumidityMeasurementClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+        if (bindRelativeHumidityMeasurementClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to bind relative humidity measurement cluster" << bindRelativeHumidityMeasurementClusterReply->error();
+            if (retries > 0) {
+                bindRelativeHumidityMeasurementInputCluster(endpoint, retries - 1);
+                return;
+            }
+            // Intentionally falling through... Still trying to configure attribute reporting, just in case
+        }
+
+        ZigbeeClusterLibrary::AttributeReportingConfiguration measuredValueReportingConfig;
+        measuredValueReportingConfig.attributeId = ZigbeeClusterRelativeHumidityMeasurement::AttributeMeasuredValue;
+        measuredValueReportingConfig.dataType = Zigbee::Int16;
+        measuredValueReportingConfig.minReportingInterval = 60; // We want currentPower asap
+        measuredValueReportingConfig.maxReportingInterval = 1200;
+        measuredValueReportingConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+        ZigbeeClusterReply *reportingReply = relativeHumidityMeasurementCluster->configureReporting({measuredValueReportingConfig});
         connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
             if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
                 qCWarning(m_dc) << "Failed to configure temperature measurement cluster attribute reporting" << reportingReply->error();
@@ -448,7 +489,7 @@ void ZigbeeIntegrationPlugin::bindIlluminanceMeasurementInputCluster(ZigbeeNodeE
         if (bindIlluminanceMeasurementClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
             qCWarning(m_dc) << "Failed to bind temperature measurement cluster" << bindIlluminanceMeasurementClusterReply->error();
             if (retries > 0) {
-                bindTemperatureSensorInputCluster(endpoint, retries - 1);
+                bindIlluminanceMeasurementInputCluster(endpoint, retries - 1);
                 return;
             }
             // Intentionally falling through... Still trying to configure attribute reporting, just in case
@@ -597,6 +638,23 @@ void ZigbeeIntegrationPlugin::connectToTemperatureMeasurementInputCluster(Thing 
         connect(temperatureMeasurementCluster, &ZigbeeClusterTemperatureMeasurement::temperatureChanged, thing, [=](double temperature) {
             qCDebug(m_dc) << "Temperature for" << thing->name() << "changed to:" << temperature;
             thing->setStateValue("temperature", temperature);
+        });
+    }
+}
+
+void ZigbeeIntegrationPlugin::connectToRelativeHumidityMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterRelativeHumidityMeasurement *relativeHumidityMeasurementCluster = endpoint->inputCluster<ZigbeeClusterRelativeHumidityMeasurement>(ZigbeeClusterLibrary::ClusterIdRelativeHumidityMeasurement);
+    if (!relativeHumidityMeasurementCluster) {
+        qCWarning(m_dc) << "Could not find relative humidity measurement cluster on" << thing->name() << endpoint;
+    } else {
+        if (relativeHumidityMeasurementCluster->hasAttribute(ZigbeeClusterRelativeHumidityMeasurement::AttributeMaxMeasuredValue)) {
+            thing->setStateValue("humidity", relativeHumidityMeasurementCluster->humidity());
+        }
+        relativeHumidityMeasurementCluster->readAttributes({ZigbeeClusterRelativeHumidityMeasurement::AttributeMeasuredValue});
+        connect(relativeHumidityMeasurementCluster, &ZigbeeClusterRelativeHumidityMeasurement::humidityChanged, thing, [=](double humidity) {
+            qCDebug(m_dc) << "Humidity for" << thing->name() << "changed to:" << humidity;
+            thing->setStateValue("humidity", humidity);
         });
     }
 }
