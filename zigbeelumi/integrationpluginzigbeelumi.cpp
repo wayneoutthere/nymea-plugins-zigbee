@@ -325,14 +325,14 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
             qCWarning(dcZigbeeLumi()) << "Occupancy cluster not found on" << thing->name();
         }
 
-        ZigbeeClusterIlluminanceMeasurment *illuminanceCluster = endpoint->inputCluster<ZigbeeClusterIlluminanceMeasurment>(ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement);
+        ZigbeeClusterIlluminanceMeasurement *illuminanceCluster = endpoint->inputCluster<ZigbeeClusterIlluminanceMeasurement>(ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement);
         if (illuminanceCluster) {
             // Only set the state if the cluster actually has the attribute
-            if (illuminanceCluster->hasAttribute(ZigbeeClusterIlluminanceMeasurment::AttributeMeasuredValue)) {
+            if (illuminanceCluster->hasAttribute(ZigbeeClusterIlluminanceMeasurement::AttributeMeasuredValue)) {
                 thing->setStateValue(lumiMotionSensorLightIntensityStateTypeId, illuminanceCluster->illuminance());
             }
 
-            connect(illuminanceCluster, &ZigbeeClusterIlluminanceMeasurment::illuminanceChanged, thing, [thing](quint16 illuminance){
+            connect(illuminanceCluster, &ZigbeeClusterIlluminanceMeasurement::illuminanceChanged, thing, [thing](quint16 illuminance){
                 qCDebug(dcZigbeeLumi()) << thing << "light intensity changed" << illuminance << "lux";
                 thing->setStateValue(lumiMotionSensorLightIntensityStateTypeId, illuminance);
             });
