@@ -39,24 +39,15 @@
 #include <zcl/general/zigbeeclusteridentify.h>
 #include <zcl/measurement/zigbeeclustertemperaturemeasurement.h>
 #include <zcl/measurement/zigbeeclusterrelativehumiditymeasurement.h>
+#include <zcl/security/zigbeeclusteriaswd.h>
 
 #include <QDebug>
 
 #include <zigbeeutils.h>
 
-IntegrationPluginZigbeeDevelco::IntegrationPluginZigbeeDevelco()
+IntegrationPluginZigbeeDevelco::IntegrationPluginZigbeeDevelco():
+    ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor, dcZigbeeDevelco())
 {
-    m_ieeeAddressParamTypeIds[ioModuleThingClassId] = ioModuleThingIeeeAddressParamTypeId;
-    m_ieeeAddressParamTypeIds[airQualitySensorThingClassId] = airQualitySensorThingIeeeAddressParamTypeId;
-
-    m_networkUuidParamTypeIds[ioModuleThingClassId] = ioModuleThingNetworkUuidParamTypeId;
-    m_networkUuidParamTypeIds[airQualitySensorThingClassId] = airQualitySensorThingNetworkUuidParamTypeId;
-
-    m_connectedStateTypeIds[ioModuleThingClassId] = ioModuleConnectedStateTypeId;
-    m_connectedStateTypeIds[airQualitySensorThingClassId] = airQualitySensorConnectedStateTypeId;
-
-    m_signalStrengthStateTypeIds[ioModuleThingClassId] = ioModuleSignalStrengthStateTypeId;
-    m_signalStrengthStateTypeIds[airQualitySensorThingClassId] = airQualitySensorSignalStrengthStateTypeId;
 }
 
 QString IntegrationPluginZigbeeDevelco::name() const
@@ -66,77 +57,55 @@ QString IntegrationPluginZigbeeDevelco::name() const
 
 bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &networkUuid)
 {
-    // Filter for develco manufacturer code
-    // Develco devices have an endpoint 0x01 with Develco profile
-    if (node->nodeDescriptor().manufacturerCode != Zigbee::Develco)
+    // Not filtering for Develco manufacturer code as Develco allows to override that via branding.
+    // Develco devices have an endpoint 0x01 with Develco profile, so we'll check for that
+    ZigbeeNodeEndpoint *endpoint1 = node->getEndpoint(0x01);
+    if (endpoint1->profile() != Zigbee::ZigbeeProfileDevelco) {
         return false;
+    }
 
     bool handled = false;
-    if (node->modelName() == "IOMZB-110" || node->modelName() == "DIOZB-110") {
-        if (node->hasEndpoint(IO_MODULE_EP_INPUT1) && node->hasEndpoint(IO_MODULE_EP_INPUT2) &&
-                node->hasEndpoint(IO_MODULE_EP_INPUT3) && node->hasEndpoint(IO_MODULE_EP_INPUT4) &&
-                node->hasEndpoint(IO_MODULE_EP_OUTPUT1 && node->hasEndpoint(IO_MODULE_EP_OUTPUT2))) {
-            qCDebug(dcZigbeeDevelco()) << "Found IO module" << node << networkUuid.toString();
-            initIoModule(node);
-            createThing(ioModuleThingClassId, networkUuid, node);
-            handled = true;
-        }
-    } else if (node->modelName() == "AQSZB-110") {
-        if (node->hasEndpoint(AIR_QUALITY_SENSOR_EP_SENSOR)) {
-            qCDebug(dcZigbeeDevelco()) << "Found air quality sensor" << node << networkUuid.toString();
-            initAirQualitySensor(node);
-            createThing(airQualitySensorThingClassId, networkUuid, node);
-            handled = true;
-        }
+    // Not checking model name as Develco allows to override that via branding, we're determining the devices by their available endpoints
+    if (node->hasEndpoint(IO_MODULE_EP_INPUT1) && node->hasEndpoint(IO_MODULE_EP_INPUT2) &&
+            node->hasEndpoint(IO_MODULE_EP_INPUT3) && node->hasEndpoint(IO_MODULE_EP_INPUT4) &&
+            node->hasEndpoint(IO_MODULE_EP_OUTPUT1 && node->hasEndpoint(IO_MODULE_EP_OUTPUT2))) {
+        qCDebug(dcZigbeeDevelco()) << "Found IO module" << node << networkUuid.toString();
+        initIoModule(node);
+        createThing(ioModuleThingClassId, node);
+        handled = true;
+
+    } else if (node->modelName() == "AQSZB-110" && node->hasEndpoint(AIR_QUALITY_SENSOR_EP_SENSOR)) { // FIXME: Don't check model name here either to catch brandings, but only checking the sensor EP will also match other devices
+        qCDebug(dcZigbeeDevelco()) << "Found air quality sensor" << node << networkUuid.toString();
+        initAirQualitySensor(node);
+        createThing(airQualitySensorThingClassId, node);
+        handled = true;
+
+    } else if (node->hasEndpoint(SMOKE_SENSOR_EP_IAS_ZONE) && node->hasEndpoint(SMOKE_SENSOR_EP_TEMPERATURE_SENSOR)) {
+        qCDebug(dcZigbeeDevelco()) << "Found smoke sensor" << node;
+        ZigbeeNodeEndpoint *iasZoneEndpoint = node->getEndpoint(SMOKE_SENSOR_EP_IAS_ZONE);
+        ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(SMOKE_SENSOR_EP_TEMPERATURE_SENSOR);
+
+        bindPowerConfigurationCluster(iasZoneEndpoint);
+        bindIasZoneInputCluster(iasZoneEndpoint);
+        bindTemperatureSensorInputCluster(temperatureSensorEndpoint);
+        createThing(smokeSensorThingClassId, node);
+        handled = true;
     }
 
     return handled;
-}
-
-void IntegrationPluginZigbeeDevelco::handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid)
-{
-    Q_UNUSED(networkUuid)
-    Thing *thing = m_thingNodes.key(node);
-    if (thing) {
-        qCDebug(dcZigbeeDevelco()) << node << "for" << thing << "has left the network.";
-        emit autoThingDisappeared(thing->id());
-        // Removing it from our map to prevent a loop that would ask the zigbee network to remove this node (see thingRemoved())
-        m_thingNodes.remove(thing);
-    }
-}
-
-void IntegrationPluginZigbeeDevelco::init()
-{
-    hardwareManager()->zigbeeResource()->registerHandler(this, ZigbeeHardwareResource::HandlerTypeVendor);
 }
 
 void IntegrationPluginZigbeeDevelco::setupThing(ThingSetupInfo *info)
 {
     qCDebug(dcZigbeeDevelco()) << "Setup" << info->thing();
 
-    // Get the node for this thing
     Thing *thing = info->thing();
-    QUuid networkUuid = thing->paramValue(m_networkUuidParamTypeIds.value(thing->thingClassId())).toUuid();
-    ZigbeeAddress zigbeeAddress = ZigbeeAddress(thing->paramValue(m_ieeeAddressParamTypeIds.value(thing->thingClassId())).toString());
-    ZigbeeNode *node = m_thingNodes.value(thing);
-    if (!node) {
-        node = hardwareManager()->zigbeeResource()->claimNode(this, networkUuid, zigbeeAddress);
-        if (!node) {
-            qCWarning(dcZigbeeDevelco()) << "Coud not find zigbee node for" << thing;
-            info->finish(Thing::ThingErrorHardwareNotAvailable);
-            return;
-        }
+    if (!manageNode(thing)) {
+        qCWarning(dcZigbeeDevelco()) << "Failed to claim node during setup.";
+        info->finish(Thing::ThingErrorHardwareNotAvailable);
+        return;
     }
-
-    m_thingNodes.insert(thing, node);
-
-    // Update signal strength
-    thing->setStateValue(m_signalStrengthStateTypeIds.value(thing->thingClassId()), qRound(node->lqi() * 100.0 / 255.0));
-    connect(node, &ZigbeeNode::lqiChanged, thing, [this, thing](quint8 lqi){
-        uint signalStrength = qRound(lqi * 100.0 / 255.0);
-        qCDebug(dcZigbeeDevelco()) << thing << "signal strength changed" << signalStrength << "%";
-        thing->setStateValue(m_signalStrengthStateTypeIds.value(thing->thingClassId()), signalStrength);
-    });
+    ZigbeeNode *node = nodeForThing(thing);
 
     if (thing->thingClassId() == ioModuleThingClassId) {
         // Set the version from the manufacturer specific attribute in base cluster
@@ -163,9 +132,7 @@ void IntegrationPluginZigbeeDevelco::setupThing(ThingSetupInfo *info)
         }
 
         // Handle reachable state from node
-        thing->setStateValue(m_connectedStateTypeIds.value(thing->thingClassId()), node->reachable());
         connect(node, &ZigbeeNode::reachableChanged, thing, [=](bool reachable){
-            thing->setStateValue(m_connectedStateTypeIds.value(thing->thingClassId()), reachable);
             if (reachable) {
                 readDevelcoFirmwareVersion(node, node->getEndpoint(IO_MODULE_EP_INPUT1));
                 readIoModuleOutputPowerStates(thing);
@@ -295,11 +262,6 @@ void IntegrationPluginZigbeeDevelco::setupThing(ThingSetupInfo *info)
             return;
         }
 
-        // Handle reachable state from node
-        thing->setStateValue(m_connectedStateTypeIds.value(thing->thingClassId()), node->reachable());
-        connect(node, &ZigbeeNode::reachableChanged, thing, [=](bool reachable){
-            thing->setStateValue(m_connectedStateTypeIds.value(thing->thingClassId()), reachable);
-        });
 
         // Version state
         if (sensorEndpoint->hasInputCluster(ZigbeeClusterLibrary::ClusterIdBasic)) {
@@ -406,6 +368,11 @@ void IntegrationPluginZigbeeDevelco::setupThing(ThingSetupInfo *info)
                 }
             });
         }
+    } else if (thing->thingClassId() == smokeSensorThingClassId) {
+        ZigbeeNodeEndpoint *iazZoneEndpoint = node->getEndpoint(SMOKE_SENSOR_EP_IAS_ZONE);
+        ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(SMOKE_SENSOR_EP_TEMPERATURE_SENSOR);
+        connectToIasZoneInputCluster(thing, iazZoneEndpoint, "fireDetected");
+        connectToTemperatureMeasurementInputCluster(thing, temperatureSensorEndpoint);
     }
 
     info->finish(Thing::ThingErrorNoError);
@@ -414,7 +381,7 @@ void IntegrationPluginZigbeeDevelco::setupThing(ThingSetupInfo *info)
 void IntegrationPluginZigbeeDevelco::postSetupThing(Thing *thing)
 {
     if (thing->thingClassId() == ioModuleThingClassId) {
-        if (m_thingNodes.value(thing)->reachable()) {
+        if (nodeForThing(thing)->reachable()) {
             readIoModuleOutputPowerStates(thing);
             readIoModuleInputPowerStates(thing);
         }
@@ -428,13 +395,8 @@ void IntegrationPluginZigbeeDevelco::executeAction(ThingActionInfo *info)
         return;
     }
 
-    // Get the node
     Thing *thing = info->thing();
-    ZigbeeNode *node = m_thingNodes.value(thing);
-    if (!node->reachable()) {
-        info->finish(Thing::ThingErrorHardwareNotAvailable);
-        return;
-    }
+    ZigbeeNode *node = nodeForThing(info->thing());
 
     if (thing->thingClassId() == ioModuleThingClassId) {
         // Identify
@@ -576,30 +538,25 @@ void IntegrationPluginZigbeeDevelco::executeAction(ThingActionInfo *info)
             return;
         }
     }
+    if (thing->thingClassId() == smokeSensorThingClassId) {
+        if (info->action().actionTypeId() == smokeSensorAlarmActionTypeId) {
+            ZigbeeNodeEndpoint *iazZoneEndpoint = node->getEndpoint(SMOKE_SENSOR_EP_IAS_ZONE);
+            ZigbeeClusterIasWd *iasWdCluster = iazZoneEndpoint->inputCluster<ZigbeeClusterIasWd>(ZigbeeClusterLibrary::ClusterIdIasWd);
+            if (!iasWdCluster) {
+                qCWarning(dcZigbeeDevelco()) << "Could not find IAS WD cluster for" << thing << "in" << node;
+                info->finish(Thing::ThingErrorHardwareFailure);
+                return;
+            }
+            uint duration = info->action().paramValue(smokeSensorAlarmActionDurationParamTypeId).toUInt();
+            ZigbeeClusterReply *reply = iasWdCluster->startWarning(ZigbeeClusterIasWd::WarningModeFire, true, ZigbeeClusterIasWd::SirenLevelHigh, duration, 50, ZigbeeClusterIasWd::StrobeLevelMedium);
+            connect(reply, &ZigbeeClusterReply::finished, this, [reply, info]() {
+                info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError:  Thing::ThingErrorHardwareFailure);
+            });
+            return;
+        }
+    }
 
     info->finish(Thing::ThingErrorUnsupportedFeature);
-}
-
-void IntegrationPluginZigbeeDevelco::thingRemoved(Thing *thing)
-{
-    ZigbeeNode *node = m_thingNodes.take(thing);
-    if (node) {
-        QUuid networkUuid = thing->paramValue(m_networkUuidParamTypeIds.value(thing->thingClassId())).toUuid();
-        hardwareManager()->zigbeeResource()->removeNodeFromNetwork(networkUuid, node);
-    }
-}
-
-void IntegrationPluginZigbeeDevelco::createThing(const ThingClassId &thingClassId, const QUuid &networkUuid, ZigbeeNode *node)
-{
-    ThingDescriptor descriptor(thingClassId);
-    QString deviceClassName = supportedThings().findById(thingClassId).displayName();
-    descriptor.setTitle(QString("%1 (%2 - %3)").arg(deviceClassName, node->manufacturerName(), node->modelName()));
-
-    ParamList params;
-    params.append(Param(m_networkUuidParamTypeIds[thingClassId], networkUuid.toString()));
-    params.append(Param(m_ieeeAddressParamTypeIds[thingClassId], node->extendedAddress().toString()));
-    descriptor.setParams(params);
-    emit autoThingsAppeared({descriptor});
 }
 
 QString IntegrationPluginZigbeeDevelco::parseDevelcoVersionString(ZigbeeNodeEndpoint *endpoint)
@@ -921,7 +878,7 @@ void IntegrationPluginZigbeeDevelco::readBinaryInputPresentValueAttribute(Zigbee
 
 void IntegrationPluginZigbeeDevelco::readIoModuleOutputPowerStates(Thing *thing)
 {
-    ZigbeeNode *node = m_thingNodes.value(thing);
+    ZigbeeNode *node = nodeForThing(thing);
     if (!node) {
         qCWarning(dcZigbeeDevelco()) << "Could not find zigbee node for" << thing;
         return;
@@ -948,7 +905,7 @@ void IntegrationPluginZigbeeDevelco::readIoModuleOutputPowerStates(Thing *thing)
 
 void IntegrationPluginZigbeeDevelco::readIoModuleInputPowerStates(Thing *thing)
 {
-    ZigbeeNode *node = m_thingNodes.value(thing);
+    ZigbeeNode *node = nodeForThing(thing);
     if (!node) {
         qCWarning(dcZigbeeDevelco()) << "Could not find zigbee node for" << thing;
         return;

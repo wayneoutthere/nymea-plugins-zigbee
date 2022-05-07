@@ -54,7 +54,7 @@ bool IntegrationPluginZigbeeEurotronic::handleNode(ZigbeeNode *node, const QUuid
     if (node->nodeDescriptor().manufacturerCode == 0x1037 && node->modelName() == "SPZB0001") {
 
         ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
-        bindPowerConfigurationCluster(node, endpoint);
+        bindPowerConfigurationCluster(endpoint);
         bindThermostatCluster(node, endpoint);
 
         createThing(spiritThingClassId, node);

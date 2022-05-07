@@ -69,7 +69,7 @@ bool IntegrationPluginZigbeeGewiss::handleNode(ZigbeeNode *node, const QUuid &/*
             return false;
         }
 
-        bindPowerConfigurationCluster(node, endpoint1);
+        bindPowerConfigurationCluster(endpoint1);
 
         bindOnOffOutputCluster(node, endpoint2);
         bindOnOffOutputCluster(node, endpoint1);
