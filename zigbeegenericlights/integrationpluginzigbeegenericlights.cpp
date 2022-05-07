@@ -31,7 +31,11 @@
 
 #include "integrationpluginzigbeegenericlights.h"
 #include "plugininfo.h"
-#include "hardware/zigbee/zigbeehardwareresource.h"
+
+#include <hardware/zigbee/zigbeehardwareresource.h>
+#include <zcl/general/zigbeeclusteronoff.h>
+#include <zcl/general/zigbeeclusterlevelcontrol.h>
+#include <zcl/general/zigbeeclusteridentify.h>
 
 #include <QDebug>
 

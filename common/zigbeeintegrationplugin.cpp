@@ -29,9 +29,14 @@
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "zigbeeintegrationplugin.h"
+
 #include <hardware/zigbee/zigbeehardwareresource.h>
-#include <zcl/measurement/zigbeeclusterelectricalmeasurement.h>
+
+#include <zcl/general/zigbeeclusterpowerconfiguration.h>
+#include <zcl/general/zigbeeclusteronoff.h>
+#include <zcl/hvac/zigbeeclusterthermostat.h>
 #include <zcl/smartenergy/zigbeeclustermetering.h>
+#include <zcl/measurement/zigbeeclusterelectricalmeasurement.h>
 
 Q_DECLARE_LOGGING_CATEGORY(dcZigbeeCluster)
 
@@ -144,7 +149,14 @@ void ZigbeeIntegrationPlugin::bindPowerConfigurationCluster(ZigbeeNode *node, Zi
         batteryPercentageConfig.maxReportingInterval = 120;
         batteryPercentageConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
 
-        ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdPowerConfiguration)->configureReporting({batteryPercentageConfig});
+        ZigbeeClusterLibrary::AttributeReportingConfiguration batteryAlarmStateConfig;
+        batteryAlarmStateConfig.attributeId = ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState;
+        batteryAlarmStateConfig.dataType = Zigbee::Uint8;
+        batteryAlarmStateConfig.minReportingInterval = 60;
+        batteryAlarmStateConfig.maxReportingInterval = 120;
+        batteryAlarmStateConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+        ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdPowerConfiguration)->configureReporting({batteryPercentageConfig, batteryAlarmStateConfig});
         connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
             if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
                 qCWarning(dcZigbeeCluster()) << "Failed to configure power configuration cluster attribute reporting" << reportingReply->error();
@@ -306,26 +318,34 @@ void ZigbeeIntegrationPlugin::connectToPowerConfigurationCluster(Thing *thing, Z
     ZigbeeClusterPowerConfiguration *powerCluster = endpoint->inputCluster<ZigbeeClusterPowerConfiguration>(ZigbeeClusterLibrary::ClusterIdPowerConfiguration);
     if (powerCluster) {
         // If the power cluster attributes are already available, read values now
-        if (powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining)) {
+        if (thing->thingClass().hasStateType("batteryLevel") && powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining)) {
             thing->setStateValue("batteryLevel", powerCluster->batteryPercentage());
-            thing->setStateValue("batteryCritical", (powerCluster->batteryPercentage() < 10.0));
         }
-        // Refresh power cluster attributes in any case
-        ZigbeeClusterReply *reply = powerCluster->readAttributes({ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining});
-        connect(reply, &ZigbeeClusterReply::finished, thing, [=](){
-            if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(dcZigbeeCluster()) << thing->name() << "Reading power configuration cluster attributes finished with error" << reply->error();
-                return;
+        if (powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState)) {
+            thing->setStateValue("batteryCritical", powerCluster->batteryAlarmState() > 0);
+        } else {
+            thing->setStateValue("batteryCritical", thing->stateValue("batteryLevel").toInt() < 10);
+        }
+
+        // Connect to changes
+        connect(powerCluster, &ZigbeeClusterPowerConfiguration::batteryPercentageChanged, thing, [=](double percentage){
+            if (thing->thingClass().hasStateType("batteryLevel")) {
+                thing->setStateValue("batteryLevel", percentage);
             }
-            thing->setStateValue("batteryLevel", powerCluster->batteryPercentage());
-            thing->setStateValue("batteryCritical", (powerCluster->batteryPercentage() < 10.0));
+            if (!powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState)) {
+                thing->setStateValue("batteryCritical", (percentage < 10.0));
+            }
+        });
+        connect(powerCluster, &ZigbeeClusterPowerConfiguration::batteryAlarmStateChanged, thing, [=](ZigbeeClusterPowerConfiguration::BatteryAlarmMask alarmState){
+            thing->setStateValue("batteryCritical", alarmState > 0);
         });
 
-        // Connect to battery level changes
-        connect(powerCluster, &ZigbeeClusterPowerConfiguration::batteryPercentageChanged, thing, [=](double percentage){
-            thing->setStateValue("batteryLevel", percentage);
-            thing->setStateValue("batteryCritical", (percentage < 10.0));
-        });
+        // Refresh power cluster attributes in any case. Response will be processed in signal handlers
+        powerCluster->readAttributes({
+                                     ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining,
+                                     ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState
+                                 });
+
     } else {
         qCWarning(dcZigbeeCluster()) << "No power configuration cluster on" << thing->name() << "and endpoint" << endpoint->endpointId();
     }

@@ -31,8 +31,12 @@
 
 #include "integrationpluginzigbeetradfri.h"
 #include "plugininfo.h"
-#include "zigbeeutils.h"
-#include "hardware/zigbee/zigbeehardwareresource.h"
+
+#include <zigbeeutils.h>
+#include <hardware/zigbee/zigbeehardwareresource.h>
+#include <zcl/general/zigbeeclusteronoff.h>
+#include <zcl/general/zigbeeclusterpowerconfiguration.h>
+#include <zcl/general/zigbeeclusterscenes.h>
 
 #include <qmath.h>
 

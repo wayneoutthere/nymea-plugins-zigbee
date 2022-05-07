@@ -31,8 +31,12 @@
 #ifndef INTEGRATIONPLUGINZIGBEEGENERICLIGHTS_H
 #define INTEGRATIONPLUGINZIGBEEGENERICLIGHTS_H
 
-#include "integrations/integrationplugin.h"
-#include "hardware/zigbee/zigbeehandler.h"
+#include "extern-plugininfo.h"
+
+#include <integrations/integrationplugin.h>
+#include <hardware/zigbee/zigbeehandler.h>
+#include <zcl/lighting/zigbeeclustercolorcontrol.h>
+
 
 class IntegrationPluginZigbeeGenericLights: public IntegrationPlugin, public ZigbeeHandler
 {

@@ -153,7 +153,7 @@
                     "name": "airQualitySensor",
                     "displayName": "Air qualiy sensor",
                     "createMethods": ["auto"],
-                    "interfaces": ["indoorairquality", "temperaturesensor", "humiditysensor", "battery", "wirelessconnectable"],
+                    "interfaces": ["indoorairqualitysensor", "temperaturesensor", "humiditysensor", "battery", "wirelessconnectable"],
                     "paramTypes": [
                         {
                             "id": "dbad9e63-1adc-45ef-8bfc-4947060f19f4",
