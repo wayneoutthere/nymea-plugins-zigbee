@@ -42,7 +42,7 @@
 
 #include <QDebug>
 
-IntegrationPluginZigbeeGeneric::IntegrationPluginZigbeeGeneric(): ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeCatchAll)
+IntegrationPluginZigbeeGeneric::IntegrationPluginZigbeeGeneric(): ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeCatchAll, dcZigbeeGeneric())
 {
 }
 
@@ -151,6 +151,14 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
 
             });
 
+            handled = true;
+        }
+
+        if (endpoint->profile() == Zigbee::ZigbeeProfile::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceTemperatureSensor) {
+            qCInfo(dcZigbeeGeneric()) << "Temperature sensor device found!";
+            bindPowerConfigurationCluster(node, endpoint);
+            bindTemperatureSensorInputCluster(endpoint);
+            createThing(temperatureSensorThingClassId, node, {Param(temperatureSensorThingEndpointIdParamTypeId, endpoint->endpointId())});
             handled = true;
         }
     }
@@ -276,6 +284,11 @@ void IntegrationPluginZigbeeGeneric::setupThing(ThingSetupInfo *info)
                 thing->setStateValue(fireSensorFireDetectedStateTypeId, zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2));
             });
         }
+    }
+
+    if (thing->thingClassId() == temperatureSensorThingClassId) {
+        qCDebug(dcZigbeeGeneric()) << "Setting up temperature sensor" << thing->name() << endpoint->endpointId();;
+        connectToTemperatureMeasurementInputCluster(thing, endpoint);
     }
 
     info->finish(Thing::ThingErrorNoError);

@@ -41,7 +41,7 @@
 
 #include <QDebug>
 
-IntegrationPluginZigbeeGewiss::IntegrationPluginZigbeeGewiss(): ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor)
+IntegrationPluginZigbeeGewiss::IntegrationPluginZigbeeGewiss(): ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor, dcZigbeeGewiss())
 {
 }
 

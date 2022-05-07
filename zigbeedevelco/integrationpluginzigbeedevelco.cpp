@@ -68,7 +68,6 @@ bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &n
 {
     // Filter for develco manufacturer code
     // Develco devices have an endpoint 0x01 with Develco profile
-    ZigbeeNodeEndpoint *endpoint1 = node->getEndpoint(0x01);
     if (node->nodeDescriptor().manufacturerCode != Zigbee::Develco)
         return false;
 

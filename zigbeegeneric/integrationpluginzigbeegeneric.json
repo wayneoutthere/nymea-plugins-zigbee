@@ -761,6 +761,88 @@
                             "displayName": "Notify armed/disarmed"
                         }
                     ]
+                },
+                {
+                    "id": "ff9657f3-4076-41b9-ae7d-537866fd0ddc",
+                    "name": "temperatureSensor",
+                    "displayName": "Temperature sensor",
+                    "interfaces": ["temperaturesensor", "wirelessconnectable", "battery"],
+                    "paramTypes": [
+                        {
+                            "id": "ccbd0b84-be4e-4555-bcc1-173a1a903733",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "e756669e-a434-4674-bac9-9fd0858796c8",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "cb5e1332-b7e4-4449-8202-f435ded34377",
+                            "name": "endpointId",
+                            "displayName": "Endpoint ID",
+                            "type": "uint",
+                            "defaultValue": 1
+                        },
+                        {
+                            "id": "c4444d63-95ed-4b13-bf7b-9328e1a31c17",
+                            "name": "manufacturer",
+                            "displayName": "Manufacturer",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "65445e33-6a2d-4755-b8c6-b1324934d5d5",
+                            "name": "model",
+                            "displayName": "Model",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "cf20355b-1640-4eda-b7e7-e3363c02bed6",
+                            "name": "batteryCritical",
+                            "displayName": "Battery critical",
+                            "displayNameEvent": "Battery critical changed",
+                            "type": "bool",
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "13d91dce-cba3-452c-9618-3c505a56fbc2",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "displayNameEvent": "Connected or disconnected",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "cached": false
+                        },
+                        {
+                            "id": "8f77c980-a1e0-4f4b-a042-1272a8fe3459",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "displayNameEvent": "Signal strength changed",
+                            "type": "uint",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "1ca9594f-fa48-4ea3-be0e-d8aea3e5ad0a",
+                            "name": "temperature",
+                            "displayName": "Temperature",
+                            "displayNameEvent": "Temperature changed",
+                            "type": "double",
+                            "unit": "DegreeCelsius",
+                            "defaultValue": 0
+                        }
+                    ]
                 }
             ]
         }
