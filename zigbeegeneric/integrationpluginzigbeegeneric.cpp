@@ -34,6 +34,11 @@
 #include "hardware/zigbee/zigbeehardwareresource.h"
 
 #include "zcl/hvac/zigbeeclusterthermostat.h"
+#include "zcl/closures/zigbeeclusterdoorlock.h"
+#include "zcl/general/zigbeeclusteridentify.h"
+#include "zcl/general/zigbeeclusteronoff.h"
+#include "zcl/security/zigbeeclusteriaszone.h"
+#include "zcl/security/zigbeeclusteriaswd.h"
 
 #include <QDebug>
 
@@ -434,6 +439,36 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
                 } else {
                     info->finish(Thing::ThingErrorNoError);
                 }
+            });
+            return;
+        }
+    }
+
+    if (thing->thingClassId() == fireSensorThingClassId) {
+        if (info->action().actionTypeId() == fireSensorAlarmActionTypeId) {
+            ZigbeeClusterIasWd *iasWdCluster = endpoint->inputCluster<ZigbeeClusterIasWd>(ZigbeeClusterLibrary::ClusterIdIasWd);
+            if (!iasWdCluster) {
+                qCWarning(dcZigbeeGeneric()) << "Could not find IAS WD cluster for" << thing << "in" << node;
+                info->finish(Thing::ThingErrorHardwareFailure);
+                return;
+            }
+            uint duration = info->action().paramValue(fireSensorAlarmActionDurationParamTypeId).toUInt();
+            ZigbeeClusterReply *reply = iasWdCluster->startWarning(ZigbeeClusterIasWd::WarningModeStop, true, ZigbeeClusterIasWd::SirenLevelHigh, duration, 50, ZigbeeClusterIasWd::StrobeLevelMedium);
+            connect(reply, &ZigbeeClusterReply::finished, this, [reply, info]() {
+                info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError:  Thing::ThingErrorHardwareFailure);
+            });
+            return;
+        }
+        if (info->action().actionTypeId() == fireSensorNotifyActionTypeId) {
+            ZigbeeClusterIasWd *iasWdCluster = endpoint->inputCluster<ZigbeeClusterIasWd>(ZigbeeClusterLibrary::ClusterIdIasWd);
+            if (!iasWdCluster) {
+                qCWarning(dcZigbeeGeneric()) << "Could not find IAS WD cluster for" << thing << "in" << node;
+                info->finish(Thing::ThingErrorHardwareFailure);
+                return;
+            }
+            ZigbeeClusterReply *reply = iasWdCluster->squawk(ZigbeeClusterIasWd::SquawkModeSystemDisarmed, true, ZigbeeClusterIasWd::SquawkLevelLow);
+            connect(reply, &ZigbeeClusterReply::finished, this, [reply, info]() {
+                info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError:  Thing::ThingErrorHardwareFailure);
             });
             return;
         }

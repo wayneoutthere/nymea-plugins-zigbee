@@ -31,9 +31,13 @@
 
 #include "integrationpluginzigbeetuya.h"
 #include "plugininfo.h"
-#include "hardware/zigbee/zigbeehardwareresource.h"
 
-#include "zcl/hvac/zigbeeclusterthermostat.h"
+#include <hardware/zigbee/zigbeehardwareresource.h>
+
+#include <zcl/general/zigbeeclusteronoff.h>
+#include <zcl/hvac/zigbeeclusterthermostat.h>
+#include <zcl/smartenergy/zigbeeclustermetering.h>
+#include <zcl/measurement/zigbeeclusterelectricalmeasurement.h>
 
 #include <QDebug>
 

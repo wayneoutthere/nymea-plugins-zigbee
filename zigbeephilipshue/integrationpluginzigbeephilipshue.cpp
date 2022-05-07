@@ -31,7 +31,16 @@
 
 #include "integrationpluginzigbeephilipshue.h"
 #include "plugininfo.h"
-#include "hardware/zigbee/zigbeehardwareresource.h"
+
+#include <hardware/zigbee/zigbeehardwareresource.h>
+#include <zcl/general/zigbeeclusteronoff.h>
+#include <zcl/general/zigbeeclusterpowerconfiguration.h>
+#include <zcl/general/zigbeeclusterlevelcontrol.h>
+#include <zcl/measurement/zigbeeclusteroccupancysensing.h>
+#include <zcl/measurement/zigbeeclustertemperaturemeasurement.h>
+#include <zcl/measurement/zigbeeclusterilluminancemeasurment.h>
+#include <zcl/manufacturerspecific/philips/zigbeeclustermanufacturerspecificphilips.h>
+
 
 #include <math.h>
 

@@ -31,7 +31,12 @@
 
 #include "integrationpluginzigbeeremotes.h"
 #include "plugininfo.h"
-#include "hardware/zigbee/zigbeehardwareresource.h"
+
+#include <hardware/zigbee/zigbeehardwareresource.h>
+#include <zcl/general/zigbeeclusteronoff.h>
+#include <zcl/general/zigbeeclusterlevelcontrol.h>
+#include <zcl/general/zigbeeclusterscenes.h>
+#include <zcl/general/zigbeeclusterpowerconfiguration.h>
 
 #include <QDebug>
 

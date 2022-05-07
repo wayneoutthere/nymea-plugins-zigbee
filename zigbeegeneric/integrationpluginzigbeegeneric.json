@@ -652,7 +652,7 @@
                     "id": "6b49bd7e-4331-4e1b-bc1b-7860906fda15",
                     "name": "fireSensor",
                     "displayName": "Fire sensor",
-                    "interfaces": ["wirelessconnectable"],
+                    "interfaces": ["firesensor", "alarm", "wirelessconnectable", "battery"],
                     "paramTypes": [
                         {
                             "id": "77a75423-3415-4be1-b6b4-ac947d28a717",
@@ -700,17 +700,6 @@
                             "defaultValue": "false"
                         },
                         {
-                            "id": "75ffe8ff-7dd7-4fcf-9e37-459aedf1467d",
-                            "name": "batteryLevel",
-                            "displayName": "Battery level",
-                            "displayNameEvent": "Battery level changed",
-                            "type": "int",
-                            "minValue": 0,
-                            "maxValue": 100,
-                            "unit": "Percentage",
-                            "defaultValue": 0
-                        },
-                        {
                             "id": "6d0a6178-5e86-4bb5-b1a2-929a6d732195",
                             "name": "batteryCritical",
                             "displayName": "Battery critical",
@@ -737,6 +726,39 @@
                             "maxValue": 100,
                             "unit": "Percentage",
                             "defaultValue": 0
+                        },
+                        {
+                            "id": "7cd6219c-a7af-4789-a174-ce1167d97164",
+                            "name": "version",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "f19e752b-03d9-4848-9dd1-e92c9c21b749",
+                            "name": "alarm",
+                            "displayName": "Alarm",
+                            "paramTypes": [
+                                {
+                                    "id": "5ff26563-fe34-4d6a-b7bb-663028b6de70",
+                                    "name": "duration",
+                                    "displayName": "Duration",
+                                    "type": "uint",
+                                    "unit": "Seconds",
+                                    "minValue": 0,
+                                    "maxValue": 177776,
+                                    "defaultValue": 600
+                                }
+                            ]
+                        },
+                        {
+                            "id": "11d84d8b-254a-4d52-a6c3-1d9c71b331f4",
+                            "name": "notify",
+                            "displayName": "Notify armed/disarmed"
                         }
                     ]
                 }
