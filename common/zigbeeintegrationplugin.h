@@ -62,6 +62,7 @@ protected:
     void bindMeteringCluster(ZigbeeNodeEndpoint *endpoint);
     void bindTemperatureSensorInputCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
     void bindIasZoneInputCluster(ZigbeeNodeEndpoint *endpoint);
+    void bindIlluminanceMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
 
     void connectToPowerConfigurationCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToThermostatCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
@@ -70,6 +71,7 @@ protected:
     void connectToMeteringCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToTemperatureMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToIasZoneInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &alarmStateName, bool inverted = false);
+    void connectToIlluminanceMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
 
 private:
     QHash<Thing*, ZigbeeNode*> m_thingNodes;

@@ -40,7 +40,7 @@
 #include <zcl/general/zigbeeclusteranalogoutput.h>
 #include <zcl/general/zigbeeclusteranaloginput.h>
 #include <zcl/measurement/zigbeeclusteroccupancysensing.h>
-#include <zcl/measurement/zigbeeclusterilluminancemeasurment.h>
+#include <zcl/measurement/zigbeeclusterilluminancemeasurement.h>
 #include <zcl/measurement/zigbeeclustertemperaturemeasurement.h>
 #include <zcl/measurement/zigbeeclusterrelativehumiditymeasurement.h>
 #include <zcl/measurement/zigbeeclusterpressuremeasurement.h>

@@ -38,6 +38,7 @@
 #include <zcl/smartenergy/zigbeeclustermetering.h>
 #include <zcl/measurement/zigbeeclusterelectricalmeasurement.h>
 #include <zcl/measurement/zigbeeclustertemperaturemeasurement.h>
+#include <zcl/measurement/zigbeeclusterilluminancemeasurement.h>
 #include <zcl/security/zigbeeclusteriaszone.h>
 
 ZigbeeIntegrationPlugin::ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerType handlerType, const QLoggingCategory &loggingCategory):
@@ -429,6 +430,47 @@ void ZigbeeIntegrationPlugin::bindIasZoneInputCluster(ZigbeeNodeEndpoint *endpoi
     });
 }
 
+void ZigbeeIntegrationPlugin::bindIlluminanceMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries)
+{
+    ZigbeeNode *node = endpoint->node();
+
+    ZigbeeClusterIlluminanceMeasurement* illuminanceMeasurementCluster = endpoint->inputCluster<ZigbeeClusterIlluminanceMeasurement>(ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement);
+    if (!illuminanceMeasurementCluster) {
+        qCWarning(m_dc) << "No illuminance measurement cluster on this endpoint";
+        return;
+    }
+
+    illuminanceMeasurementCluster->readAttributes({ZigbeeClusterIlluminanceMeasurement::AttributeMeasuredValue});
+
+    ZigbeeDeviceObjectReply *bindIlluminanceMeasurementClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement,
+                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
+    connect(bindIlluminanceMeasurementClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+        if (bindIlluminanceMeasurementClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to bind temperature measurement cluster" << bindIlluminanceMeasurementClusterReply->error();
+            if (retries > 0) {
+                bindTemperatureSensorInputCluster(endpoint, retries - 1);
+                return;
+            }
+            // Intentionally falling through... Still trying to configure attribute reporting, just in case
+        }
+
+        ZigbeeClusterLibrary::AttributeReportingConfiguration measuredValueReportingConfig;
+        measuredValueReportingConfig.attributeId = ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue;
+        measuredValueReportingConfig.dataType = Zigbee::Int16;
+        measuredValueReportingConfig.minReportingInterval = 60; // We want currentPower asap
+        measuredValueReportingConfig.maxReportingInterval = 1200;
+        measuredValueReportingConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+        ZigbeeClusterReply *reportingReply = illuminanceMeasurementCluster->configureReporting({measuredValueReportingConfig});
+        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+                qCWarning(m_dc) << "Failed to configure illuminance measurement cluster attribute reporting" << reportingReply->error();
+            }
+        });
+    });
+
+}
+
 void ZigbeeIntegrationPlugin::connectToPowerConfigurationCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeClusterPowerConfiguration *powerCluster = endpoint->inputCluster<ZigbeeClusterPowerConfiguration>(ZigbeeClusterLibrary::ClusterIdPowerConfiguration);
@@ -586,5 +628,23 @@ void ZigbeeIntegrationPlugin::connectToIasZoneInputCluster(Thing *thing, ZigbeeN
             }
         });
     }
+}
+
+void ZigbeeIntegrationPlugin::connectToIlluminanceMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterIlluminanceMeasurement *illuminanceMeasurementCluster = endpoint->inputCluster<ZigbeeClusterIlluminanceMeasurement>(ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement);
+    if (!illuminanceMeasurementCluster) {
+        qCWarning(m_dc) << "Could not find illuminance measurement cluster on" << thing->name() << endpoint;
+    } else {
+        if (illuminanceMeasurementCluster->hasAttribute(ZigbeeClusterTemperatureMeasurement::AttributeMaxMeasuredValue)) {
+            thing->setStateValue("lightIntensity", illuminanceMeasurementCluster->illuminance());
+        }
+        illuminanceMeasurementCluster->readAttributes({ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue});
+        connect(illuminanceMeasurementCluster, &ZigbeeClusterIlluminanceMeasurement::illuminanceChanged, thing, [=](double illuminance) {
+            qCDebug(m_dc) << "Illuminance for" << thing->name() << "changed to:" << illuminance;
+            thing->setStateValue("lightIntensity", illuminance);
+        });
+    }
+
 }
 

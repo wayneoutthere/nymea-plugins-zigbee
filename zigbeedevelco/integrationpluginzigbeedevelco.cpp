@@ -39,6 +39,7 @@
 #include <zcl/general/zigbeeclusteridentify.h>
 #include <zcl/measurement/zigbeeclustertemperaturemeasurement.h>
 #include <zcl/measurement/zigbeeclusterrelativehumiditymeasurement.h>
+#include <zcl/security/zigbeeclusteriaszone.h>
 #include <zcl/security/zigbeeclusteriaswd.h>
 
 #include <QDebug>
@@ -74,21 +75,71 @@ bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &n
         createThing(ioModuleThingClassId, node);
         handled = true;
 
-    } else if (node->modelName() == "AQSZB-110" && node->hasEndpoint(AIR_QUALITY_SENSOR_EP_SENSOR)) { // FIXME: Don't check model name here either to catch brandings, but only checking the sensor EP will also match other devices
+    } else if (node->hasEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR)
+               && node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR)->hasInputCluster(static_cast<ZigbeeClusterLibrary::ClusterId>(AIR_QUALITY_SENSOR_VOC_MEASUREMENT_CLUSTER_ID))) {
         qCDebug(dcZigbeeDevelco()) << "Found air quality sensor" << node << networkUuid.toString();
         initAirQualitySensor(node);
         createThing(airQualitySensorThingClassId, node);
         handled = true;
 
-    } else if (node->hasEndpoint(SMOKE_SENSOR_EP_IAS_ZONE) && node->hasEndpoint(SMOKE_SENSOR_EP_TEMPERATURE_SENSOR)) {
-        qCDebug(dcZigbeeDevelco()) << "Found smoke sensor" << node;
-        ZigbeeNodeEndpoint *iasZoneEndpoint = node->getEndpoint(SMOKE_SENSOR_EP_IAS_ZONE);
-        ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(SMOKE_SENSOR_EP_TEMPERATURE_SENSOR);
+    } else if (node->hasEndpoint(DEVELCO_EP_IAS_ZONE)) {
+        qCDebug(dcZigbeeDevelco()) << "Found IAS Zone sensor" << node;
+        ZigbeeNodeEndpoint *iasZoneEndpoint = node->getEndpoint(DEVELCO_EP_IAS_ZONE);
 
         bindPowerConfigurationCluster(iasZoneEndpoint);
         bindIasZoneInputCluster(iasZoneEndpoint);
-        bindTemperatureSensorInputCluster(temperatureSensorEndpoint);
-        createThing(smokeSensorThingClassId, node);
+
+        // IAS Zone devices (at least fire, water and sensors) have a temperature sensor endpoint too
+        ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR);
+        if (temperatureSensorEndpoint) {
+            bindTemperatureSensorInputCluster(temperatureSensorEndpoint);
+        }
+
+        // Some have a light sensor (at least the motion sensor)
+        ZigbeeNodeEndpoint *lightSensorEndpoint = node->getEndpoint(DEVELCO_EP_LIGHT_SENSOR);
+        if (lightSensorEndpoint) {
+            bindIlluminanceMeasurementInputCluster(lightSensorEndpoint);
+        }
+
+        // We need to read the Type attribute to determine what this actually is...
+        ZigbeeClusterIasZone *iasZoneCluster = iasZoneEndpoint->inputCluster<ZigbeeClusterIasZone>(ZigbeeClusterLibrary::ClusterIdIasZone);
+        ZigbeeClusterReply *reply = iasZoneCluster->readAttributes({ZigbeeClusterIasZone::AttributeZoneType});
+        connect(reply, &ZigbeeClusterReply::finished, this, [=](){
+            if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
+                qCWarning(dcZigbeeDevelco()) << "Reading IAS Zone type attribute finished with error" << reply->error();
+                return;
+            }
+            QList<ZigbeeClusterLibrary::ReadAttributeStatusRecord> attributeStatusRecords = ZigbeeClusterLibrary::parseAttributeStatusRecords(reply->responseFrame().payload);
+            if (attributeStatusRecords.count() != 1 || attributeStatusRecords.first().attributeId != ZigbeeClusterIasZone::AttributeZoneType) {
+                qCWarning(dcZigbeeDevelco()) << "Unexpected reply in reading IAS Zone device type:" << attributeStatusRecords;
+                return;
+            }
+
+            ZigbeeClusterLibrary::ReadAttributeStatusRecord iasZoneTypeRecord = attributeStatusRecords.first();
+            qCDebug(dcZigbeeDevelco()) << "IAS Zone device type:" << iasZoneTypeRecord.dataType.toUInt16();
+            switch (iasZoneTypeRecord.dataType.toUInt16()) {
+            case ZigbeeClusterIasZone::ZoneTypeFireSensor:
+                qCInfo(dcZigbeeDevelco()) << "Fire sensor thing";
+                createThing(smokeSensorThingClassId, node);
+                break;
+            case ZigbeeClusterIasZone::ZoneTypeWaterSensor:
+                qCInfo(dcZigbeeDevelco()) << "Water sensor thing";
+                createThing(waterSensorThingClassId, node);
+                break;
+            case ZigbeeClusterIasZone::ZoneTypeContactSwitch:
+                qCInfo(dcZigbeeDevelco()) << "Door/window sensor thing";
+                createThing(doorSensorThingClassId, node);
+                break;
+            case ZigbeeClusterIasZone::ZoneTypeMotionSensor:
+                qCInfo(dcZigbeeDevelco()) << "Motion sensor thing";
+                createThing(motionSensorThingClassId, node);
+                break;
+            default:
+                qCWarning(dcZigbeeDevelco()) << "Unhandled IAS Zone device type:" << "0x" + QString::number(iasZoneTypeRecord.dataType.toUInt16(), 16);
+
+            }
+        });
+
         handled = true;
     }
 
@@ -255,7 +306,7 @@ void IntegrationPluginZigbeeDevelco::setupThing(ThingSetupInfo *info)
             }
         }
     } else if (thing->thingClassId() == airQualitySensorThingClassId) {
-        ZigbeeNodeEndpoint *sensorEndpoint = node->getEndpoint(AIR_QUALITY_SENSOR_EP_SENSOR);
+        ZigbeeNodeEndpoint *sensorEndpoint = node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR);
         if (!sensorEndpoint) {
             qCWarning(dcZigbeeDevelco()) << "Failed to set up air quality sensor" << thing << ". Could not find endpoint for version parsing.";
             info->finish(Thing::ThingErrorSetupFailed);
@@ -369,10 +420,27 @@ void IntegrationPluginZigbeeDevelco::setupThing(ThingSetupInfo *info)
             });
         }
     } else if (thing->thingClassId() == smokeSensorThingClassId) {
-        ZigbeeNodeEndpoint *iazZoneEndpoint = node->getEndpoint(SMOKE_SENSOR_EP_IAS_ZONE);
-        ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(SMOKE_SENSOR_EP_TEMPERATURE_SENSOR);
+        ZigbeeNodeEndpoint *iazZoneEndpoint = node->getEndpoint(DEVELCO_EP_IAS_ZONE);
+        ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR);
         connectToIasZoneInputCluster(thing, iazZoneEndpoint, "fireDetected");
         connectToTemperatureMeasurementInputCluster(thing, temperatureSensorEndpoint);
+    } else if (thing->thingClassId() == waterSensorThingClassId) {
+        ZigbeeNodeEndpoint *iazZoneEndpoint = node->getEndpoint(DEVELCO_EP_IAS_ZONE);
+        ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR);
+        connectToIasZoneInputCluster(thing, iazZoneEndpoint, "waterDetected");
+        connectToTemperatureMeasurementInputCluster(thing, temperatureSensorEndpoint);
+    } else if (thing->thingClassId() == doorSensorThingClassId) {
+        ZigbeeNodeEndpoint *iazZoneEndpoint = node->getEndpoint(DEVELCO_EP_IAS_ZONE);
+        ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR);
+        connectToIasZoneInputCluster(thing, iazZoneEndpoint, "closed", true);
+        connectToTemperatureMeasurementInputCluster(thing, temperatureSensorEndpoint);
+    } else if (thing->thingClassId() == motionSensorThingClassId) {
+        ZigbeeNodeEndpoint *iazZoneEndpoint = node->getEndpoint(DEVELCO_EP_IAS_ZONE);
+        ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR);
+        ZigbeeNodeEndpoint *illuminanceSensorEndpoint = node->getEndpoint(DEVELCO_EP_LIGHT_SENSOR);
+        connectToIasZoneInputCluster(thing, iazZoneEndpoint, "isPresent");
+        connectToTemperatureMeasurementInputCluster(thing, temperatureSensorEndpoint);
+        connectToIlluminanceMeasurementInputCluster(thing, illuminanceSensorEndpoint);
     }
 
     info->finish(Thing::ThingErrorNoError);
@@ -540,7 +608,7 @@ void IntegrationPluginZigbeeDevelco::executeAction(ThingActionInfo *info)
     }
     if (thing->thingClassId() == smokeSensorThingClassId) {
         if (info->action().actionTypeId() == smokeSensorAlarmActionTypeId) {
-            ZigbeeNodeEndpoint *iazZoneEndpoint = node->getEndpoint(SMOKE_SENSOR_EP_IAS_ZONE);
+            ZigbeeNodeEndpoint *iazZoneEndpoint = node->getEndpoint(DEVELCO_EP_IAS_ZONE);
             ZigbeeClusterIasWd *iasWdCluster = iazZoneEndpoint->inputCluster<ZigbeeClusterIasWd>(ZigbeeClusterLibrary::ClusterIdIasWd);
             if (!iasWdCluster) {
                 qCWarning(dcZigbeeDevelco()) << "Could not find IAS WD cluster for" << thing << "in" << node;
@@ -608,12 +676,13 @@ void IntegrationPluginZigbeeDevelco::initIoModule(ZigbeeNode *node)
 void IntegrationPluginZigbeeDevelco::initAirQualitySensor(ZigbeeNode *node)
 {
     qCDebug(dcZigbeeDevelco()) << "Start initializing air quality sensor" << node;
-    readDevelcoFirmwareVersion(node, node->getEndpoint(AIR_QUALITY_SENSOR_EP_SENSOR));
+    ZigbeeNodeEndpoint *endpoint = node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR);
+    readDevelcoFirmwareVersion(node, endpoint);
 
-    configureTemperatureReporting(node, node->getEndpoint(AIR_QUALITY_SENSOR_EP_SENSOR));
-    configureHumidityReporting(node, node->getEndpoint(AIR_QUALITY_SENSOR_EP_SENSOR));
-    configureBattryVoltageReporting(node, node->getEndpoint(AIR_QUALITY_SENSOR_EP_SENSOR));
-    configureVocReporting(node, node->getEndpoint(AIR_QUALITY_SENSOR_EP_SENSOR));
+    configureTemperatureReporting(node, endpoint);
+    configureHumidityReporting(node, endpoint);
+    configureBattryVoltageReporting(node, endpoint);
+    configureVocReporting(node, endpoint);
 }
 
 void IntegrationPluginZigbeeDevelco::configureOnOffPowerReporting(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)

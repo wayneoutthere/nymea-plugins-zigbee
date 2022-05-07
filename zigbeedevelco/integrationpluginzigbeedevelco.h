@@ -63,18 +63,16 @@
 #define IO_MODULE_EP_OUTPUT1 0x74
 #define IO_MODULE_EP_OUTPUT2 0x75
 
-/* Air quality sensor - manufacturer specific clustr
- * https://www.develcoproducts.com/media/1674/aqszb-110-technical-manual-air-quality-sensor-04-08-20.pdf
- */
-#define AIR_QUALITY_SENSOR_EP_SENSOR 0x26
+/* Develco specific application endpoints */
+#define DEVELCO_EP_IAS_ZONE 0x23
+#define DEVELCO_EP_TEMPERATURE_SENSOR 0x026
+#define DEVELCO_EP_LIGHT_SENSOR 0x27
+
 #define AIR_QUALITY_SENSOR_VOC_MEASUREMENT_CLUSTER_ID 0xfc03
 #define AIR_QUALITY_SENSOR_VOC_MEASUREMENT_ATTRIBUTE_MEASURED_VALUE 0x0000
 #define AIR_QUALITY_SENSOR_VOC_MEASUREMENT_ATTRIBUTE_MIN_MEASURED_VALUE 0x0001
 #define AIR_QUALITY_SENSOR_VOC_MEASUREMENT_ATTRIBUTE_RESOLUTION 0x0003
 
-/* Smoke sensor */
-#define SMOKE_SENSOR_EP_IAS_ZONE 0x23
-#define SMOKE_SENSOR_EP_TEMPERATURE_SENSOR 0x026
 
 /* Develco manufacturer specific Basic cluster attributes */
 #define DEVELCO_BASIC_ATTRIBUTE_SW_VERSION 0x8000
