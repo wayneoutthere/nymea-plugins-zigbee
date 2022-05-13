@@ -88,7 +88,9 @@ bool IntegrationPluginZigbeeTradfri::handleNode(ZigbeeNode *node, const QUuid &n
 
     bool handled = false;
     foreach (ZigbeeNodeEndpoint *endpoint, node->endpoints()) {
-        if (endpoint->modelIdentifier().contains("on/off switch")) {
+        if (endpoint->modelIdentifier().contains("on/off switch") &&
+                endpoint->profile() == Zigbee::ZigbeeProfileHomeAutomation &&
+                endpoint->deviceId() == Zigbee::HomeAutomationDeviceNonColourController) {
             // "TRADFRI on/off switch"
             qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI on/off switch" << node << endpoint;
             createThing(onOffSwitchThingClassId, networkUuid, node, endpoint);
