@@ -50,7 +50,7 @@ QString IntegrationPluginZigbeeTuya::name() const
 
 bool IntegrationPluginZigbeeTuya::handleNode(ZigbeeNode *node, const QUuid &/*networkUuid*/)
 {
-    if (node->nodeDescriptor().manufacturerCode == 0x1141 || node->modelName() == "TS011F") {
+    if (node->nodeDescriptor().manufacturerCode == 0x1141 && node->modelName() == "TS011F") {
         qCDebug(dcZigbeeTuya()) << "Tuya smart plug";
 
         ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
