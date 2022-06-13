@@ -1,3 +1,21 @@
+nymea-plugins-zigbee (1.2.0) jammy; urgency=medium
+
+  [ Michael Zanetti ]
+  * Don't use withOnOff when setting brightness
+  * New Plugin: Gewiss
+  * Generic: Add fire sensor support
+  * Generic: Add support for temperature sensors
+  * Develco: Add smoke, water, motion and door sensor device support
+  * Generic: Add support for Water, humidity and illuminance sensors
+
+  [ Simon Stürz ]
+  * Tradfri: Add shortcut button
+
+  [ Michael Zanetti ]
+  * Tuya: Fix handleNode grabbing too much
+
+ -- jenkins <developer@nymea.io>  Mon, 13 Jun 2022 11:16:35 +0200
+
 nymea-plugins-zigbee (1.1.0) jammy; urgency=medium
 
   [ Michael Zanetti ]
