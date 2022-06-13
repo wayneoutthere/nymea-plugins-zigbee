@@ -31,11 +31,12 @@
 #ifndef INTEGRATIONPLUGINZIGBEETRADFRI_H
 #define INTEGRATIONPLUGINZIGBEETRADFRI_H
 
-#include "integrations/integrationplugin.h"
-#include "hardware/zigbee/zigbeehandler.h"
-#include "plugintimer.h"
-
 #include "extern-plugininfo.h"
+
+#include <integrations/integrationplugin.h>
+#include <hardware/zigbee/zigbeehandler.h>
+#include <zcl/general/zigbeeclusterlevelcontrol.h>
+#include <plugintimer.h>
 
 #include <QTimer>
 

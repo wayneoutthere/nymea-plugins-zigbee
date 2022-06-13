@@ -34,6 +34,11 @@
 #include "hardware/zigbee/zigbeehardwareresource.h"
 
 #include "zcl/hvac/zigbeeclusterthermostat.h"
+#include "zcl/closures/zigbeeclusterdoorlock.h"
+#include "zcl/general/zigbeeclusteridentify.h"
+#include "zcl/general/zigbeeclusteronoff.h"
+#include "zcl/security/zigbeeclusteriaszone.h"
+#include "zcl/security/zigbeeclusteriaswd.h"
 
 #include <QDebug>
 
@@ -104,6 +109,9 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
         // Security sensors
         if (endpoint->profile() == Zigbee::ZigbeeProfile::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceIasZone) {
             qCInfo(dcZigbeeGeneric()) << "IAS Zone device found!";
+
+            bindPowerConfigurationCluster(node, endpoint);
+
             // We need to read the Type cluster to determine what this actually is...
             ZigbeeClusterIasZone *iasZoneCluster = endpoint->inputCluster<ZigbeeClusterIasZone>(ZigbeeClusterLibrary::ClusterIdIasZone);
             ZigbeeClusterReply *reply = iasZoneCluster->readAttributes({ZigbeeClusterIasZone::AttributeZoneType});
@@ -131,6 +139,10 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
                 case ZigbeeClusterIasZone::ZoneTypeMotionSensor:
                     qCInfo(dcZigbeeGeneric()) << "Creating motion sensor thing";
                     createThing(motionSensorThingClassId, node, {Param(motionSensorThingEndpointIdParamTypeId, endpoint->endpointId())});
+                    break;
+                case ZigbeeClusterIasZone::ZoneTypeFireSensor:
+                    qCInfo(dcZigbeeGeneric()) << "Fire sensor thing";
+                    createThing(fireSensorThingClassId, node, {Param(fireSensorThingEndpointIdParamTypeId, endpoint->endpointId())});
                     break;
                 default:
                     qCWarning(dcZigbeeGeneric()) << "Unhandled IAS Zone device type:" << "0x" + QString::number(iasZoneTypeRecord.dataType.toUInt16(), 16);
@@ -241,6 +253,27 @@ void IntegrationPluginZigbeeGeneric::setupThing(ThingSetupInfo *info)
                 qCDebug(dcZigbeeGeneric()) << "Zone status changed to:" << zoneStatus << extendedStatus << zoneId << delays;
                 thing->setStateValue(motionSensorIsPresentStateTypeId, zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2));
                 thing->setStateValue(motionSensorTamperedStateTypeId, zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusTamper));
+            });
+        }
+    }
+
+    if (thing->thingClassId() == fireSensorThingClassId) {
+        qCDebug(dcZigbeeGeneric()) << "Setting up fire sensor" << endpoint->endpointId();;
+        ZigbeeClusterIasZone *iasZoneCluster = endpoint->inputCluster<ZigbeeClusterIasZone>(ZigbeeClusterLibrary::ClusterIdIasZone);
+        if (!iasZoneCluster) {
+            qCWarning(dcZigbeeGeneric()) << "Could not find IAS zone cluster on" << thing << endpoint;
+        } else {
+            qCDebug(dcZigbeeGeneric()) << "Cluster attributes:" << iasZoneCluster->attributes();
+            qCDebug(dcZigbeeGeneric()) << "Zone state:" << thing->name() << iasZoneCluster->zoneState();
+            qCDebug(dcZigbeeGeneric()) << "Zone type:" << thing->name() << iasZoneCluster->zoneType();
+            qCDebug(dcZigbeeGeneric()) << "Zone status:" << thing->name() << iasZoneCluster->zoneStatus();
+            if (iasZoneCluster->hasAttribute(ZigbeeClusterIasZone::AttributeZoneStatus)) {
+                ZigbeeClusterIasZone::ZoneStatusFlags zoneStatus = iasZoneCluster->zoneStatus();
+                thing->setStateValue(fireSensorFireDetectedStateTypeId, zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2));
+            }
+            connect(iasZoneCluster, &ZigbeeClusterIasZone::zoneStatusChanged, thing, [=](ZigbeeClusterIasZone::ZoneStatusFlags zoneStatus, quint8 extendedStatus, quint8 zoneId, quint16 delays) {
+                qCDebug(dcZigbeeGeneric()) << "Zone status changed to:" << zoneStatus << extendedStatus << zoneId << delays;
+                thing->setStateValue(fireSensorFireDetectedStateTypeId, zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2));
             });
         }
     }
@@ -406,6 +439,36 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
                 } else {
                     info->finish(Thing::ThingErrorNoError);
                 }
+            });
+            return;
+        }
+    }
+
+    if (thing->thingClassId() == fireSensorThingClassId) {
+        if (info->action().actionTypeId() == fireSensorAlarmActionTypeId) {
+            ZigbeeClusterIasWd *iasWdCluster = endpoint->inputCluster<ZigbeeClusterIasWd>(ZigbeeClusterLibrary::ClusterIdIasWd);
+            if (!iasWdCluster) {
+                qCWarning(dcZigbeeGeneric()) << "Could not find IAS WD cluster for" << thing << "in" << node;
+                info->finish(Thing::ThingErrorHardwareFailure);
+                return;
+            }
+            uint duration = info->action().paramValue(fireSensorAlarmActionDurationParamTypeId).toUInt();
+            ZigbeeClusterReply *reply = iasWdCluster->startWarning(ZigbeeClusterIasWd::WarningModeStop, true, ZigbeeClusterIasWd::SirenLevelHigh, duration, 50, ZigbeeClusterIasWd::StrobeLevelMedium);
+            connect(reply, &ZigbeeClusterReply::finished, this, [reply, info]() {
+                info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError:  Thing::ThingErrorHardwareFailure);
+            });
+            return;
+        }
+        if (info->action().actionTypeId() == fireSensorNotifyActionTypeId) {
+            ZigbeeClusterIasWd *iasWdCluster = endpoint->inputCluster<ZigbeeClusterIasWd>(ZigbeeClusterLibrary::ClusterIdIasWd);
+            if (!iasWdCluster) {
+                qCWarning(dcZigbeeGeneric()) << "Could not find IAS WD cluster for" << thing << "in" << node;
+                info->finish(Thing::ThingErrorHardwareFailure);
+                return;
+            }
+            ZigbeeClusterReply *reply = iasWdCluster->squawk(ZigbeeClusterIasWd::SquawkModeSystemDisarmed, true, ZigbeeClusterIasWd::SquawkLevelLow);
+            connect(reply, &ZigbeeClusterReply::finished, this, [reply, info]() {
+                info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError:  Thing::ThingErrorHardwareFailure);
             });
             return;
         }

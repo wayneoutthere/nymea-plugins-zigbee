@@ -31,7 +31,14 @@
 
 #include "integrationpluginzigbeedevelco.h"
 #include "plugininfo.h"
-#include "hardware/zigbee/zigbeehardwareresource.h"
+
+#include <hardware/zigbee/zigbeehardwareresource.h>
+#include <zcl/general/zigbeeclusteronoff.h>
+#include <zcl/general/zigbeeclusterbinaryinput.h>
+#include <zcl/general/zigbeeclusterpowerconfiguration.h>
+#include <zcl/general/zigbeeclusteridentify.h>
+#include <zcl/measurement/zigbeeclustertemperaturemeasurement.h>
+#include <zcl/measurement/zigbeeclusterrelativehumiditymeasurement.h>
 
 #include <QDebug>
 
@@ -60,6 +67,8 @@ QString IntegrationPluginZigbeeDevelco::name() const
 bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &networkUuid)
 {
     // Filter for develco manufacturer code
+    // Develco devices have an endpoint 0x01 with Develco profile
+    ZigbeeNodeEndpoint *endpoint1 = node->getEndpoint(0x01);
     if (node->nodeDescriptor().manufacturerCode != Zigbee::Develco)
         return false;
 

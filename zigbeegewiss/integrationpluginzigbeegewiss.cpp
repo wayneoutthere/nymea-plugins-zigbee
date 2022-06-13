@@ -31,10 +31,13 @@
 
 #include "integrationpluginzigbeegewiss.h"
 #include "plugininfo.h"
-#include "hardware/zigbee/zigbeehardwareresource.h"
-#include "plugintimer.h"
+
+#include <hardware/zigbee/zigbeehardwareresource.h>
+#include <plugintimer.h>
 
 #include <zigbeenodeendpoint.h>
+#include <zcl/general/zigbeeclusteronoff.h>
+#include <zcl/general/zigbeeclusterbinaryinput.h>
 
 #include <QDebug>
 
