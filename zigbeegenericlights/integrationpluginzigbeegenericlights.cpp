@@ -534,7 +534,7 @@ void IntegrationPluginZigbeeGenericLights::executeAction(ThingActionInfo *info)
         if (info->action().actionTypeId() == dimmableLightBrightnessActionTypeId) {
             int brightness = info->action().param(dimmableLightBrightnessActionBrightnessParamTypeId).value().toInt();
             quint8 level = static_cast<quint8>(qRound(255.0 * brightness / 100.0));
-            executeBrightnessAction(info, endpoint, dimmableLightPowerStateTypeId, dimmableLightBrightnessStateTypeId, brightness, level);
+            executeBrightnessAction(info, endpoint, dimmableLightBrightnessStateTypeId, brightness, level);
             return;
         }
     }
@@ -555,7 +555,7 @@ void IntegrationPluginZigbeeGenericLights::executeAction(ThingActionInfo *info)
         if (info->action().actionTypeId() == colorTemperatureLightBrightnessActionTypeId) {
             int brightness = info->action().param(colorTemperatureLightBrightnessActionBrightnessParamTypeId).value().toInt();
             quint8 level = static_cast<quint8>(qRound(255.0 * brightness / 100.0));
-            executeBrightnessAction(info, endpoint, colorTemperatureLightPowerStateTypeId, colorTemperatureLightBrightnessStateTypeId, brightness, level);
+            executeBrightnessAction(info, endpoint, colorTemperatureLightBrightnessStateTypeId, brightness, level);
             return;
         }
 
@@ -582,7 +582,7 @@ void IntegrationPluginZigbeeGenericLights::executeAction(ThingActionInfo *info)
         if (info->action().actionTypeId() == colorLightBrightnessActionTypeId) {
             int brightness = info->action().param(colorLightBrightnessActionBrightnessParamTypeId).value().toInt();
             quint8 level = static_cast<quint8>(qRound(255.0 * brightness / 100.0));
-            executeBrightnessAction(info, endpoint, colorLightPowerStateTypeId, colorLightBrightnessStateTypeId, brightness, level);
+            executeBrightnessAction(info, endpoint, colorLightBrightnessStateTypeId, brightness, level);
             return;
         }
 
@@ -731,7 +731,7 @@ void IntegrationPluginZigbeeGenericLights::executePowerAction(ThingActionInfo *i
     });
 }
 
-void IntegrationPluginZigbeeGenericLights::executeBrightnessAction(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint, const StateTypeId &powerStateTypeId, const StateTypeId &brightnessStateTypeId, int brightness, quint8 level)
+void IntegrationPluginZigbeeGenericLights::executeBrightnessAction(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint, const StateTypeId &brightnessStateTypeId, int brightness, quint8 level)
 {
     Thing *thing = info->thing();
     ZigbeeClusterLevelControl *levelCluster = endpoint->inputCluster<ZigbeeClusterLevelControl>(ZigbeeClusterLibrary::ClusterIdLevelControl);
@@ -741,14 +741,13 @@ void IntegrationPluginZigbeeGenericLights::executeBrightnessAction(ThingActionIn
         return;
     }
 
-    ZigbeeClusterReply *reply = levelCluster->commandMoveToLevelWithOnOff(level, 5);
+    ZigbeeClusterReply *reply = levelCluster->commandMoveToLevel(level, 5);
     connect(reply, &ZigbeeClusterReply::finished, info, [=](){
         // Note: reply will be deleted automatically
         if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
             info->finish(Thing::ThingErrorHardwareFailure);
         } else {
             info->finish(Thing::ThingErrorNoError);
-            thing->setStateValue(powerStateTypeId, (brightness > 0 ? true : false));
             thing->setStateValue(brightnessStateTypeId, brightness);
         }
     });
