@@ -33,15 +33,17 @@
 
 #include "integrations/integrationplugin.h"
 #include "hardware/zigbee/zigbeehandler.h"
+#include "hardware/zigbee/zigbeehardwareresource.h"
 
 class ZigbeeIntegrationPlugin: public IntegrationPlugin, public ZigbeeHandler
 {
     Q_OBJECT
 
 public:
-    explicit ZigbeeIntegrationPlugin();
+    explicit ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerType handlerType);
     virtual ~ZigbeeIntegrationPlugin();
 
+    virtual void init() override;
     virtual void handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid) override;
     virtual void thingRemoved(Thing *thing) override;
 
@@ -55,18 +57,20 @@ protected:
     void bindPowerConfigurationCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void bindThermostatCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void bindOnOffCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
+    void bindOnOffOutputCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint, int retries = 3);
     void bindElectricalMeasurementCluster(ZigbeeNodeEndpoint *endpoint);
     void bindMeteringCluster(ZigbeeNodeEndpoint *endpoint);
 
     void connectToPowerConfigurationCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToThermostatCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
-    void connectToOnOffCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
+    void connectToOnOffCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName = "power");
     void connectToElectricalMeasurementCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToMeteringCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
 
 private:
     QHash<Thing*, ZigbeeNode*> m_thingNodes;
 
+    ZigbeeHardwareResource::HandlerType m_handlerType = ZigbeeHardwareResource::HandlerTypeVendor;
 
 };
 

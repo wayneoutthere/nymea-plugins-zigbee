@@ -37,7 +37,7 @@
 
 #include <QDebug>
 
-IntegrationPluginZigbeeGeneric::IntegrationPluginZigbeeGeneric()
+IntegrationPluginZigbeeGeneric::IntegrationPluginZigbeeGeneric(): ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeCatchAll)
 {
 }
 
@@ -144,11 +144,6 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
     }
 
     return handled;
-}
-
-void IntegrationPluginZigbeeGeneric::init()
-{
-    hardwareManager()->zigbeeResource()->registerHandler(this, ZigbeeHardwareResource::HandlerTypeCatchAll);
 }
 
 void IntegrationPluginZigbeeGeneric::setupThing(ThingSetupInfo *info)

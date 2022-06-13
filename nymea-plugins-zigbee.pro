@@ -5,6 +5,7 @@ PLUGIN_DIRS = \
     zigbeeeurotronic    \
     zigbeegeneric       \
     zigbeegenericlights \
+    zigbeegewiss        \
     zigbeelumi          \
     zigbeephilipshue    \
     zigbeeremotes       \
