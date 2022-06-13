@@ -92,7 +92,7 @@ bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &n
         // IAS Zone devices (at least fire, water and sensors) have a temperature sensor endpoint too
         ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR);
         if (temperatureSensorEndpoint) {
-            bindTemperatureSensorInputCluster(temperatureSensorEndpoint);
+            bindTemperatureMeasurementInputCluster(temperatureSensorEndpoint);
         }
 
         // Some have a light sensor (at least the motion sensor)
