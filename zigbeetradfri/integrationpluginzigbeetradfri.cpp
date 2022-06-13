@@ -43,36 +43,42 @@
 IntegrationPluginZigbeeTradfri::IntegrationPluginZigbeeTradfri()
 {
     m_ieeeAddressParamTypeIds[onOffSwitchThingClassId] = onOffSwitchThingIeeeAddressParamTypeId;
+    m_ieeeAddressParamTypeIds[shortcutButtonThingClassId] = shortcutButtonThingIeeeAddressParamTypeId;
     m_ieeeAddressParamTypeIds[remoteThingClassId] = remoteThingIeeeAddressParamTypeId;
     m_ieeeAddressParamTypeIds[soundRemoteThingClassId] = soundRemoteThingIeeeAddressParamTypeId;
     m_ieeeAddressParamTypeIds[motionSensorThingClassId] = motionSensorThingIeeeAddressParamTypeId;
     m_ieeeAddressParamTypeIds[signalRepeaterThingClassId] = signalRepeaterThingIeeeAddressParamTypeId;
 
     m_networkUuidParamTypeIds[onOffSwitchThingClassId] = onOffSwitchThingNetworkUuidParamTypeId;
+    m_networkUuidParamTypeIds[shortcutButtonThingClassId] = shortcutButtonThingNetworkUuidParamTypeId;
     m_networkUuidParamTypeIds[remoteThingClassId] = remoteThingNetworkUuidParamTypeId;
     m_networkUuidParamTypeIds[soundRemoteThingClassId] = soundRemoteThingNetworkUuidParamTypeId;
     m_networkUuidParamTypeIds[motionSensorThingClassId] = motionSensorThingNetworkUuidParamTypeId;
     m_networkUuidParamTypeIds[signalRepeaterThingClassId] = signalRepeaterThingNetworkUuidParamTypeId;
 
     m_endpointIdParamTypeIds[onOffSwitchThingClassId] = onOffSwitchThingEndpointIdParamTypeId;
+    m_endpointIdParamTypeIds[shortcutButtonThingClassId] = shortcutButtonThingEndpointIdParamTypeId;
     m_endpointIdParamTypeIds[remoteThingClassId] = remoteThingEndpointIdParamTypeId;
     m_endpointIdParamTypeIds[soundRemoteThingClassId] = soundRemoteThingEndpointIdParamTypeId;
     m_endpointIdParamTypeIds[motionSensorThingClassId] = motionSensorThingEndpointIdParamTypeId;
     m_endpointIdParamTypeIds[signalRepeaterThingClassId] = signalRepeaterThingEndpointIdParamTypeId;
 
     m_connectedStateTypeIds[onOffSwitchThingClassId] = onOffSwitchConnectedStateTypeId;
+    m_connectedStateTypeIds[shortcutButtonThingClassId] = shortcutButtonConnectedStateTypeId;
     m_connectedStateTypeIds[remoteThingClassId] = remoteConnectedStateTypeId;
     m_connectedStateTypeIds[soundRemoteThingClassId] = soundRemoteConnectedStateTypeId;
     m_connectedStateTypeIds[motionSensorThingClassId] = motionSensorConnectedStateTypeId;
     m_connectedStateTypeIds[signalRepeaterThingClassId] = signalRepeaterConnectedStateTypeId;
 
     m_signalStrengthStateTypeIds[onOffSwitchThingClassId] = onOffSwitchSignalStrengthStateTypeId;
+    m_signalStrengthStateTypeIds[shortcutButtonThingClassId] = shortcutButtonSignalStrengthStateTypeId;
     m_signalStrengthStateTypeIds[remoteThingClassId] = remoteSignalStrengthStateTypeId;
     m_signalStrengthStateTypeIds[soundRemoteThingClassId] = soundRemoteSignalStrengthStateTypeId;
     m_signalStrengthStateTypeIds[motionSensorThingClassId] = motionSensorSignalStrengthStateTypeId;
     m_signalStrengthStateTypeIds[signalRepeaterThingClassId] = signalRepeaterSignalStrengthStateTypeId;
 
     m_versionStateTypeIds[onOffSwitchThingClassId] = onOffSwitchVersionStateTypeId;
+    m_versionStateTypeIds[shortcutButtonThingClassId] = shortcutButtonVersionStateTypeId;
     m_versionStateTypeIds[remoteThingClassId] = remoteVersionStateTypeId;
     m_versionStateTypeIds[soundRemoteThingClassId] = soundRemoteVersionStateTypeId;
     m_versionStateTypeIds[motionSensorThingClassId] = motionSensorVersionStateTypeId;
@@ -92,12 +98,21 @@ bool IntegrationPluginZigbeeTradfri::handleNode(ZigbeeNode *node, const QUuid &n
 
     bool handled = false;
     foreach (ZigbeeNodeEndpoint *endpoint, node->endpoints()) {
-        if (endpoint->modelIdentifier().contains("on/off switch")) {
-            // "TRADFRI on/off switch"
-            qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI on/off switch" << node << endpoint;
-            createThing(onOffSwitchThingClassId, networkUuid, node, endpoint);
-            initOnOffSwitch(node, endpoint);
-            handled = true;
+
+        if (endpoint->profile() == Zigbee::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceNonColourController) {
+            if (endpoint->modelIdentifier().contains("on/off switch")) {
+                // "TRADFRI on/off switch"
+                qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI on/off switch" << node << endpoint;
+                createThing(onOffSwitchThingClassId, networkUuid, node, endpoint);
+                initOnOffSwitch(node, endpoint);
+                handled = true;
+            } else if (endpoint->modelIdentifier().toLower().contains("shortcut button")) {
+                // "TRADFRI SHORTCUT Button"
+                qCDebug(dcZigbeeTradfri()) << "Handling TRADFRI SHORTCUT Button" << node << endpoint;
+                createThing(shortcutButtonThingClassId, networkUuid, node, endpoint);
+                initShortcutButton(node, endpoint);
+                handled = true;
+            }
         }
 
         if (endpoint->profile() == Zigbee::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceOnOffSensor) {
@@ -252,6 +267,68 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
             });
         }
     }
+
+    if (thing->thingClassId() == shortcutButtonThingClassId) {
+        // Get battery level changes
+        ZigbeeClusterPowerConfiguration *powerCluster = endpoint->inputCluster<ZigbeeClusterPowerConfiguration>(ZigbeeClusterLibrary::ClusterIdPowerConfiguration);
+        if (!powerCluster) {
+            qCWarning(dcZigbeeTradfri()) << "Could not find power configuration cluster on" << thing << endpoint;
+        } else {
+            // Only set the initial state if the attribute already exists
+            if (powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining)) {
+                thing->setStateValue(shortcutButtonBatteryLevelStateTypeId, powerCluster->batteryPercentage());
+                thing->setStateValue(shortcutButtonBatteryCriticalStateTypeId, (powerCluster->batteryPercentage() < 10.0));
+            }
+
+            connect(powerCluster, &ZigbeeClusterPowerConfiguration::batteryPercentageChanged, thing, [=](double percentage){
+                qCDebug(dcZigbeeTradfri()) << "Battery percentage changed" << percentage << "%" << thing;
+                thing->setStateValue(shortcutButtonBatteryLevelStateTypeId, percentage);
+                thing->setStateValue(shortcutButtonBatteryCriticalStateTypeId, (percentage < 10.0));
+            });
+        }
+
+        // Receive on/off commands
+        ZigbeeClusterOnOff *onOffCluster = endpoint->outputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
+        if (!onOffCluster) {
+            qCWarning(dcZigbeeTradfri()) << "Could not find on/off client cluster on" << thing << endpoint;
+        } else {
+            connect(onOffCluster, &ZigbeeClusterOnOff::commandSent, thing, [=](ZigbeeClusterOnOff::Command command, const QByteArray &/*payload*/, quint8 transactionSequenceNumber){
+                if (isDuplicate(transactionSequenceNumber)) {
+                    return;
+                }
+                qCDebug(dcZigbeeTradfri()) << thing << "button pressed" << command;
+                if (command == ZigbeeClusterOnOff::CommandOn) {
+                    qCDebug(dcZigbeeTradfri()) << thing << "pressed";
+                    emit emitEvent(Event(shortcutButtonPressedEventTypeId, thing->id()));
+                }
+            });
+        }
+
+        // Receive level control commands
+        ZigbeeClusterLevelControl *levelCluster = endpoint->outputCluster<ZigbeeClusterLevelControl>(ZigbeeClusterLibrary::ClusterIdLevelControl);
+        if (!levelCluster) {
+            qCWarning(dcZigbeeTradfri()) << "Could not find level client cluster on" << thing << endpoint;
+        } else {
+            connect(levelCluster, &ZigbeeClusterLevelControl::commandSent, thing, [=](ZigbeeClusterLevelControl::Command command, const QByteArray &payload, quint8 transactionSequenceNumber){
+                if (isDuplicate(transactionSequenceNumber)) {
+                    return;
+                }
+                qCDebug(dcZigbeeTradfri()) << thing << "button pressed" << command << payload.toHex();
+                switch (command) {
+                case ZigbeeClusterLevelControl::CommandMoveWithOnOff:
+                    qCDebug(dcZigbeeTradfri()) << thing << "long pressed";
+                    emit emitEvent(Event(shortcutButtonLongPressedEventTypeId, thing->id()));
+                    break;
+                case ZigbeeClusterLevelControl::CommandStopWithOnOff:
+                    qCDebug(dcZigbeeTradfri()) << thing << "released aftr long pressed";
+                    break;
+                default:
+                    break;
+                }
+            });
+        }
+    }
+
 
     if (thing->thingClassId() == motionSensorThingClassId) {
         // Get battery level changes
@@ -634,6 +711,67 @@ void IntegrationPluginZigbeeTradfri::initOnOffSwitch(ZigbeeNode *node, ZigbeeNod
                                 }
                             });
                         });
+                    });
+                });
+            });
+        });
+    });
+}
+
+void IntegrationPluginZigbeeTradfri::initShortcutButton(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
+{
+    // Get the current configured bindings for this node
+    ZigbeeReply *reply = node->removeAllBindings();
+    connect(reply, &ZigbeeReply::finished, node, [=](){
+        if (reply->error() != ZigbeeReply::ErrorNoError) {
+            qCWarning(dcZigbeeTradfri()) << "Failed to remove all bindings for initialization of" << node;
+        } else {
+            qCDebug(dcZigbeeTradfri()) << "Removed all bindings successfully from" << node;
+        }
+
+        // Read battery, bind and configure attribute reporting for battery
+        if (!endpoint->hasInputCluster(ZigbeeClusterLibrary::ClusterIdPowerConfiguration)) {
+            qCWarning(dcZigbeeTradfri()) << "Failed to initialize the power configuration cluster because the cluster could not be found" << node << endpoint;
+            return;
+        }
+
+        qCDebug(dcZigbeeTradfri()) << "Read power configuration cluster attributes" << node;
+        ZigbeeClusterReply *readAttributeReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdPowerConfiguration)->readAttributes({ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining});
+        connect(readAttributeReply, &ZigbeeClusterReply::finished, node, [=](){
+            if (readAttributeReply->error() != ZigbeeClusterReply::ErrorNoError) {
+                qCWarning(dcZigbeeTradfri()) << "Failed to read power cluster attributes" << readAttributeReply->error();
+            } else {
+                qCDebug(dcZigbeeTradfri()) << "Read power configuration cluster attributes finished successfully";
+            }
+
+            qCDebug(dcZigbeeTradfri()) << "Bind on/off configuration cluster to coordinator";
+            ZigbeeDeviceObjectReply * zdoReply = node->deviceObject()->requestBindGroupAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdOnOff, 0x0000);
+            connect(zdoReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+                if (zdoReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+                    qCWarning(dcZigbeeTradfri()) << "Failed to bind on/off cluster to coordinator" << zdoReply->error();
+                } else {
+                    qCDebug(dcZigbeeTradfri()) << "Bind on/off cluster to coordinator finished successfully";
+                }
+
+                qCDebug(dcZigbeeTradfri()) << "Bind power level cluster to coordinator";
+                ZigbeeDeviceObjectReply * zdoReply = node->deviceObject()->requestBindGroupAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdLevelControl, 0x0000);
+                connect(zdoReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+                    if (zdoReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+                        qCWarning(dcZigbeeTradfri()) << "Failed to bind level cluster to coordinator" << zdoReply->error();
+                    } else {
+                        qCDebug(dcZigbeeTradfri()) << "Bind level cluster to coordinator finished successfully";
+                    }
+
+                    qCDebug(dcZigbeeTradfri()) << "Read final binding table from node" << node;
+                    ZigbeeReply *reply = node->readBindingTableEntries();
+                    connect(reply, &ZigbeeReply::finished, node, [=](){
+                        if (reply->error() != ZigbeeReply::ErrorNoError) {
+                            qCWarning(dcZigbeeTradfri()) << "Failed to read binding table from" << node;
+                        } else {
+                            foreach (const ZigbeeDeviceProfile::BindingTableListRecord &binding, node->bindingTableRecords()) {
+                                qCDebug(dcZigbeeTradfri()) << node << binding;
+                            }
+                        }
                     });
                 });
             });

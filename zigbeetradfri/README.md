@@ -13,6 +13,14 @@ The [Wireless dimmer](https://www.ikea.com/us/en/p/tradfri-wireless-dimmer-white
 **Pairing instructions**: Open the ZigBee network for joining. Click the connect button 4 times within 5 seconds.
 
 
+### TRÅDFRI Shortcut button
+
+The [Shortcut Button](https://www.ikea.com/us/en/p/tradfri-shortcut-button-white-20356382/) requires the latest firmware version in order to work properly with nymea. If the thing shows up in nymea once paired, but no button events will be recongized, please update the device to the latest firmware version and re-add it to nymea.
+
+> Known working device firmware version: `2.2.008`
+
+**Pairing instructions**: Open the ZigBee network for joining. Click the connect button 4 times within 5 seconds.
+
 
 ### TRÅDFRI Remote control
 
@@ -26,7 +34,7 @@ The [Remote control](https://www.ikea.com/us/en/p/tradfri-remote-control-0044313
 
 ### TRÅDFRI Symfonisk
 
-The [Remote control](https://www.ikea.com/us/en/p/symfonisk-sound-remote-white-20370482/) is *not* supported properly yet, even if it shows up when pairing. This implementation of this device is still under construction.
+The [Symfonisk](https://www.ikea.com/us/en/p/symfonisk-sound-remote-white-20370482/) is *not* supported properly yet, even if it shows up when pairing. This implementation of this device is still under construction.
 
 **Pairing instructions**: Open the ZigBee network for joining. Click the connect button 4 times within 5 seconds.
 
@@ -34,7 +42,7 @@ The [Remote control](https://www.ikea.com/us/en/p/symfonisk-sound-remote-white-2
 
 ### TRÅDFRI Motion sensor
 
-The [Remote control](https://www.ikea.com/us/en/p/tradfri-wireless-motion-sensor-white-60377655/) is fully supported.
+The [Motion sensor](https://www.ikea.com/us/en/p/tradfri-wireless-motion-sensor-white-60377655/) is fully supported.
 
 **Pairing instructions**: Open the ZigBee network for joining. Click the connect button 4 times within 5 seconds.
 

@@ -81,6 +81,7 @@ private:
     void createThing(const ThingClassId &thingClassId, const QUuid &networkUuid, ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
 
     void initOnOffSwitch(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
+    void initShortcutButton(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void initRemote(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void initMotionSensor(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
 
