@@ -62,7 +62,7 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
                 endpoint->deviceId() == Zigbee::HomeAutomationDeviceThermostat) {
             qCDebug(dcZigbeeGeneric()) << "Handling thermostat endpoint for" << node << endpoint;
             createThing(thermostatThingClassId, node, {Param(thermostatThingEndpointIdParamTypeId, endpoint->endpointId())});
-            bindPowerConfigurationCluster(node, endpoint);
+            bindPowerConfigurationCluster(endpoint);
             bindThermostatCluster(node, endpoint);
             handled = true;
         }
@@ -110,7 +110,7 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
         if (endpoint->profile() == Zigbee::ZigbeeProfile::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceIasZone) {
             qCInfo(dcZigbeeGeneric()) << "IAS Zone device found!";
 
-            bindPowerConfigurationCluster(node, endpoint);
+            bindPowerConfigurationCluster(endpoint);
 
             // We need to read the Type cluster to determine what this actually is...
             ZigbeeClusterIasZone *iasZoneCluster = endpoint->inputCluster<ZigbeeClusterIasZone>(ZigbeeClusterLibrary::ClusterIdIasZone);
@@ -127,7 +127,7 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
                     return;
                 }
 
-                initIASSensor(node, endpoint);
+                bindIasZoneInputCluster(endpoint);
 
                 ZigbeeClusterLibrary::ReadAttributeStatusRecord iasZoneTypeRecord = attributeStatusRecords.first();
                 qCDebug(dcZigbeeGeneric()) << "IAS Zone device type:" << iasZoneTypeRecord.dataType.toUInt16();
@@ -156,7 +156,7 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
 
         if (endpoint->profile() == Zigbee::ZigbeeProfile::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceTemperatureSensor) {
             qCInfo(dcZigbeeGeneric()) << "Temperature sensor device found!";
-            bindPowerConfigurationCluster(node, endpoint);
+            bindPowerConfigurationCluster(endpoint);
             bindTemperatureSensorInputCluster(endpoint);
             createThing(temperatureSensorThingClassId, node, {Param(temperatureSensorThingEndpointIdParamTypeId, endpoint->endpointId())});
             handled = true;
@@ -226,6 +226,7 @@ void IntegrationPluginZigbeeGeneric::setupThing(ThingSetupInfo *info)
     }
 
     if (thing->thingClassId() == doorSensorThingClassId) {
+        connectToIasZoneInputCluster(thing, endpoint, "closed", true);
         ZigbeeClusterIasZone *iasZoneCluster = endpoint->inputCluster<ZigbeeClusterIasZone>(ZigbeeClusterLibrary::ClusterIdIasZone);
         if (!iasZoneCluster) {
             qCWarning(dcZigbeeGeneric()) << "Could not find IAS zone cluster on" << thing << endpoint;
@@ -244,46 +245,12 @@ void IntegrationPluginZigbeeGeneric::setupThing(ThingSetupInfo *info)
 
     if (thing->thingClassId() == motionSensorThingClassId) {
         qCDebug(dcZigbeeGeneric()) << "Setting up motion sensor" << endpoint->endpointId();;
-        ZigbeeClusterIasZone *iasZoneCluster = endpoint->inputCluster<ZigbeeClusterIasZone>(ZigbeeClusterLibrary::ClusterIdIasZone);
-        if (!iasZoneCluster) {
-            qCWarning(dcZigbeeGeneric()) << "Could not find IAS zone cluster on" << thing << endpoint;
-        } else {
-            qCDebug(dcZigbeeGeneric()) << "Cluster attributes:" << iasZoneCluster->attributes();
-            qCDebug(dcZigbeeGeneric()) << "Zone state:" << thing->name() << iasZoneCluster->zoneState();
-            qCDebug(dcZigbeeGeneric()) << "Zone type:" << thing->name() << iasZoneCluster->zoneType();
-            qCDebug(dcZigbeeGeneric()) << "Zone status:" << thing->name() << iasZoneCluster->zoneStatus();
-            if (iasZoneCluster->hasAttribute(ZigbeeClusterIasZone::AttributeZoneStatus)) {
-                ZigbeeClusterIasZone::ZoneStatusFlags zoneStatus = iasZoneCluster->zoneStatus();
-                thing->setStateValue(motionSensorIsPresentStateTypeId, zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2));
-                thing->setStateValue(motionSensorTamperedStateTypeId, zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusTamper));
-            }
-            connect(iasZoneCluster, &ZigbeeClusterIasZone::zoneStatusChanged, thing, [=](ZigbeeClusterIasZone::ZoneStatusFlags zoneStatus, quint8 extendedStatus, quint8 zoneId, quint16 delays) {
-                qCDebug(dcZigbeeGeneric()) << "Zone status changed to:" << zoneStatus << extendedStatus << zoneId << delays;
-                thing->setStateValue(motionSensorIsPresentStateTypeId, zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2));
-                thing->setStateValue(motionSensorTamperedStateTypeId, zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusTamper));
-            });
-        }
+        connectToIasZoneInputCluster(thing, endpoint, "isPresent");
     }
 
     if (thing->thingClassId() == fireSensorThingClassId) {
         qCDebug(dcZigbeeGeneric()) << "Setting up fire sensor" << endpoint->endpointId();;
-        ZigbeeClusterIasZone *iasZoneCluster = endpoint->inputCluster<ZigbeeClusterIasZone>(ZigbeeClusterLibrary::ClusterIdIasZone);
-        if (!iasZoneCluster) {
-            qCWarning(dcZigbeeGeneric()) << "Could not find IAS zone cluster on" << thing << endpoint;
-        } else {
-            qCDebug(dcZigbeeGeneric()) << "Cluster attributes:" << iasZoneCluster->attributes();
-            qCDebug(dcZigbeeGeneric()) << "Zone state:" << thing->name() << iasZoneCluster->zoneState();
-            qCDebug(dcZigbeeGeneric()) << "Zone type:" << thing->name() << iasZoneCluster->zoneType();
-            qCDebug(dcZigbeeGeneric()) << "Zone status:" << thing->name() << iasZoneCluster->zoneStatus();
-            if (iasZoneCluster->hasAttribute(ZigbeeClusterIasZone::AttributeZoneStatus)) {
-                ZigbeeClusterIasZone::ZoneStatusFlags zoneStatus = iasZoneCluster->zoneStatus();
-                thing->setStateValue(fireSensorFireDetectedStateTypeId, zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2));
-            }
-            connect(iasZoneCluster, &ZigbeeClusterIasZone::zoneStatusChanged, thing, [=](ZigbeeClusterIasZone::ZoneStatusFlags zoneStatus, quint8 extendedStatus, quint8 zoneId, quint16 delays) {
-                qCDebug(dcZigbeeGeneric()) << "Zone status changed to:" << zoneStatus << extendedStatus << zoneId << delays;
-                thing->setStateValue(fireSensorFireDetectedStateTypeId, zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2));
-            });
-        }
+        connectToIasZoneInputCluster(thing, endpoint, "fireDetected");
     }
 
     if (thing->thingClassId() == temperatureSensorThingClassId) {
@@ -466,20 +433,7 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
                 return;
             }
             uint duration = info->action().paramValue(fireSensorAlarmActionDurationParamTypeId).toUInt();
-            ZigbeeClusterReply *reply = iasWdCluster->startWarning(ZigbeeClusterIasWd::WarningModeStop, true, ZigbeeClusterIasWd::SirenLevelHigh, duration, 50, ZigbeeClusterIasWd::StrobeLevelMedium);
-            connect(reply, &ZigbeeClusterReply::finished, this, [reply, info]() {
-                info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError:  Thing::ThingErrorHardwareFailure);
-            });
-            return;
-        }
-        if (info->action().actionTypeId() == fireSensorNotifyActionTypeId) {
-            ZigbeeClusterIasWd *iasWdCluster = endpoint->inputCluster<ZigbeeClusterIasWd>(ZigbeeClusterLibrary::ClusterIdIasWd);
-            if (!iasWdCluster) {
-                qCWarning(dcZigbeeGeneric()) << "Could not find IAS WD cluster for" << thing << "in" << node;
-                info->finish(Thing::ThingErrorHardwareFailure);
-                return;
-            }
-            ZigbeeClusterReply *reply = iasWdCluster->squawk(ZigbeeClusterIasWd::SquawkModeSystemDisarmed, true, ZigbeeClusterIasWd::SquawkLevelLow);
+            ZigbeeClusterReply *reply = iasWdCluster->startWarning(ZigbeeClusterIasWd::WarningModeFire, true, ZigbeeClusterIasWd::SirenLevelHigh, duration, 50, ZigbeeClusterIasWd::StrobeLevelMedium);
             connect(reply, &ZigbeeClusterReply::finished, this, [reply, info]() {
                 info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError:  Thing::ThingErrorHardwareFailure);
             });
@@ -548,7 +502,7 @@ void IntegrationPluginZigbeeGeneric::initSimplePowerSocket(ZigbeeNode *node, Zig
 
 void IntegrationPluginZigbeeGeneric::initDoorLock(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
 {
-    bindPowerConfigurationCluster(node, endpoint);
+    bindPowerConfigurationCluster(endpoint);
 
     qCDebug(dcZigbeeGeneric()) << "Binding door lock cluster ";
     ZigbeeDeviceObjectReply * zdoReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdDoorLock, hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
@@ -575,76 +529,6 @@ void IntegrationPluginZigbeeGeneric::initDoorLock(ZigbeeNode *node, ZigbeeNodeEn
             } else {
                 qCDebug(dcZigbeeGeneric()) << "Attribute reporting configuration finished for door lock cluster" << ZigbeeClusterLibrary::parseAttributeReportingStatusRecords(reportingReply->responseFrame().payload);
             }
-        });
-    });
-}
-
-void IntegrationPluginZigbeeGeneric::initIASSensor(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
-{
-    bindPowerConfigurationCluster(node, endpoint);
-
-    // First, bind the IAS cluster in a regular manner, for devices that don't fully implement the enrollment process:
-    qCDebug(dcZigbeeGeneric()) << "Binding IAS Zone cluster";
-    ZigbeeDeviceObjectReply *bindIasClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdIasZone,
-                                                                                     hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
-    connect(bindIasClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
-        if (bindIasClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
-            qCWarning(dcZigbeeGeneric()) << "Failed to bind IAS zone cluster" << bindIasClusterReply->error();
-        } else {
-            qCDebug(dcZigbeeGeneric()) << "Binding IAS zone cluster finished successfully";
-        }
-
-        ZigbeeClusterLibrary::AttributeReportingConfiguration reportingStatusConfig;
-        reportingStatusConfig.attributeId = ZigbeeClusterIasZone::AttributeZoneStatus;
-        reportingStatusConfig.dataType = Zigbee::BitMap16;
-        reportingStatusConfig.minReportingInterval = 300;
-        reportingStatusConfig.maxReportingInterval = 2700;
-        reportingStatusConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        qCDebug(dcZigbeeGeneric()) << "Configuring attribute reporting for IAS Zone cluster";
-        ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdIasZone)->configureReporting({reportingStatusConfig});
-        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
-            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(dcZigbeeGeneric()) << "Failed to configure IAS Zone cluster status attribute reporting" << reportingReply->error();
-            } else {
-                qCDebug(dcZigbeeGeneric()) << "Attribute reporting configuration finished for IAS Zone cluster" << ZigbeeClusterLibrary::parseAttributeReportingStatusRecords(reportingReply->responseFrame().payload);
-            }
-
-
-            // OK, now we've bound regularly, devices that require zone enrollment may still not send us anything, so let's try to enroll a zone
-            // For that we need to write our own IEEE address as the CIE (security zone master)
-            ZigbeeDataType dataType(hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()).toUInt64());
-            ZigbeeClusterLibrary::WriteAttributeRecord record;
-            record.attributeId = ZigbeeClusterIasZone::AttributeCieAddress;
-            record.dataType = Zigbee::IeeeAddress;
-            record.data = dataType.data();
-            qCDebug(dcZigbeeGeneric()) << "Setting CIE address" << hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()) << record.data;
-            ZigbeeClusterIasZone *iasZoneCluster = dynamic_cast<ZigbeeClusterIasZone*>(endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdIasZone));
-            ZigbeeClusterReply *writeCIEreply = iasZoneCluster->writeAttributes({record});
-            connect(writeCIEreply, &ZigbeeClusterReply::finished, this, [=](){
-                if (writeCIEreply->error() != ZigbeeClusterReply::ErrorNoError) {
-                    qCWarning(dcZigbeeGeneric()) << "Failed to write CIE address to IAS server:" << writeCIEreply->error();
-                    return;
-                }
-
-                qCDebug(dcZigbeeGeneric()) << "Wrote CIE address to IAS server:" << ZigbeeClusterLibrary::parseAttributeReportingStatusRecords(writeCIEreply->responseFrame().payload);
-
-                // Auto-Enroll-Response mechanism: We'll be sending an enroll response right away (without request) to try and enroll a zone
-                qCDebug(dcZigbeeGeneric()) << "Enrolling zone 0x42 to IAS server.";
-                ZigbeeClusterReply *enrollReply = iasZoneCluster->sendZoneEnrollResponse(0x42);
-                connect(enrollReply, &ZigbeeClusterReply::finished, this, [=](){
-                    // Interestingly some devices stop regular conversation as soon as a zone is enrolled, so we might never get this reply...
-                    qCDebug(dcZigbeeGeneric()) << "Zone enrollment reply:" << enrollReply->error() << enrollReply->responseData() << enrollReply->responseFrame();
-                });
-
-                // According to the spec, if Auto-Enroll-Response is implemented, also Trip-to-Pair is to be handled
-                connect(iasZoneCluster, &ZigbeeClusterIasZone::zoneEnrollRequest, this, [=](ZigbeeClusterIasZone::ZoneType zoneType, quint16 manufacturerCode){
-                    // Accepting any zoneZype/manufacturercode
-                    Q_UNUSED(zoneType)
-                    Q_UNUSED(manufacturerCode)
-                    iasZoneCluster->sendZoneEnrollResponse(0x42);
-                });
-            });
         });
     });
 }

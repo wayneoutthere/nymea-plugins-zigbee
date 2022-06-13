@@ -258,6 +258,361 @@
                         }
                     ],
                     "actionTypes": [ ]
+                },
+                {
+                    "id": "f41ea8de-6df0-40b6-8fc1-95334659a964",
+                    "name": "smokeSensor",
+                    "displayName": "Smoke sensor",
+                    "createMethods": ["auto"],
+                    "interfaces": ["firesensor", "temperaturesensor", "battery", "wirelessconnectable"],
+                    "paramTypes": [
+                        {
+                            "id": "47c8c49d-f36f-4526-927b-f13e76ee79e1",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "6f9e37bf-dd6d-462a-bcfe-fe35bb07cad3",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "67df8dca-5da0-4909-84d0-684cdda5340a",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "displayNameEvent": "Connected changed",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "fc21bb2f-b35f-4847-a459-8db0ce66107c",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "displayNameEvent": "Signal strength changed",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage"
+                        },
+                        {
+                            "id": "f4275d7b-5911-4422-8a97-a7a01300f281",
+                            "name": "version",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "9ab61466-0ead-4d95-a6d5-c54951445bfb",
+                            "name": "fireDetected",
+                            "displayName": "Fire detected",
+                            "displayNameEvent": "Fire detected changed",
+                            "type": "bool",
+                            "defaultValue": "false"
+                        },
+                        {
+                            "id": "3bcabb7b-8545-447b-98ba-761a1112f72b",
+                            "name": "temperature",
+                            "displayName": "Temperature",
+                            "displayNameEvent": "Temperature changed",
+                            "type": "double",
+                            "unit": "DegreeCelsius",
+                            "defaultValue": 0.0,
+                            "filter": "adaptive"
+                        },
+                        {
+                            "id": "d34ecef2-ceea-4e6f-8cd7-06f54593d594",
+                            "name": "batteryCritical",
+                            "displayName": "Battery critical",
+                            "displayNameEvent": "Battery critical changed",
+                            "type": "bool",
+                            "defaultValue": false
+                        }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "dc28424e-7414-4cba-b48d-e16a4e2cc1ec",
+                            "name": "alarm",
+                            "displayName": "Alarm",
+                            "paramTypes": [
+                                {
+                                    "id": "5ff26563-fe34-4d6a-b7bb-663028b6de70",
+                                    "name": "duration",
+                                    "displayName": "Duration",
+                                    "type": "uint",
+                                    "unit": "Seconds",
+                                    "minValue": 0,
+                                    "maxValue": 177776,
+                                    "defaultValue": 600
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "20c843dc-b60e-4d06-8f96-be7950a98fc6",
+                    "name": "waterSensor",
+                    "displayName": "Water sensor",
+                    "createMethods": ["auto"],
+                    "interfaces": ["watersensor", "temperaturesensor", "battery", "wirelessconnectable"],
+                    "paramTypes": [
+                        {
+                            "id": "d1e17923-72ef-4390-ab7d-1bd2174d805c",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "378935eb-f07e-4bea-bbe7-bfccf1498594",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "6e26a196-6ecd-4971-a36c-0dcbd508e557",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "displayNameEvent": "Connected changed",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "9d92c9c7-901b-4a99-84d0-3d19c8be1635",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "displayNameEvent": "Signal strength changed",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage"
+                        },
+                        {
+                            "id": "a59bb290-0c3e-48d8-933b-2f0783cc5615",
+                            "name": "version",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "ff751a4f-ea4e-4706-ad4f-627c327a3d6a",
+                            "name": "waterDetected",
+                            "displayName": "Water detected",
+                            "displayNameEvent": "Water detected changed",
+                            "type": "bool",
+                            "defaultValue": "false"
+                        },
+                        {
+                            "id": "98d4f3a5-539f-4f75-a86e-88d4ab4b026f",
+                            "name": "temperature",
+                            "displayName": "Temperature",
+                            "displayNameEvent": "Temperature changed",
+                            "type": "double",
+                            "unit": "DegreeCelsius",
+                            "defaultValue": 0.0,
+                            "filter": "adaptive"
+                        },
+                        {
+                            "id": "b5eb9897-eabf-455b-9958-91db6b1c4868",
+                            "name": "batteryCritical",
+                            "displayName": "Battery critical",
+                            "displayNameEvent": "Battery critical changed",
+                            "type": "bool",
+                            "defaultValue": false
+                        }
+                    ]
+                },
+                {
+                    "id": "714e2bd2-c100-4f2a-b13e-c9d5c87f7adb",
+                    "name": "doorSensor",
+                    "displayName": "Door/Window sensor",
+                    "createMethods": ["auto"],
+                    "interfaces": ["closablesensor", "temperaturesensor", "battery", "wirelessconnectable"],
+                    "paramTypes": [
+                        {
+                            "id": "06e6cfe6-96c4-446a-a1f1-6ce3ab4ab9a6",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "ff930747-3dd0-44ef-80b8-2f5de826da3d",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "fd09cac9-e98a-4161-80c5-d63d813e466e",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "displayNameEvent": "Connected changed",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "70f6e8c9-3d4c-4b03-879b-9a469f2f3b58",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "displayNameEvent": "Signal strength changed",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage"
+                        },
+                        {
+                            "id": "68862900-b07c-4bd7-be85-64b2ce5384f9",
+                            "name": "version",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "279e7781-19cf-4628-a9da-efbe51c6e439",
+                            "name": "closed",
+                            "displayName": "Closed",
+                            "displayNameEvent": "Opened/closed",
+                            "type": "bool",
+                            "defaultValue": "false"
+                        },
+                        {
+                            "id": "be94e9a8-b225-4610-9a49-686967e84a28",
+                            "name": "temperature",
+                            "displayName": "Temperature",
+                            "displayNameEvent": "Temperature changed",
+                            "type": "double",
+                            "unit": "DegreeCelsius",
+                            "defaultValue": 0.0,
+                            "filter": "adaptive"
+                        },
+                        {
+                            "id": "14907cf7-0acf-4dcb-b397-bd7bd3055479",
+                            "name": "batteryCritical",
+                            "displayName": "Battery critical",
+                            "displayNameEvent": "Battery critical changed",
+                            "type": "bool",
+                            "defaultValue": false
+                        }
+                    ]
+                },
+                {
+                    "id": "6cbf86ea-0d31-4ce7-b0fd-02ff707d3553",
+                    "name": "motionSensor",
+                    "displayName": "Motion sensor",
+                    "createMethods": ["auto"],
+                    "interfaces": ["presencesensor", "temperaturesensor", "lightsensor", "battery", "wirelessconnectable"],
+                    "paramTypes": [
+                        {
+                            "id": "18221173-4c1a-42a9-9631-413ea2a4ccfc",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "0d7c987f-bd08-4ae9-9d48-fc188ef44a73",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "1c109b37-f002-4fb4-8667-2ee62bba2626",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "displayNameEvent": "Connected changed",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "bbd0eef3-b2cd-4fcf-bd2a-e76295d0b232",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "displayNameEvent": "Signal strength changed",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage"
+                        },
+                        {
+                            "id": "1060399a-3e15-44ce-8bdc-4b7fd6f1e194",
+                            "name": "version",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "5ed06626-db36-4520-8c09-b0224df570f8",
+                            "name": "tampered",
+                            "displayName": "Tampered",
+                            "displayNameEvent": "Tampered",
+                            "type": "bool",
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "80bb5618-2115-4909-a6ea-be0ccdaeffbd",
+                            "name": "isPresent",
+                            "displayName": "Presence detected",
+                            "displayNameEvent": "Presence changed",
+                            "type": "bool",
+                            "defaultValue": "false"
+                        },
+                        {
+                            "id": "d7d096fe-8937-4fcf-a54c-8eb4a9aa830b",
+                            "name": "temperature",
+                            "displayName": "Temperature",
+                            "displayNameEvent": "Temperature changed",
+                            "type": "double",
+                            "unit": "DegreeCelsius",
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "5368431e-a622-4d36-b1c0-61a456744ea8",
+                            "name": "lightIntensity",
+                            "displayName": "Light intensity",
+                            "displayNameEvent": "Light intensity changed",
+                            "type": "double",
+                            "unit": "Lux",
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "0a9d580f-70e6-42f9-9d77-d7aeb245ee84",
+                            "name": "batteryCritical",
+                            "displayName": "Battery critical",
+                            "displayNameEvent": "Battery critical changed",
+                            "type": "bool",
+                            "defaultValue": false
+                        }
+                    ]
                 }
             ]
         }

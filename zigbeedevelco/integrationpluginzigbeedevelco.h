@@ -31,13 +31,17 @@
 #ifndef INTEGRATIONPLUGINZIGBEEDEVELCO_H
 #define INTEGRATIONPLUGINZIGBEEDEVELCO_H
 
-#include "integrations/integrationplugin.h"
-#include "hardware/zigbee/zigbeehandler.h"
+#include "../common/zigbeeintegrationplugin.h"
 #include "plugintimer.h"
 
 #include <QTimer>
 
+#include <integrations/integrationplugin.h>
+#include <hardware/zigbee/zigbeehandler.h>
+
 #include <zigbeereply.h>
+
+#include "extern-plugininfo.h"
 
 /* IO Module
  *
@@ -59,14 +63,16 @@
 #define IO_MODULE_EP_OUTPUT1 0x74
 #define IO_MODULE_EP_OUTPUT2 0x75
 
-/* Air quality sensor - manufacturer specific clustr
- * https://www.develcoproducts.com/media/1674/aqszb-110-technical-manual-air-quality-sensor-04-08-20.pdf
- */
-#define AIR_QUALITY_SENSOR_EP_SENSOR 0x26
+/* Develco specific application endpoints */
+#define DEVELCO_EP_IAS_ZONE 0x23
+#define DEVELCO_EP_TEMPERATURE_SENSOR 0x026
+#define DEVELCO_EP_LIGHT_SENSOR 0x27
+
 #define AIR_QUALITY_SENSOR_VOC_MEASUREMENT_CLUSTER_ID 0xfc03
 #define AIR_QUALITY_SENSOR_VOC_MEASUREMENT_ATTRIBUTE_MEASURED_VALUE 0x0000
 #define AIR_QUALITY_SENSOR_VOC_MEASUREMENT_ATTRIBUTE_MIN_MEASURED_VALUE 0x0001
 #define AIR_QUALITY_SENSOR_VOC_MEASUREMENT_ATTRIBUTE_RESOLUTION 0x0003
+
 
 /* Develco manufacturer specific Basic cluster attributes */
 #define DEVELCO_BASIC_ATTRIBUTE_SW_VERSION 0x8000
@@ -76,7 +82,7 @@
 #define DEVELCO_BASIC_ATTRIBUTE_3RD_PARTY_SW_VERSION 0x8050
 
 
-class IntegrationPluginZigbeeDevelco: public IntegrationPlugin, public ZigbeeHandler
+class IntegrationPluginZigbeeDevelco: public ZigbeeIntegrationPlugin
 {
     Q_OBJECT
 
@@ -88,25 +94,12 @@ public:
 
     QString name() const override;
     bool handleNode(ZigbeeNode *node, const QUuid &networkUuid) override;
-    void handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid) override;
 
-    void init() override;
     void setupThing(ThingSetupInfo *info) override;
     void postSetupThing(Thing *thing) override;
     void executeAction(ThingActionInfo *info) override;
-    void thingRemoved(Thing *thing) override;
 
 private:    
-    QHash<Thing*, ZigbeeNode*> m_thingNodes;
-
-    QHash<ThingClassId, ParamTypeId> m_ieeeAddressParamTypeIds;
-    QHash<ThingClassId, ParamTypeId> m_networkUuidParamTypeIds;
-    QHash<ThingClassId, StateTypeId> m_connectedStateTypeIds;
-    QHash<ThingClassId, StateTypeId> m_signalStrengthStateTypeIds;
-
-    // Get the endpoint for the given thing
-    void createThing(const ThingClassId &thingClassId, const QUuid &networkUuid, ZigbeeNode *node);
-
     QString parseDevelcoVersionString(ZigbeeNodeEndpoint *endpoint);
 
     void initIoModule(ZigbeeNode *node);

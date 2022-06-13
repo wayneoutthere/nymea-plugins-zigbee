@@ -60,7 +60,6 @@ private:
 
     void initSimplePowerSocket(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void initDoorLock(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void initIASSensor(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
 };
 
 #endif // INTEGRATIONPLUGINZIGBEEGENERIC_H

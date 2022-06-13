@@ -754,11 +754,6 @@
                                     "defaultValue": 600
                                 }
                             ]
-                        },
-                        {
-                            "id": "11d84d8b-254a-4d52-a6c3-1d9c71b331f4",
-                            "name": "notify",
-                            "displayName": "Notify armed/disarmed"
                         }
                     ]
                 },

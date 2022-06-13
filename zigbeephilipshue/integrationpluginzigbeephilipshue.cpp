@@ -38,7 +38,7 @@
 #include <zcl/general/zigbeeclusterlevelcontrol.h>
 #include <zcl/measurement/zigbeeclusteroccupancysensing.h>
 #include <zcl/measurement/zigbeeclustertemperaturemeasurement.h>
-#include <zcl/measurement/zigbeeclusterilluminancemeasurment.h>
+#include <zcl/measurement/zigbeeclusterilluminancemeasurement.h>
 #include <zcl/manufacturerspecific/philips/zigbeeclustermanufacturerspecificphilips.h>
 
 
@@ -519,18 +519,18 @@ void IntegrationPluginZigbeePhilipsHue::setupThing(ThingSetupInfo *info)
             });
         }
 
-        ZigbeeClusterIlluminanceMeasurment *illuminanceCluster = endpointHa->inputCluster<ZigbeeClusterIlluminanceMeasurment>(ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement);
+        ZigbeeClusterIlluminanceMeasurement *illuminanceCluster = endpointHa->inputCluster<ZigbeeClusterIlluminanceMeasurement>(ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement);
         if (!illuminanceCluster) {
             qCWarning(dcZigbeePhilipsHue()) << "Could not find the illuminance measurement server cluster on" << thing << endpointHa;
         } else {
             // Only set the state if the cluster actually has the attribute
-            if (illuminanceCluster->hasAttribute(ZigbeeClusterIlluminanceMeasurment::AttributeMeasuredValue)) {
+            if (illuminanceCluster->hasAttribute(ZigbeeClusterIlluminanceMeasurement::AttributeMeasuredValue)) {
                 int convertedValue = pow(10, illuminanceCluster->illuminance() / 10000) - 1;
                 qCDebug(dcZigbeePhilipsHue()) << thing << "illuminance" << illuminanceCluster->illuminance() << "-->" << convertedValue << "lux";
                 thing->setStateValue(motionSensorLightIntensityStateTypeId, convertedValue);
             }
 
-            connect(illuminanceCluster, &ZigbeeClusterIlluminanceMeasurment::illuminanceChanged, thing, [thing](quint16 illuminance){
+            connect(illuminanceCluster, &ZigbeeClusterIlluminanceMeasurement::illuminanceChanged, thing, [thing](quint16 illuminance){
                 int convertedValue = pow(10, illuminance / 10000) - 1;
                 qCDebug(dcZigbeePhilipsHue()) << thing << "illuminance changed" << illuminance << "-->" << convertedValue << "lux";
                 thing->setStateValue(motionSensorLightIntensityStateTypeId, convertedValue);
@@ -878,7 +878,7 @@ void IntegrationPluginZigbeePhilipsHue::initMotionSensor(ZigbeeNode *node)
                                     }
 
                                     qCDebug(dcZigbeePhilipsHue()) << "Read illuminance measurement cluster attributes" << node;
-                                    ZigbeeClusterReply *readAttributeReply = endpointHa->getInputCluster(ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement)->readAttributes({ZigbeeClusterIlluminanceMeasurment::AttributeMeasuredValue});
+                                    ZigbeeClusterReply *readAttributeReply = endpointHa->getInputCluster(ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement)->readAttributes({ZigbeeClusterIlluminanceMeasurement::AttributeMeasuredValue});
                                     connect(readAttributeReply, &ZigbeeClusterReply::finished, node, [=](){
                                         if (readAttributeReply->error() != ZigbeeClusterReply::ErrorNoError) {
                                             qCWarning(dcZigbeePhilipsHue()) << "Failed to read illuminance measurement cluster attributes" << readAttributeReply->error();
@@ -888,7 +888,7 @@ void IntegrationPluginZigbeePhilipsHue::initMotionSensor(ZigbeeNode *node)
 
                                         // Configure attribute reporting for illuminance
                                         ZigbeeClusterLibrary::AttributeReportingConfiguration reportingConfig;
-                                        reportingConfig.attributeId = ZigbeeClusterIlluminanceMeasurment::AttributeMeasuredValue;
+                                        reportingConfig.attributeId = ZigbeeClusterIlluminanceMeasurement::AttributeMeasuredValue;
                                         reportingConfig.dataType = Zigbee::Uint16;
                                         reportingConfig.minReportingInterval = 5;
                                         reportingConfig.maxReportingInterval = 600;

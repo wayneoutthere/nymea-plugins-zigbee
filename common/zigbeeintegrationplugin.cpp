@@ -38,6 +38,8 @@
 #include <zcl/smartenergy/zigbeeclustermetering.h>
 #include <zcl/measurement/zigbeeclusterelectricalmeasurement.h>
 #include <zcl/measurement/zigbeeclustertemperaturemeasurement.h>
+#include <zcl/measurement/zigbeeclusterilluminancemeasurement.h>
+#include <zcl/security/zigbeeclusteriaszone.h>
 
 ZigbeeIntegrationPlugin::ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerType handlerType, const QLoggingCategory &loggingCategory):
     m_handlerType(handlerType),
@@ -133,8 +135,9 @@ void ZigbeeIntegrationPlugin::createThing(const ThingClassId &thingClassId, Zigb
     emit autoThingsAppeared({descriptor});
 }
 
-void ZigbeeIntegrationPlugin::bindPowerConfigurationCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint)
+void ZigbeeIntegrationPlugin::bindPowerConfigurationCluster(ZigbeeNodeEndpoint *endpoint)
 {
+    ZigbeeNode *node = endpoint->node();
     ZigbeeDeviceObjectReply *bindPowerReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdPowerConfiguration,
                                                                                            hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
     connect(bindPowerReply, &ZigbeeDeviceObjectReply::finished, endpoint, [=](){
@@ -358,6 +361,116 @@ void ZigbeeIntegrationPlugin::bindTemperatureSensorInputCluster(ZigbeeNodeEndpoi
     });
 }
 
+void ZigbeeIntegrationPlugin::bindIasZoneInputCluster(ZigbeeNodeEndpoint *endpoint)
+{
+    // First, bind the IAS cluster in a regular manner, for devices that don't fully implement the enrollment process:
+    qCDebug(m_dc) << "Binding IAS Zone cluster";
+    ZigbeeNode *node = endpoint->node();
+    ZigbeeDeviceObjectReply *bindIasClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdIasZone,
+                                                                                     hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
+    connect(bindIasClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+        if (bindIasClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to bind IAS zone cluster" << bindIasClusterReply->error();
+        } else {
+            qCDebug(m_dc) << "Binding IAS zone cluster finished successfully";
+        }
+
+        ZigbeeClusterLibrary::AttributeReportingConfiguration reportingStatusConfig;
+        reportingStatusConfig.attributeId = ZigbeeClusterIasZone::AttributeZoneStatus;
+        reportingStatusConfig.dataType = Zigbee::BitMap16;
+        reportingStatusConfig.minReportingInterval = 300;
+        reportingStatusConfig.maxReportingInterval = 2700;
+        reportingStatusConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+        qCDebug(m_dc) << "Configuring attribute reporting for IAS Zone cluster";
+        ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdIasZone)->configureReporting({reportingStatusConfig});
+        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+                qCWarning(m_dc) << "Failed to configure IAS Zone cluster status attribute reporting" << reportingReply->error();
+            } else {
+                qCDebug(m_dc) << "Attribute reporting configuration finished for IAS Zone cluster" << ZigbeeClusterLibrary::parseAttributeReportingStatusRecords(reportingReply->responseFrame().payload);
+            }
+
+
+            // OK, now we've bound regularly, devices that require zone enrollment may still not send us anything, so let's try to enroll a zone
+            // For that we need to write our own IEEE address as the CIE (security zone master)
+            ZigbeeDataType dataType(hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()).toUInt64());
+            ZigbeeClusterLibrary::WriteAttributeRecord record;
+            record.attributeId = ZigbeeClusterIasZone::AttributeCieAddress;
+            record.dataType = Zigbee::IeeeAddress;
+            record.data = dataType.data();
+            qCDebug(m_dc) << "Setting CIE address" << hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()) << record.data;
+            ZigbeeClusterIasZone *iasZoneCluster = dynamic_cast<ZigbeeClusterIasZone*>(endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdIasZone));
+            ZigbeeClusterReply *writeCIEreply = iasZoneCluster->writeAttributes({record});
+            connect(writeCIEreply, &ZigbeeClusterReply::finished, this, [=](){
+                if (writeCIEreply->error() != ZigbeeClusterReply::ErrorNoError) {
+                    qCWarning(m_dc) << "Failed to write CIE address to IAS server:" << writeCIEreply->error();
+                    return;
+                }
+
+                qCDebug(m_dc) << "Wrote CIE address to IAS server:" << ZigbeeClusterLibrary::parseAttributeReportingStatusRecords(writeCIEreply->responseFrame().payload);
+
+                // Auto-Enroll-Response mechanism: We'll be sending an enroll response right away (without request) to try and enroll a zone
+                qCDebug(m_dc) << "Enrolling zone 0x42 to IAS server.";
+                ZigbeeClusterReply *enrollReply = iasZoneCluster->sendZoneEnrollResponse(0x42);
+                connect(enrollReply, &ZigbeeClusterReply::finished, this, [=](){
+                    // Interestingly some devices stop regular conversation as soon as a zone is enrolled, so we might never get this reply...
+                    qCDebug(m_dc) << "Zone enrollment reply:" << enrollReply->error() << enrollReply->responseData() << enrollReply->responseFrame();
+                });
+
+                // According to the spec, if Auto-Enroll-Response is implemented, also Trip-to-Pair is to be handled
+                connect(iasZoneCluster, &ZigbeeClusterIasZone::zoneEnrollRequest, this, [=](ZigbeeClusterIasZone::ZoneType zoneType, quint16 manufacturerCode){
+                    // Accepting any zoneZype/manufacturercode
+                    Q_UNUSED(zoneType)
+                    Q_UNUSED(manufacturerCode)
+                    iasZoneCluster->sendZoneEnrollResponse(0x42);
+                });
+            });
+        });
+    });
+}
+
+void ZigbeeIntegrationPlugin::bindIlluminanceMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries)
+{
+    ZigbeeNode *node = endpoint->node();
+
+    ZigbeeClusterIlluminanceMeasurement* illuminanceMeasurementCluster = endpoint->inputCluster<ZigbeeClusterIlluminanceMeasurement>(ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement);
+    if (!illuminanceMeasurementCluster) {
+        qCWarning(m_dc) << "No illuminance measurement cluster on this endpoint";
+        return;
+    }
+
+    illuminanceMeasurementCluster->readAttributes({ZigbeeClusterIlluminanceMeasurement::AttributeMeasuredValue});
+
+    ZigbeeDeviceObjectReply *bindIlluminanceMeasurementClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement,
+                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
+    connect(bindIlluminanceMeasurementClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+        if (bindIlluminanceMeasurementClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to bind temperature measurement cluster" << bindIlluminanceMeasurementClusterReply->error();
+            if (retries > 0) {
+                bindTemperatureSensorInputCluster(endpoint, retries - 1);
+                return;
+            }
+            // Intentionally falling through... Still trying to configure attribute reporting, just in case
+        }
+
+        ZigbeeClusterLibrary::AttributeReportingConfiguration measuredValueReportingConfig;
+        measuredValueReportingConfig.attributeId = ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue;
+        measuredValueReportingConfig.dataType = Zigbee::Int16;
+        measuredValueReportingConfig.minReportingInterval = 60; // We want currentPower asap
+        measuredValueReportingConfig.maxReportingInterval = 1200;
+        measuredValueReportingConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+        ZigbeeClusterReply *reportingReply = illuminanceMeasurementCluster->configureReporting({measuredValueReportingConfig});
+        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+                qCWarning(m_dc) << "Failed to configure illuminance measurement cluster attribute reporting" << reportingReply->error();
+            }
+        });
+    });
+
+}
+
 void ZigbeeIntegrationPlugin::connectToPowerConfigurationCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeClusterPowerConfiguration *powerCluster = endpoint->inputCluster<ZigbeeClusterPowerConfiguration>(ZigbeeClusterLibrary::ClusterIdPowerConfiguration);
@@ -486,5 +599,52 @@ void ZigbeeIntegrationPlugin::connectToTemperatureMeasurementInputCluster(Thing 
             thing->setStateValue("temperature", temperature);
         });
     }
+}
+
+void ZigbeeIntegrationPlugin::connectToIasZoneInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &alarmStateName, bool inverted)
+{
+    ZigbeeClusterIasZone *iasZoneCluster = endpoint->inputCluster<ZigbeeClusterIasZone>(ZigbeeClusterLibrary::ClusterIdIasZone);
+    if (!iasZoneCluster) {
+        qCWarning(m_dc) << "Could not find IAS zone cluster on" << thing << endpoint;
+    } else {
+        qCDebug(m_dc) << "Cluster attributes:" << iasZoneCluster->attributes();
+        qCDebug(m_dc) << "Zone state:" << thing->name() << iasZoneCluster->zoneState();
+        qCDebug(m_dc) << "Zone type:" << thing->name() << iasZoneCluster->zoneType();
+        qCDebug(m_dc) << "Zone status:" << thing->name() << iasZoneCluster->zoneStatus();
+        if (iasZoneCluster->hasAttribute(ZigbeeClusterIasZone::AttributeZoneStatus)) {
+            ZigbeeClusterIasZone::ZoneStatusFlags zoneStatus = iasZoneCluster->zoneStatus();
+            bool zoneAlarm = zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2);
+            thing->setStateValue(alarmStateName, inverted ? !zoneAlarm : zoneAlarm);
+            if (thing->thingClass().hasStateType("tampered")) {
+                thing->setStateValue("tampered", zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusTamper));
+            }
+        }
+        connect(iasZoneCluster, &ZigbeeClusterIasZone::zoneStatusChanged, thing, [=](ZigbeeClusterIasZone::ZoneStatusFlags zoneStatus, quint8 extendedStatus, quint8 zoneId, quint16 delays) {
+            qCDebug(m_dc) << "Zone status changed to:" << zoneStatus << extendedStatus << zoneId << delays;
+            bool zoneAlarm = zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2);
+            thing->setStateValue(alarmStateName, inverted ? !zoneAlarm : zoneAlarm);
+            if (thing->thingClass().hasStateType("tampered")) {
+                thing->setStateValue("tampered", zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusTamper));
+            }
+        });
+    }
+}
+
+void ZigbeeIntegrationPlugin::connectToIlluminanceMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterIlluminanceMeasurement *illuminanceMeasurementCluster = endpoint->inputCluster<ZigbeeClusterIlluminanceMeasurement>(ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement);
+    if (!illuminanceMeasurementCluster) {
+        qCWarning(m_dc) << "Could not find illuminance measurement cluster on" << thing->name() << endpoint;
+    } else {
+        if (illuminanceMeasurementCluster->hasAttribute(ZigbeeClusterTemperatureMeasurement::AttributeMaxMeasuredValue)) {
+            thing->setStateValue("lightIntensity", illuminanceMeasurementCluster->illuminance());
+        }
+        illuminanceMeasurementCluster->readAttributes({ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue});
+        connect(illuminanceMeasurementCluster, &ZigbeeClusterIlluminanceMeasurement::illuminanceChanged, thing, [=](double illuminance) {
+            qCDebug(m_dc) << "Illuminance for" << thing->name() << "changed to:" << illuminance;
+            thing->setStateValue("lightIntensity", illuminance);
+        });
+    }
+
 }
 
