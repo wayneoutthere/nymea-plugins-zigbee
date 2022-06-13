@@ -40,7 +40,7 @@ class ZigbeeIntegrationPlugin: public IntegrationPlugin, public ZigbeeHandler
     Q_OBJECT
 
 public:
-    explicit ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerType handlerType);
+    explicit ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerType handlerType, const QLoggingCategory &loggingCategory);
     virtual ~ZigbeeIntegrationPlugin();
 
     virtual void init() override;
@@ -60,17 +60,20 @@ protected:
     void bindOnOffOutputCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint, int retries = 3);
     void bindElectricalMeasurementCluster(ZigbeeNodeEndpoint *endpoint);
     void bindMeteringCluster(ZigbeeNodeEndpoint *endpoint);
+    void bindTemperatureSensorInputCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
 
     void connectToPowerConfigurationCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToThermostatCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToOnOffCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName = "power");
     void connectToElectricalMeasurementCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToMeteringCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
+    void connectToTemperatureMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
 
 private:
     QHash<Thing*, ZigbeeNode*> m_thingNodes;
 
     ZigbeeHardwareResource::HandlerType m_handlerType = ZigbeeHardwareResource::HandlerTypeVendor;
+    QLoggingCategory m_dc;
 
 };
 

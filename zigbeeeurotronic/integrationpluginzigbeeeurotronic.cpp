@@ -38,7 +38,7 @@
 #include <QDebug>
 
 
-IntegrationPluginZigbeeEurotronic::IntegrationPluginZigbeeEurotronic(): ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor)
+IntegrationPluginZigbeeEurotronic::IntegrationPluginZigbeeEurotronic(): ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor, dcZigbeeEurotronic())
 {
 }
 
