@@ -61,7 +61,7 @@ bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &n
     // Not filtering for Develco manufacturer code as Develco allows to override that via branding.
     // Develco devices have an endpoint 0x01 with Develco profile, so we'll check for that
     ZigbeeNodeEndpoint *endpoint1 = node->getEndpoint(0x01);
-    if (endpoint1->profile() != Zigbee::ZigbeeProfileDevelco) {
+    if (!endpoint1 || endpoint1->profile() != Zigbee::ZigbeeProfileDevelco) {
         return false;
     }
 
