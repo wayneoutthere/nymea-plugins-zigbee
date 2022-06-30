@@ -1,3 +1,10 @@
+nymea-plugins-zigbee (1.3.0) jammy; urgency=medium
+
+  [ Michael Zanetti ]
+  * Develco: Fix a crash in handleNode()
+
+ -- jenkins <developer@nymea.io>  Thu, 30 Jun 2022 15:05:07 +0200
+
 nymea-plugins-zigbee (1.2.0) jammy; urgency=medium
 
   [ Michael Zanetti ]
