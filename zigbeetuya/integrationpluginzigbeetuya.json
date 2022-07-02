@@ -28,13 +28,6 @@
                             "displayName": "Zigbee network UUID",
                             "type": "QString",
                             "defaultValue": ""
-                        },
-                        {
-                            "id": "0dec4a3c-8812-4cd3-9622-2d1656e63c15",
-                            "name": "endpointId",
-                            "displayName": "Endpoint ID",
-                            "type": "uint",
-                            "defaultValue": 1
                         }
                     ],
                     "settingsTypes": [
