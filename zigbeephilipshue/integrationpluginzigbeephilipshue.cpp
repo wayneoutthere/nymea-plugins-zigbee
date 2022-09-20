@@ -243,6 +243,7 @@ void IntegrationPluginZigbeePhilipsHue::setupThing(ThingSetupInfo *info)
                 thing->setStateValue(dimmerSwitchBatteryLevelStateTypeId, powerCluster->batteryPercentage());
                 thing->setStateValue(dimmerSwitchBatteryCriticalStateTypeId, (powerCluster->batteryPercentage() < 10.0));
             }
+            powerCluster->readAttributes({ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining});
 
             connect(powerCluster, &ZigbeeClusterPowerConfiguration::batteryPercentageChanged, thing, [=](double percentage){
                 qCDebug(dcZigbeePhilipsHue()) << "Battery percentage changed" << percentage << "%" << thing;

@@ -63,7 +63,9 @@ bool IntegrationPluginZigbeeTuya::handleNode(ZigbeeNode *node, const QUuid &/*ne
             return false;
         }
 
-        bindOnOffCluster(node, endpoint);
+        bindOnOffCluster(endpoint);
+        configureOnOffInputAttributeReporting(endpoint);
+
         bindElectricalMeasurementCluster(endpoint);
         bindMeteringCluster(endpoint);
 
@@ -89,7 +91,7 @@ void IntegrationPluginZigbeeTuya::setupThing(ThingSetupInfo *info)
     ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
 
     if (thing->thingClassId() == powerSocketThingClassId) {
-        connectToOnOffCluster(thing, endpoint);
+        connectToOnOffInputCluster(thing, endpoint);
         connectToElectricalMeasurementCluster(thing, endpoint);
 
         // Device doesn't use standard divisor and the formatting attribute is not supported.

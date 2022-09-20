@@ -35,6 +35,9 @@
 #include "hardware/zigbee/zigbeehandler.h"
 #include "hardware/zigbee/zigbeehardwareresource.h"
 
+#include <zcl/lighting/zigbeeclustercolorcontrol.h>
+
+
 class ZigbeeIntegrationPlugin: public IntegrationPlugin, public ZigbeeHandler
 {
     Q_OBJECT
@@ -55,9 +58,9 @@ protected:
     void createThing(const ThingClassId &thingClassId, ZigbeeNode *node, const ParamList &additionalParams = ParamList());
 
     void bindPowerConfigurationCluster(ZigbeeNodeEndpoint *endpoint);
-    void bindThermostatCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void bindOnOffCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void bindOnOffOutputCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint, int retries = 3);
+    void bindThermostatCluster(ZigbeeNodeEndpoint *endpoint);
+    void bindOnOffCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
+    void bindLevelControlInputCluster(ZigbeeNodeEndpoint *endpoint);
     void bindElectricalMeasurementCluster(ZigbeeNodeEndpoint *endpoint);
     void bindMeteringCluster(ZigbeeNodeEndpoint *endpoint);
     void bindTemperatureMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
@@ -65,9 +68,12 @@ protected:
     void bindIasZoneInputCluster(ZigbeeNodeEndpoint *endpoint);
     void bindIlluminanceMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
 
+    void configureOnOffInputAttributeReporting(ZigbeeNodeEndpoint *endpoint);
+
     void connectToPowerConfigurationCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToThermostatCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
-    void connectToOnOffCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName = "power");
+    void connectToOnOffInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName = "power");
+    void connectToLevelControlInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName);
     void connectToElectricalMeasurementCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToMeteringCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToTemperatureMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
@@ -75,12 +81,28 @@ protected:
     void connectToIasZoneInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &alarmStateName, bool inverted = false);
     void connectToIlluminanceMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
 
+    void executePowerOnOffInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);
+    void executeBrightnessLevelControlInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);
+    void executeColorTemperatureColorControlInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);
+    void executeColorColorControlInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);
+
+    void readColorTemperatureRange(Thing *thing, ZigbeeNodeEndpoint *endpoint);
+    quint16 mapScaledValueToColorTemperature(Thing *thing, int scaledColorTemperature);
+    int mapColorTemperatureToScaledValue(Thing *thing, quint16 colorTemperature);
+
 private:
     QHash<Thing*, ZigbeeNode*> m_thingNodes;
 
     ZigbeeHardwareResource::HandlerType m_handlerType = ZigbeeHardwareResource::HandlerTypeVendor;
     QLoggingCategory m_dc;
 
+    typedef struct ColorTemperatureRange {
+        quint16 minValue = 250;
+        quint16 maxValue = 450;
+    } ColorTemperatureRange;
+
+    QHash<Thing *, ColorTemperatureRange> m_colorTemperatureRanges;
+    QHash<Thing *, ZigbeeClusterColorControl::ColorCapabilities> m_colorCapabilities;
 };
 
 #endif // INTEGRATIONPLUGINZIGBEEEUROTRONIC_H

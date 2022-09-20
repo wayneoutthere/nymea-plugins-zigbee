@@ -55,7 +55,7 @@ bool IntegrationPluginZigbeeEurotronic::handleNode(ZigbeeNode *node, const QUuid
 
         ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
         bindPowerConfigurationCluster(endpoint);
-        bindThermostatCluster(node, endpoint);
+        bindThermostatCluster(endpoint);
 
         createThing(spiritThingClassId, node);
         return true;

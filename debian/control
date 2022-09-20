@@ -33,19 +33,12 @@ Package: nymea-plugin-zigbee-generic
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends},
+Conflicts: nymea-plugin-zigbee-generic-lights
+Replaces: nymea-plugin-zigbee-generic-lights
 Description: nymea integration plugin for ZigBee Spec compliant devices
  This package contains the nymea integration plugin for ZigBee devices which
  adhere to the ZigBee Cluster Library specification and thus can be handled
  in a unified and generic manner.
-
-
-Package: nymea-plugin-zigbee-generic-lights
-Architecture: any
-Depends: ${shlibs:Depends},
-         ${misc:Depends},
-Description: nymea integration plugin for ZigBee Spec compliant lighting devices
- This package contains the nymea integration plugin for ZigBee lighting devices
- which adhere to the ZigBee Cluster Library specification for lighting devices.
 
 
 Package: nymea-plugin-zigbee-gewiss
@@ -112,7 +105,6 @@ Depends: nymea-plugin-zigbee-develco,
          nymea-plugin-zigbee-eurotronic,
          nymea-plugin-zigbee-lumi,
          nymea-plugin-zigbee-generic,
-         nymea-plugin-zigbee-generic-lights,
          nymea-plugin-zigbee-gewiss,
          nymea-plugin-zigbee-philipshue,
          nymea-plugin-zigbee-remotes,

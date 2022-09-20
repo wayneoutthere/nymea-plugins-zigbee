@@ -4,7 +4,6 @@ PLUGIN_DIRS = \
     zigbeedevelco       \
     zigbeeeurotronic    \
     zigbeegeneric       \
-    zigbeegenericlights \
     zigbeegewiss        \
     zigbeelumi          \
     zigbeephilipshue    \

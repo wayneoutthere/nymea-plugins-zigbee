@@ -57,13 +57,64 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
     foreach (ZigbeeNodeEndpoint *endpoint, node->endpoints()) {
         qCDebug(dcZigbeeGeneric()) << "Checking node endpoint:" << endpoint->endpointId() << endpoint->deviceId();
 
+        // OnOff light
+        if ((endpoint->profile() == Zigbee::ZigbeeProfile::ZigbeeProfileLightLink &&
+             endpoint->deviceId() == Zigbee::LightLinkDevice::LightLinkDeviceOnOffLight) ||
+                (endpoint->profile() == Zigbee::ZigbeeProfile::ZigbeeProfileHomeAutomation &&
+                 endpoint->deviceId() == Zigbee::HomeAutomationDeviceOnOffLight)) {
+
+            qCDebug(dcZigbeeGeneric()) << "Handling on/off light for" << node << endpoint;
+            createThing(onOffLightThingClassId, node, {Param(onOffLightThingEndpointIdParamTypeId, endpoint->endpointId())});
+            configureOnOffInputAttributeReporting(endpoint);
+            handled = true;
+        }
+
+        // Dimmable light
+        if ((endpoint->profile() == Zigbee::ZigbeeProfile::ZigbeeProfileLightLink &&
+             endpoint->deviceId() == Zigbee::LightLinkDevice::LightLinkDeviceDimmableLight) ||
+                (endpoint->profile() == Zigbee::ZigbeeProfile::ZigbeeProfileHomeAutomation &&
+                 endpoint->deviceId() == Zigbee::HomeAutomationDeviceDimmableLight)) {
+
+            qCDebug(dcZigbeeGeneric()) << "Handling dimmable light for" << node << endpoint;
+            createThing(dimmableLightThingClassId, node, {Param(dimmableLightThingEndpointIdParamTypeId, endpoint->endpointId())});
+            configureOnOffInputAttributeReporting(endpoint);
+            bindLevelControlInputCluster(endpoint);
+            handled = true;
+        }
+
+        // CT light
+        if ((endpoint->profile() == Zigbee::ZigbeeProfileLightLink &&
+             endpoint->deviceId() == Zigbee::LightLinkDeviceColourTemperatureLight) ||
+                (endpoint->profile() == Zigbee::ZigbeeProfileHomeAutomation &&
+                 endpoint->deviceId() == Zigbee::HomeAutomationDeviceColourTemperatureLight)) {
+
+            qCDebug(dcZigbeeGeneric()) << "Handling color temperature light for" << node << endpoint;
+            createThing(colorTemperatureLightThingClassId, node, {Param(colorTemperatureLightThingEndpointIdParamTypeId, endpoint->endpointId())});
+            configureOnOffInputAttributeReporting(endpoint);
+            bindLevelControlInputCluster(endpoint);
+            handled = true;
+        }
+
+        // Color light
+        if ((endpoint->profile() == Zigbee::ZigbeeProfileLightLink && endpoint->deviceId() == Zigbee::LightLinkDeviceColourLight) ||
+                (endpoint->profile() == Zigbee::ZigbeeProfileLightLink && endpoint->deviceId() == Zigbee::LightLinkDeviceExtendedColourLight) ||
+                (endpoint->profile() == Zigbee::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceExtendedColourLight) ||
+                (endpoint->profile() == Zigbee::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceDimmableColorLight)) {
+
+            qCDebug(dcZigbeeGeneric()) << "Handling color light for" << node << endpoint;
+            createThing(colorLightThingClassId, node, {Param(colorLightThingEndpointIdParamTypeId, endpoint->endpointId())});
+            configureOnOffInputAttributeReporting(endpoint);
+            bindLevelControlInputCluster(endpoint);
+            handled = true;
+        }
+
         // Check thermostat
         if (endpoint->profile() == Zigbee::ZigbeeProfile::ZigbeeProfileHomeAutomation &&
                 endpoint->deviceId() == Zigbee::HomeAutomationDeviceThermostat) {
             qCDebug(dcZigbeeGeneric()) << "Handling thermostat endpoint for" << node << endpoint;
             createThing(thermostatThingClassId, node, {Param(thermostatThingEndpointIdParamTypeId, endpoint->endpointId())});
             bindPowerConfigurationCluster(endpoint);
-            bindThermostatCluster(node, endpoint);
+            bindThermostatCluster(endpoint);
             handled = true;
         }
 
@@ -87,7 +138,8 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
                     createThing(powerSocketThingClassId, node, {Param(powerSocketThingEndpointIdParamTypeId, endpoint->endpointId())});
                 }
 
-                bindOnOffCluster(node, endpoint);
+                bindOnOffCluster(endpoint);
+                configureOnOffInputAttributeReporting(endpoint);
                 handled = true;
             }
         }
@@ -204,16 +256,35 @@ void IntegrationPluginZigbeeGeneric::setupThing(ThingSetupInfo *info)
     }
 
     // Type specific setup
+    if (thing->thingClassId() == onOffLightThingClassId) {
+        connectToOnOffInputCluster(thing, endpoint);
+    }
+
+    if (thing->thingClassId() == dimmableLightThingClassId) {
+        connectToOnOffInputCluster(thing, endpoint);
+        connectToLevelControlInputCluster(thing, endpoint, "brightness");
+    }
+
+    if (thing->thingClassId() == colorTemperatureLightThingClassId) {
+        connectToOnOffInputCluster(thing, endpoint);
+        connectToLevelControlInputCluster(thing, endpoint, "brightness");
+    }
+
+    if (thing->thingClassId() == colorLightThingClassId) {
+        connectToOnOffInputCluster(thing, endpoint);
+        connectToLevelControlInputCluster(thing, endpoint, "brightness");
+    }
+
     if (thing->thingClassId() == thermostatThingClassId) {
         connectToThermostatCluster(thing, endpoint);
     }
 
     if (thing->thingClassId() == powerSocketThingClassId) {
-        connectToOnOffCluster(thing, endpoint);
+        connectToOnOffInputCluster(thing, endpoint);
     }
 
     if (thing->thingClassId() == powerMeterSocketThingClassId) {
-        connectToOnOffCluster(thing, endpoint);
+        connectToOnOffInputCluster(thing, endpoint);
         connectToMeteringCluster(thing, endpoint);
     }
 
@@ -311,6 +382,43 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
         return;
     }
 
+    if (thing->thingClassId() == onOffLightThingClassId) {
+        if (info->action().actionTypeId() == onOffLightPowerActionTypeId) {
+            executePowerOnOffInputCluster(info, endpoint);
+        }
+        return;
+    }
+    if (thing->thingClassId() == dimmableLightThingClassId) {
+        if (info->action().actionTypeId() == dimmableLightPowerActionTypeId) {
+            executePowerOnOffInputCluster(info, endpoint);
+        } else if (info->action().actionTypeId() == dimmableLightBrightnessActionTypeId) {
+            executeBrightnessLevelControlInputCluster(info, endpoint);
+        }
+        return;
+    }
+    if (thing->thingClassId() == colorTemperatureLightThingClassId) {
+        if (info->action().actionTypeId() == colorTemperatureLightPowerActionTypeId) {
+            executePowerOnOffInputCluster(info, endpoint);
+        } else if (info->action().actionTypeId() == colorTemperatureLightBrightnessActionTypeId) {
+            executeBrightnessLevelControlInputCluster(info, endpoint);
+        } else if (info->action().actionTypeId() == colorTemperatureLightColorTemperatureActionTypeId) {
+            executeColorTemperatureColorControlInputCluster(info, endpoint);
+        }
+        return;
+    }
+    if (thing->thingClassId() == colorLightThingClassId) {
+        if (info->action().actionTypeId() == colorLightPowerActionTypeId) {
+            executePowerOnOffInputCluster(info, endpoint);
+        } else if (info->action().actionTypeId() == colorLightBrightnessActionTypeId) {
+            executeBrightnessLevelControlInputCluster(info, endpoint);
+        } else if (info->action().actionTypeId() == colorLightColorTemperatureActionTypeId) {
+            executeColorTemperatureColorControlInputCluster(info, endpoint);
+        } else if (info->action().actionTypeId() == colorLightColorActionTypeId) {
+            executeColorColorControlInputCluster(info, endpoint);
+        }
+        return;
+    }
+
     if (thing->thingClassId() == thermostatThingClassId) {
         if (info->action().actionTypeId() == thermostatTargetTemperatureActionTypeId) {
             ZigbeeClusterThermostat *thermostatCluster = endpoint->inputCluster<ZigbeeClusterThermostat>(ZigbeeClusterLibrary::ClusterIdThermostat);
@@ -351,21 +459,7 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
         }
 
         if (info->action().actionTypeId() == powerSocketPowerActionTypeId) {
-            ZigbeeClusterOnOff *onOffCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
-            if (!onOffCluster) {
-                qCWarning(dcZigbeeGeneric()) << "Could not find on/off cluster for" << thing << "in" << endpoint;
-                info->finish(Thing::ThingErrorHardwareFailure);
-                return;
-            }
-
-            bool power = info->action().param(powerSocketPowerActionPowerParamTypeId).value().toBool();
-            ZigbeeClusterReply *reply = (power ? onOffCluster->commandOn() : onOffCluster->commandOff());
-            connect(reply, &ZigbeeClusterReply::finished, info, [=](){
-                if (reply->error() == ZigbeeClusterReply::ErrorNoError) {
-                    thing->setStateValue(powerSocketPowerStateTypeId, power);
-                }
-                info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError : Thing::ThingErrorHardwareFailure);
-            });
+            executePowerOnOffInputCluster(info, endpoint);
             return;
         }
     }
@@ -387,23 +481,7 @@ void IntegrationPluginZigbeeGeneric::executeAction(ThingActionInfo *info)
         }
 
         if (info->action().actionTypeId() == powerMeterSocketPowerActionTypeId) {
-            ZigbeeClusterOnOff *onOffCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
-            if (!onOffCluster) {
-                qCWarning(dcZigbeeGeneric()) << "Could not find on/off cluster for" << thing << "in" << endpoint;
-                info->finish(Thing::ThingErrorHardwareFailure);
-                return;
-            }
-
-            bool power = info->action().param(powerMeterSocketPowerActionPowerParamTypeId).value().toBool();
-            ZigbeeClusterReply *reply = (power ? onOffCluster->commandOn() : onOffCluster->commandOff());
-            connect(reply, &ZigbeeClusterReply::finished, info, [=](){
-                info->finish(reply->error() == ZigbeeClusterReply::ErrorNoError ? Thing::ThingErrorNoError : Thing::ThingErrorHardwareFailure);
-            });
-            connect(reply, &ZigbeeClusterReply::finished, thing, [=](){
-                if (reply->error() == ZigbeeClusterReply::ErrorNoError) {
-                    thing->setStateValue(powerMeterSocketPowerStateTypeId, power);
-                }
-            });
+            executePowerOnOffInputCluster(info, endpoint);
             return;
         }
     }
