@@ -9,6 +9,105 @@
             "displayName": "Philips",
             "thingClasses": [
                 {
+                    "name": "colorLight",
+                    "displayName": "Color Light",
+                    "id": "d32953a5-ac30-479e-bd8d-e523c745902d",
+                    "setupMethod": "JustAdd",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "colorlight", "alert", "wirelessconnectable" ],
+                    "paramTypes": [
+                        {
+                            "id": "67648441-69a5-403b-97c7-a20d8a9dba12",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE address",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "01851a2d-60da-494e-aee4-908394c9b2ae",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "e4954ad7-812b-491f-9187-ba6cd6cd1755",
+                            "name": "connected",
+                            "displayName": "Available",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "3a65294c-a5b8-475e-ab1c-8a5df5c3ab51",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage"
+                        },
+                        {
+                            "id": "985ef8bf-22c7-40b8-8de6-8ba5f54ab287",
+                            "name": "version",
+                            "displayName": "Version",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "3ab42d68-2394-40ff-8704-571e5b1b28e9",
+                            "name": "power",
+                            "displayName": "Power",
+                            "displayNameAction": "Set power",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "writable": true
+                        },
+                        {
+                            "id": "58f16042-b027-439b-96f6-39ae4b5772f8",
+                            "name": "brightness",
+                            "displayName": "Brightness",
+                            "displayNameAction": "Set brightness",
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "int",
+                            "defaultValue": 100,
+                            "writable": true
+                        },
+                        {
+                            "id": "472d3582-cff9-42d1-914a-433ebdf8bf37",
+                            "name": "colorTemperature",
+                            "displayName": "Color temperature scaled",
+                            "displayNameAction": "Set color temperature scaled",
+                            "defaultValue": 100,
+                            "minValue": 0,
+                            "maxValue": 200,
+                            "type": "int",
+                            "writable": true
+                        },
+                        {
+                            "id": "92338bb1-c3ef-46ee-8e87-3dcabad6d0d2",
+                            "name": "color",
+                            "displayName": "color",
+                            "displayNameAction": "Set color",
+                            "type": "QColor",
+                            "defaultValue": "#000000",
+                            "writable": true
+                        }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "2a0dc479-34e8-4f56-bd24-b004d4b762e9",
+                            "name": "alert",
+                            "displayName": "Identify"
+                        }
+                    ]
+                },
+                {
                     "name": "dimmerSwitch",
                     "displayName": "Hue Dimmer switch",
                     "id": "b2711164-a848-4715-8ddf-33ca86f9f4cf",

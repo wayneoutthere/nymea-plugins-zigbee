@@ -31,13 +31,13 @@
 #ifndef INTEGRATIONPLUGINZIGBEEPHILIPSHUE_H
 #define INTEGRATIONPLUGINZIGBEEPHILIPSHUE_H
 
-#include "integrations/integrationplugin.h"
+#include "../common/zigbeeintegrationplugin.h"
 #include "hardware/zigbee/zigbeehandler.h"
 #include "plugintimer.h"
 #include "extern-plugininfo.h"
 #include <QTimer>
 
-class IntegrationPluginZigbeePhilipsHue: public IntegrationPlugin, public ZigbeeHandler
+class IntegrationPluginZigbeePhilipsHue: public ZigbeeIntegrationPlugin
 {
     Q_OBJECT
 
@@ -49,25 +49,12 @@ public:
 
     QString name() const override;
     bool handleNode(ZigbeeNode *node, const QUuid &networkUuid) override;
-    void handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid) override;
 
-    void init() override;
     void setupThing(ThingSetupInfo *info) override;
     void executeAction(ThingActionInfo *info) override;
-    void thingRemoved(Thing *thing) override;
 
 private:
     PluginTimer *m_presenceTimer = nullptr;
-    QHash<Thing*, ZigbeeNode*> m_thingNodes;
-
-    QHash<ThingClassId, ParamTypeId> m_ieeeAddressParamTypeIds;
-    QHash<ThingClassId, ParamTypeId> m_networkUuidParamTypeIds;
-
-    QHash<ThingClassId, StateTypeId> m_connectedStateTypeIds;
-    QHash<ThingClassId, StateTypeId> m_signalStrengthStateTypeIds;
-    QHash<ThingClassId, StateTypeId> m_versionStateTypeIds;
-
-    void createThing(const ThingClassId &thingClassId, const QUuid &networkUuid, ZigbeeNode *node);
 
     void initDimmerSwitch(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void initMotionSensor(ZigbeeNode *node);
