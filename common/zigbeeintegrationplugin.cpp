@@ -31,6 +31,7 @@
 #include "zigbeeintegrationplugin.h"
 
 #include <hardware/zigbee/zigbeehardwareresource.h>
+#include <network/networkaccessmanager.h>
 
 #include <zigbeeutils.h>
 
@@ -44,8 +45,17 @@
 #include <zcl/measurement/zigbeeclusterilluminancemeasurement.h>
 #include <zcl/measurement/zigbeeclusterrelativehumiditymeasurement.h>
 #include <zcl/security/zigbeeclusteriaszone.h>
+#include <zcl/general/zigbeeclusteridentify.h>
+#include <zcl/measurement/zigbeeclusteroccupancysensing.h>
+#include <zcl/ota/zigbeeclusterota.h>
 
 #include <QColor>
+#include <QNetworkRequest>
+#include <QJsonDocument>
+#include <QStandardPaths>
+#include <QFile>
+#include <QDataStream>
+#include <qmath.h>
 
 ZigbeeIntegrationPlugin::ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerType handlerType, const QLoggingCategory &loggingCategory):
     m_handlerType(handlerType),
@@ -62,6 +72,8 @@ ZigbeeIntegrationPlugin::~ZigbeeIntegrationPlugin()
 void ZigbeeIntegrationPlugin::init()
 {
     hardwareManager()->zigbeeResource()->registerHandler(this, m_handlerType);
+
+    updateFirmwareIndex();
 }
 
 void ZigbeeIntegrationPlugin::handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid)
@@ -113,6 +125,17 @@ bool ZigbeeIntegrationPlugin::manageNode(Thing *thing)
         thing->setStateValue("signalStrength", signalStrength);
     });
 
+    connect(node, &ZigbeeNode::lastSeenChanged, this, [=](){
+        while (!m_delayedWriteRequests.value(node).isEmpty()) {
+            DelayedAttributeWriteRequest request = m_delayedWriteRequests[node].takeFirst();
+            request.cluster->writeAttributes(request.records, request.manufacturerCode);
+        }
+        while (!m_delayedReadRequests.value(node).isEmpty()) {
+            DelayedAttributeReadRequest request = m_delayedReadRequests[node].takeFirst();
+            request.cluster->readAttributes(request.attributes, request.manufacturerCode);
+        }
+    });
+
     return true;
 }
 
@@ -143,39 +166,12 @@ void ZigbeeIntegrationPlugin::createThing(const ThingClassId &thingClassId, Zigb
 
 void ZigbeeIntegrationPlugin::bindPowerConfigurationCluster(ZigbeeNodeEndpoint *endpoint)
 {
-    ZigbeeNode *node = endpoint->node();
-    ZigbeeDeviceObjectReply *bindPowerReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdPowerConfiguration,
-                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
+    ZigbeeDeviceObjectReply *bindPowerReply = endpoint->node()->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdPowerConfiguration,
+                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(endpoint->node()->networkUuid()), 0x01);
     connect(bindPowerReply, &ZigbeeDeviceObjectReply::finished, endpoint, [=](){
         if (bindPowerReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
             qCWarning(m_dc) << "Failed to bind power configuration cluster" << bindPowerReply->error();
         }
-
-        ZigbeeClusterLibrary::AttributeReportingConfiguration batteryPercentageConfig;
-        batteryPercentageConfig.attributeId = ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining;
-        batteryPercentageConfig.dataType = Zigbee::Uint8;
-        batteryPercentageConfig.minReportingInterval = 60;
-        batteryPercentageConfig.maxReportingInterval = 120;
-        batteryPercentageConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        ZigbeeClusterLibrary::AttributeReportingConfiguration batteryAlarmStateConfig;
-        batteryAlarmStateConfig.attributeId = ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState;
-        batteryAlarmStateConfig.dataType = Zigbee::Uint8;
-        batteryAlarmStateConfig.minReportingInterval = 60;
-        batteryAlarmStateConfig.maxReportingInterval = 120;
-        batteryAlarmStateConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        ZigbeeClusterPowerConfiguration *powerConfigurationCluster = endpoint->inputCluster<ZigbeeClusterPowerConfiguration>(ZigbeeClusterLibrary::ClusterIdPowerConfiguration);
-        if (!powerConfigurationCluster) {
-            qCWarning(m_dc) << "No power configuation cluster found. Cannot configure attribute reporting for" << thingForNode(node)->name() << endpoint;
-            return;
-        }
-        ZigbeeClusterReply *reportingReply = powerConfigurationCluster->configureReporting({batteryPercentageConfig, batteryAlarmStateConfig});
-        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
-            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(m_dc) << "Failed to configure power configuration cluster attribute reporting" << reportingReply->error();
-            }
-        });
     });
 }
 
@@ -227,7 +223,7 @@ void ZigbeeIntegrationPlugin::bindOnOffCluster(ZigbeeNodeEndpoint *endpoint, int
     });
 }
 
-void ZigbeeIntegrationPlugin::bindLevelControlInputCluster(ZigbeeNodeEndpoint *endpoint)
+void ZigbeeIntegrationPlugin::bindLevelControlCluster(ZigbeeNodeEndpoint *endpoint)
 {
     qCDebug(m_dc) << "Binding endpoint" << endpoint->endpointId() << "Level control input cluster";
     ZigbeeDeviceObjectReply *bindLevelControlInputClusterReply = endpoint->node()->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdLevelControl,
@@ -236,20 +232,18 @@ void ZigbeeIntegrationPlugin::bindLevelControlInputCluster(ZigbeeNodeEndpoint *e
         if (bindLevelControlInputClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
             qCWarning(m_dc) << "Failed to bind Level Control input cluster" << bindLevelControlInputClusterReply->error();
         }
+    });
+}
 
-        ZigbeeClusterLibrary::AttributeReportingConfiguration levelConfig;
-        levelConfig.attributeId = ZigbeeClusterLevelControl::AttributeCurrentLevel;
-        levelConfig.dataType = Zigbee::Uint8;
-        levelConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdLevelControl)->configureReporting({levelConfig});
-        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
-            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(m_dc) << "Failed to configure Level Control input cluster attribute reporting" << reportingReply->error();
-            } else {
-                qCDebug(m_dc) << "Configured attribute reporting for Level Control Input cluster";
-            }
-        });
+void ZigbeeIntegrationPlugin::bindColorControlCluster(ZigbeeNodeEndpoint *endpoint)
+{
+    qCDebug(m_dc) << "Binding endpoint" << endpoint->endpointId() << "Color control input cluster";
+    ZigbeeDeviceObjectReply *bindColorControlInputClusterReply = endpoint->node()->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdColorControl,
+                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(endpoint->node()->networkUuid()), 0x01);
+    connect(bindColorControlInputClusterReply, &ZigbeeDeviceObjectReply::finished, endpoint, [=](){
+        if (bindColorControlInputClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to bind Color Control input cluster" << bindColorControlInputClusterReply->error();
+        }
     });
 }
 
@@ -263,36 +257,6 @@ void ZigbeeIntegrationPlugin::bindElectricalMeasurementCluster(ZigbeeNodeEndpoin
         } else {
             qCDebug(m_dc) << "Bound electrical measurement cluster successfully";
         }
-
-        ZigbeeClusterLibrary::AttributeReportingConfiguration acTotalPowerConfig;
-        acTotalPowerConfig.attributeId = ZigbeeClusterElectricalMeasurement::AttributeACPhaseAMeasurementActivePower;
-        acTotalPowerConfig.dataType = Zigbee::Int16;
-        acTotalPowerConfig.minReportingInterval = 1; // we want currentPower asap
-        acTotalPowerConfig.maxReportingInterval = 30;
-        acTotalPowerConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        ZigbeeClusterLibrary::AttributeReportingConfiguration rmsVoltageConfig;
-        rmsVoltageConfig.attributeId = ZigbeeClusterElectricalMeasurement::AttributeACPhaseAMeasurementRMSVoltage;
-        rmsVoltageConfig.dataType = Zigbee::Int16;
-        rmsVoltageConfig.minReportingInterval = 50;
-        rmsVoltageConfig.maxReportingInterval = 120;
-        rmsVoltageConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        ZigbeeClusterLibrary::AttributeReportingConfiguration rmsCurrentConfig;
-        rmsCurrentConfig.attributeId = ZigbeeClusterElectricalMeasurement::AttributeACPhaseAMeasurementRMSCurrent;
-        rmsCurrentConfig.dataType = Zigbee::Int16;
-        rmsCurrentConfig.minReportingInterval = 10;
-        rmsCurrentConfig.maxReportingInterval = 120;
-        rmsCurrentConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdElectricalMeasurement)->configureReporting({acTotalPowerConfig, rmsVoltageConfig, rmsCurrentConfig});
-        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
-            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(m_dc) << "Failed to configure electrical measurement cluster attribute reporting" << reportingReply->error();
-            } else {
-                qCDebug(m_dc) << "Enabled attribute reporting successfully";
-            }
-        });
     });
 }
 
@@ -300,54 +264,18 @@ void ZigbeeIntegrationPlugin::bindMeteringCluster(ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeNode *node = endpoint->node();
 
-    ZigbeeClusterMetering* meteringCluster = endpoint->inputCluster<ZigbeeClusterMetering>(ZigbeeClusterLibrary::ClusterIdMetering);
-    if (!meteringCluster) {
-        qCWarning(m_dc) << "No metering cluster on this endpoint";
-        return;
-    }
-    meteringCluster->readFormatting();
-
     ZigbeeDeviceObjectReply *bindMeteringClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdMetering,
                                                                                            hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
     connect(bindMeteringClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
         if (bindMeteringClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
             qCWarning(m_dc) << "Failed to bind metering cluster" << bindMeteringClusterReply->error();
         }
-
-        ZigbeeClusterLibrary::AttributeReportingConfiguration instantaneousDemandConfig;
-        instantaneousDemandConfig.attributeId = ZigbeeClusterMetering::AttributeInstantaneousDemand;
-        instantaneousDemandConfig.dataType = Zigbee::Int24;
-        instantaneousDemandConfig.minReportingInterval = 1; // We want currentPower asap
-        instantaneousDemandConfig.maxReportingInterval = 120;
-        instantaneousDemandConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        ZigbeeClusterLibrary::AttributeReportingConfiguration currentSummationConfig;
-        currentSummationConfig.attributeId = ZigbeeClusterMetering::AttributeCurrentSummationDelivered;
-        currentSummationConfig.dataType = Zigbee::Uint48;
-        currentSummationConfig.minReportingInterval = 5;
-        currentSummationConfig.maxReportingInterval = 120;
-        currentSummationConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        ZigbeeClusterReply *reportingReply = meteringCluster->configureReporting({instantaneousDemandConfig, currentSummationConfig});
-        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
-            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(m_dc) << "Failed to configure metering cluster attribute reporting" << reportingReply->error();
-            }
-        });
     });
 }
 
 void ZigbeeIntegrationPlugin::bindTemperatureMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries)
 {
     ZigbeeNode *node = endpoint->node();
-
-    ZigbeeClusterTemperatureMeasurement* temperatureMeasurementCluster = endpoint->inputCluster<ZigbeeClusterTemperatureMeasurement>(ZigbeeClusterLibrary::ClusterIdTemperatureMeasurement);
-    if (!temperatureMeasurementCluster) {
-        qCWarning(m_dc) << "No temperature measurement cluster on this endpoint";
-        return;
-    }
-
-    temperatureMeasurementCluster->readAttributes({ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue});
 
     ZigbeeDeviceObjectReply *bindTemperatureMeasurementClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdTemperatureMeasurement,
                                                                                            hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
@@ -358,22 +286,7 @@ void ZigbeeIntegrationPlugin::bindTemperatureMeasurementInputCluster(ZigbeeNodeE
                 bindTemperatureMeasurementInputCluster(endpoint, retries - 1);
                 return;
             }
-            // Intentionally falling through... Still trying to configure attribute reporting, just in case
         }
-
-        ZigbeeClusterLibrary::AttributeReportingConfiguration measuredValueReportingConfig;
-        measuredValueReportingConfig.attributeId = ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue;
-        measuredValueReportingConfig.dataType = Zigbee::Int16;
-        measuredValueReportingConfig.minReportingInterval = 60; // We want currentPower asap
-        measuredValueReportingConfig.maxReportingInterval = 1200;
-        measuredValueReportingConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        ZigbeeClusterReply *reportingReply = temperatureMeasurementCluster->configureReporting({measuredValueReportingConfig});
-        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
-            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(m_dc) << "Failed to configure temperature measurement cluster attribute reporting" << reportingReply->error();
-            }
-        });
     });
 }
 
@@ -486,49 +399,70 @@ void ZigbeeIntegrationPlugin::bindIasZoneInputCluster(ZigbeeNodeEndpoint *endpoi
     });
 }
 
-void ZigbeeIntegrationPlugin::bindIlluminanceMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries)
+void ZigbeeIntegrationPlugin::bindIlluminanceMeasurementCluster(ZigbeeNodeEndpoint *endpoint, int retries)
 {
     ZigbeeNode *node = endpoint->node();
-
-    ZigbeeClusterIlluminanceMeasurement* illuminanceMeasurementCluster = endpoint->inputCluster<ZigbeeClusterIlluminanceMeasurement>(ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement);
-    if (!illuminanceMeasurementCluster) {
-        qCWarning(m_dc) << "No illuminance measurement cluster on this endpoint";
-        return;
-    }
-
-    illuminanceMeasurementCluster->readAttributes({ZigbeeClusterIlluminanceMeasurement::AttributeMeasuredValue});
-
     ZigbeeDeviceObjectReply *bindIlluminanceMeasurementClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement,
                                                                                            hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
     connect(bindIlluminanceMeasurementClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
         if (bindIlluminanceMeasurementClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
-            qCWarning(m_dc) << "Failed to bind temperature measurement cluster" << bindIlluminanceMeasurementClusterReply->error();
+            qCWarning(m_dc) << "Failed to bind illuminance measurement cluster" << bindIlluminanceMeasurementClusterReply->error();
             if (retries > 0) {
-                bindIlluminanceMeasurementInputCluster(endpoint, retries - 1);
+                bindIlluminanceMeasurementCluster(endpoint, retries - 1);
                 return;
             }
-            // Intentionally falling through... Still trying to configure attribute reporting, just in case
         }
-
-        ZigbeeClusterLibrary::AttributeReportingConfiguration measuredValueReportingConfig;
-        measuredValueReportingConfig.attributeId = ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue;
-        measuredValueReportingConfig.dataType = Zigbee::Int16;
-        measuredValueReportingConfig.minReportingInterval = 60; // We want currentPower asap
-        measuredValueReportingConfig.maxReportingInterval = 1200;
-        measuredValueReportingConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
-
-        ZigbeeClusterReply *reportingReply = illuminanceMeasurementCluster->configureReporting({measuredValueReportingConfig});
-        connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
-            if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(m_dc) << "Failed to configure illuminance measurement cluster attribute reporting" << reportingReply->error();
-            }
-        });
     });
-
 }
 
-void ZigbeeIntegrationPlugin::configureOnOffInputAttributeReporting(ZigbeeNodeEndpoint *endpoint)
+void ZigbeeIntegrationPlugin::bindOccupancySensingCluster(ZigbeeNodeEndpoint *endpoint)
 {
+    ZigbeeNode *node = endpoint->node();
+    ZigbeeDeviceObjectReply *bindOccupancySensingClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdOccupancySensing,
+                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
+    connect(bindOccupancySensingClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+        if (bindOccupancySensingClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to bind occupancy sensing cluster" << bindOccupancySensingClusterReply->error();
+        }
+    });
+}
+
+void ZigbeeIntegrationPlugin::configurePowerConfigurationInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterLibrary::AttributeReportingConfiguration batteryPercentageConfig;
+    batteryPercentageConfig.attributeId = ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining;
+    batteryPercentageConfig.dataType = Zigbee::Uint8;
+    batteryPercentageConfig.minReportingInterval = 60;
+    batteryPercentageConfig.maxReportingInterval = 120;
+    batteryPercentageConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration batteryAlarmStateConfig;
+    batteryAlarmStateConfig.attributeId = ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState;
+    batteryAlarmStateConfig.dataType = Zigbee::Uint8;
+    batteryAlarmStateConfig.minReportingInterval = 60;
+    batteryAlarmStateConfig.maxReportingInterval = 120;
+    batteryAlarmStateConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+    ZigbeeClusterPowerConfiguration *powerConfigurationCluster = endpoint->inputCluster<ZigbeeClusterPowerConfiguration>(ZigbeeClusterLibrary::ClusterIdPowerConfiguration);
+    if (!powerConfigurationCluster) {
+        qCWarning(m_dc) << "No power configuation cluster found. Cannot configure attribute reporting for" << thingForNode(endpoint->node())->name() << endpoint;
+        return;
+    }
+    ZigbeeClusterReply *reportingReply = powerConfigurationCluster->configureReporting({batteryPercentageConfig, batteryAlarmStateConfig});
+    connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+        if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to configure power configuration cluster attribute reporting" << reportingReply->error();
+        }
+    });
+}
+
+void ZigbeeIntegrationPlugin::configureOnOffInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterOnOff *onOffInputCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
+    if (!onOffInputCluster) {
+        qCWarning(m_dc) << "No OnOff input cluster on" << endpoint->node();
+        return;
+    }
     ZigbeeClusterLibrary::AttributeReportingConfiguration onOffConfig;
     onOffConfig.attributeId = ZigbeeClusterOnOff::AttributeOnOff;
     onOffConfig.dataType = Zigbee::Bool;
@@ -537,7 +471,7 @@ void ZigbeeIntegrationPlugin::configureOnOffInputAttributeReporting(ZigbeeNodeEn
     onOffConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(0)).data();
 
     qCDebug(m_dc) << "Configuring attribute reporting for on/off cluster";
-    ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdOnOff)->configureReporting({onOffConfig});
+    ZigbeeClusterReply *reportingReply = onOffInputCluster->configureReporting({onOffConfig});
     connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
         if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
             qCWarning(m_dc) << "Failed configure attribute reporting on on/off cluster" << reportingReply->error();
@@ -547,102 +481,324 @@ void ZigbeeIntegrationPlugin::configureOnOffInputAttributeReporting(ZigbeeNodeEn
     });
 }
 
-void ZigbeeIntegrationPlugin::connectToPowerConfigurationCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+void ZigbeeIntegrationPlugin::configureLevelControlInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterLibrary::AttributeReportingConfiguration levelConfig;
+    levelConfig.attributeId = ZigbeeClusterLevelControl::AttributeCurrentLevel;
+    levelConfig.dataType = Zigbee::Uint8;
+    levelConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+    ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdLevelControl)->configureReporting({levelConfig});
+    connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+        if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to configure Level Control input cluster attribute reporting" << reportingReply->error();
+        } else {
+            qCDebug(m_dc) << "Configured attribute reporting for Level Control Input cluster";
+        }
+    });
+}
+
+void ZigbeeIntegrationPlugin::configureColorControlInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterLibrary::AttributeReportingConfiguration xConfig;
+    xConfig.attributeId = ZigbeeClusterColorControl::AttributeCurrentX;
+    xConfig.dataType = Zigbee::Uint16;
+    xConfig.reportableChange = ZigbeeDataType(static_cast<quint16>(1)).data();
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration yConfig;
+    yConfig.attributeId = ZigbeeClusterColorControl::AttributeCurrentY;
+    yConfig.dataType = Zigbee::Uint16;
+    yConfig.reportableChange = ZigbeeDataType(static_cast<quint16>(1)).data();
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration tempConfig;
+    tempConfig.attributeId = ZigbeeClusterColorControl::AttributeColorTemperatureMireds;
+    tempConfig.dataType = Zigbee::Uint16;
+    tempConfig.reportableChange = ZigbeeDataType(static_cast<quint16>(1)).data();
+
+    ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdColorControl)->configureReporting({xConfig, yConfig, tempConfig});
+    connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+        if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to configure Color Control input cluster attribute reporting" << reportingReply->error();
+        } else {
+            qCDebug(m_dc) << "Configured attribute reporting for Color Control Input cluster";
+        }
+    });
+}
+
+void ZigbeeIntegrationPlugin::configureElectricalMeasurementInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterLibrary::AttributeReportingConfiguration acTotalPowerConfig;
+    acTotalPowerConfig.attributeId = ZigbeeClusterElectricalMeasurement::AttributeACPhaseAMeasurementActivePower;
+    acTotalPowerConfig.dataType = Zigbee::Int16;
+    acTotalPowerConfig.minReportingInterval = 1; // we want currentPower asap
+    acTotalPowerConfig.maxReportingInterval = 30;
+    acTotalPowerConfig.reportableChange = ZigbeeDataType(static_cast<quint16>(1)).data();
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration rmsVoltageConfig;
+    rmsVoltageConfig.attributeId = ZigbeeClusterElectricalMeasurement::AttributeACPhaseAMeasurementRMSVoltage;
+    rmsVoltageConfig.dataType = Zigbee::Int16;
+    rmsVoltageConfig.minReportingInterval = 50;
+    rmsVoltageConfig.maxReportingInterval = 120;
+    rmsVoltageConfig.reportableChange = ZigbeeDataType(static_cast<quint16>(1)).data();
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration rmsCurrentConfig;
+    rmsCurrentConfig.attributeId = ZigbeeClusterElectricalMeasurement::AttributeACPhaseAMeasurementRMSCurrent;
+    rmsCurrentConfig.dataType = Zigbee::Int16;
+    rmsCurrentConfig.minReportingInterval = 10;
+    rmsCurrentConfig.maxReportingInterval = 120;
+    rmsCurrentConfig.reportableChange = ZigbeeDataType(static_cast<quint16>(1)).data();
+
+    ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdElectricalMeasurement)->configureReporting({acTotalPowerConfig, rmsVoltageConfig, rmsCurrentConfig});
+    connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+        if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to configure electrical measurement cluster attribute reporting" << reportingReply->error();
+        } else {
+            qCDebug(m_dc) << "Enabled attribute reporting successfully";
+        }
+    });
+}
+
+void ZigbeeIntegrationPlugin::configureMeteringInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterMetering* meteringCluster = endpoint->inputCluster<ZigbeeClusterMetering>(ZigbeeClusterLibrary::ClusterIdMetering);
+    if (!meteringCluster) {
+        qCWarning(m_dc) << "No metering cluster on this endpoint";
+        return;
+    }
+    meteringCluster->readFormatting();
+    meteringCluster->readAttributes({ZigbeeClusterMetering::AttributeInstantaneousDemand, ZigbeeClusterMetering::AttributeCurrentSummationDelivered});
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration instantaneousDemandConfig;
+    instantaneousDemandConfig.attributeId = ZigbeeClusterMetering::AttributeInstantaneousDemand;
+    instantaneousDemandConfig.dataType = Zigbee::Int24;
+    instantaneousDemandConfig.minReportingInterval = 1; // We want currentPower asap
+    instantaneousDemandConfig.maxReportingInterval = 120;
+    instantaneousDemandConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration currentSummationConfig;
+    currentSummationConfig.attributeId = ZigbeeClusterMetering::AttributeCurrentSummationDelivered;
+    currentSummationConfig.dataType = Zigbee::Uint48;
+    currentSummationConfig.minReportingInterval = 5;
+    currentSummationConfig.maxReportingInterval = 120;
+    currentSummationConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+    ZigbeeClusterReply *reportingReply = meteringCluster->configureReporting({instantaneousDemandConfig, currentSummationConfig});
+    connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+        if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to configure metering cluster attribute reporting" << reportingReply->error();
+        }
+    });
+
+}
+
+void ZigbeeIntegrationPlugin::configureTemperatureMeasurementInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterTemperatureMeasurement* temperatureMeasurementCluster = endpoint->inputCluster<ZigbeeClusterTemperatureMeasurement>(ZigbeeClusterLibrary::ClusterIdTemperatureMeasurement);
+    if (!temperatureMeasurementCluster) {
+        qCWarning(m_dc) << "No temperature measurement cluster on this endpoint";
+        return;
+    }
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration measuredValueReportingConfig;
+    measuredValueReportingConfig.attributeId = ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue;
+    measuredValueReportingConfig.dataType = Zigbee::Int16;
+    measuredValueReportingConfig.minReportingInterval = 5;
+    measuredValueReportingConfig.maxReportingInterval = 1200;
+    measuredValueReportingConfig.reportableChange = ZigbeeDataType(static_cast<qint16>(10)).data();
+
+    ZigbeeClusterReply *reportingReply = temperatureMeasurementCluster->configureReporting({measuredValueReportingConfig});
+    connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+        if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to configure temperature measurement cluster attribute reporting" << reportingReply->error();
+        }
+    });
+}
+
+void ZigbeeIntegrationPlugin::configureIlluminanceMeasurementInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterIlluminanceMeasurement* illuminanceMeasurementCluster = endpoint->inputCluster<ZigbeeClusterIlluminanceMeasurement>(ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement);
+    if (!illuminanceMeasurementCluster) {
+        qCWarning(m_dc) << "No illuminance measurement cluster on this endpoint";
+        return;
+    }
+    ZigbeeClusterLibrary::AttributeReportingConfiguration measuredValueReportingConfig;
+    measuredValueReportingConfig.attributeId = ZigbeeClusterIlluminanceMeasurement::AttributeMeasuredValue;
+    measuredValueReportingConfig.dataType = Zigbee::Uint16;
+    measuredValueReportingConfig.minReportingInterval = 5;
+    measuredValueReportingConfig.maxReportingInterval = 1200;
+    measuredValueReportingConfig.reportableChange = ZigbeeDataType(static_cast<quint16>(10)).data();
+
+    ZigbeeClusterReply *reportingReply = illuminanceMeasurementCluster->configureReporting({measuredValueReportingConfig});
+    connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+        if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to configure illuminance measurement cluster attribute reporting" << reportingReply->error();
+        } else {
+            qCDebug(m_dc) << "Configured illuminance measurement input cluster attribue reporting successfully";
+        }
+    });
+}
+
+void ZigbeeIntegrationPlugin::configureOccupancySensingInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterOccupancySensing *occupancySensingInputCluster = endpoint->inputCluster<ZigbeeClusterOccupancySensing>(ZigbeeClusterLibrary::ClusterIdOccupancySensing);
+    if (!occupancySensingInputCluster) {
+        qCWarning(m_dc) << "No occupancy sensing cluster on this endpoint";
+        return;
+    }
+    ZigbeeClusterLibrary::AttributeReportingConfiguration reportingConfig;
+    reportingConfig.attributeId = ZigbeeClusterOccupancySensing::AttributeOccupancy;
+    reportingConfig.dataType = Zigbee::BitMap8;
+    reportingConfig.minReportingInterval = 0;
+    reportingConfig.maxReportingInterval = 300;
+
+    ZigbeeClusterReply *reportingReply = occupancySensingInputCluster->configureReporting({reportingConfig});
+    connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+        if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to configure occupancy cluster attribute reporting" << reportingReply->error();
+        }
+    });
+}
+
+void ZigbeeIntegrationPlugin::connectToPowerConfigurationInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeClusterPowerConfiguration *powerCluster = endpoint->inputCluster<ZigbeeClusterPowerConfiguration>(ZigbeeClusterLibrary::ClusterIdPowerConfiguration);
-    if (powerCluster) {
-        // If the power cluster attributes are already available, read values now
-        if (thing->thingClass().hasStateType("batteryLevel") && powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining)) {
-            thing->setStateValue("batteryLevel", powerCluster->batteryPercentage());
-        }
-        if (powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState)) {
-            thing->setStateValue("batteryCritical", powerCluster->batteryAlarmState() > 0);
-        } else {
-            thing->setStateValue("batteryCritical", thing->stateValue("batteryLevel").toInt() < 10);
-        }
-
-        // Connect to changes
-        connect(powerCluster, &ZigbeeClusterPowerConfiguration::batteryPercentageChanged, thing, [=](double percentage){
-            if (thing->thingClass().hasStateType("batteryLevel")) {
-                thing->setStateValue("batteryLevel", percentage);
-            }
-            if (!powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState)) {
-                thing->setStateValue("batteryCritical", (percentage < 10.0));
-            }
-        });
-        connect(powerCluster, &ZigbeeClusterPowerConfiguration::batteryAlarmStateChanged, thing, [=](ZigbeeClusterPowerConfiguration::BatteryAlarmMask alarmState){
-            thing->setStateValue("batteryCritical", alarmState > 0);
-        });
-
-        // Refresh power cluster attributes in any case. Response will be processed in signal handlers
-        powerCluster->readAttributes({
-                                     ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining,
-                                     ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState
-                                 });
-
-    } else {
+    if (!powerCluster) {
         qCWarning(m_dc) << "No power configuration cluster on" << thing->name() << "and endpoint" << endpoint->endpointId();
+        return;
     }
+
+    if (thing->thingClass().hasStateType("batteryLevel") && powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining)) {
+        thing->setStateValue("batteryLevel", powerCluster->batteryPercentage());
+    }
+    if (powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState)) {
+        thing->setStateValue("batteryCritical", powerCluster->batteryAlarmState() > 0);
+    } else {
+        thing->setStateValue("batteryCritical", thing->stateValue("batteryLevel").toInt() < 10);
+    }
+
+    connect(powerCluster, &ZigbeeClusterPowerConfiguration::batteryPercentageChanged, thing, [=](double percentage){
+        if (thing->thingClass().hasStateType("batteryLevel")) {
+            thing->setStateValue("batteryLevel", percentage);
+        }
+        if (!powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState)) {
+            thing->setStateValue("batteryCritical", (percentage < 10.0));
+        }
+    });
+    connect(powerCluster, &ZigbeeClusterPowerConfiguration::batteryAlarmStateChanged, thing, [=](ZigbeeClusterPowerConfiguration::BatteryAlarmMask alarmState){
+        thing->setStateValue("batteryCritical", alarmState > 0);
+    });
+
+    powerCluster->readAttributes({
+                                 ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining,
+                                 ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState
+                             });
 }
 
 void ZigbeeIntegrationPlugin::connectToThermostatCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeClusterThermostat *thermostatCluster = endpoint->inputCluster<ZigbeeClusterThermostat>(ZigbeeClusterLibrary::ClusterIdThermostat);
-    if (thermostatCluster) {
-        thermostatCluster->readAttributes({ZigbeeClusterThermostat::AttributeLocalTemperature,
-                                           ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint,
-                                           ZigbeeClusterThermostat::AttributeMinHeatSetpointLimit,
-                                           ZigbeeClusterThermostat::AttributeMaxHeatSetpointLimit,
-                                           ZigbeeClusterThermostat::AttributePIHeatingDemand,
-                                           ZigbeeClusterThermostat::AttributePICoolingDemand});
-
-        connect(thermostatCluster, &ZigbeeClusterThermostat::attributeChanged, thing, [thing](const ZigbeeClusterAttribute &attribute){
-            if (attribute.id() == ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint) {
-                thing->setStateValue("targetTemperature", attribute.dataType().toUInt16() * 0.01);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributeLocalTemperature) {
-                thing->setStateValue("temperature", attribute.dataType().toUInt16() * 0.01);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributePIHeatingDemand) {
-                thing->setStateValue("heatingOn", attribute.dataType().toUInt8() > 0);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributePICoolingDemand) {
-                thing->setStateValue("coolingOn", attribute.dataType().toUInt8() > 0);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributeMinHeatSetpointLimit) {
-                thing->setStateMinValue("targetTemperature", attribute.dataType().toUInt16() * 0.01);
-            }
-            if (attribute.id() == ZigbeeClusterThermostat::AttributeMaxHeatSetpointLimit) {
-                thing->setStateMaxValue("targetTemperature", attribute.dataType().toUInt16() * 0.01);
-            }
-        });
+    if (!thermostatCluster) {
+        qCWarning(m_dc) << "No thermostat cluster on" << thing->name() << "and endpoint" << endpoint->endpointId();
+        return;
     }
+
+    thermostatCluster->readAttributes({ZigbeeClusterThermostat::AttributeLocalTemperature,
+                                       ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint,
+                                       ZigbeeClusterThermostat::AttributeMinHeatSetpointLimit,
+                                       ZigbeeClusterThermostat::AttributeMaxHeatSetpointLimit,
+                                       ZigbeeClusterThermostat::AttributePIHeatingDemand,
+                                       ZigbeeClusterThermostat::AttributePICoolingDemand});
+
+    connect(thermostatCluster, &ZigbeeClusterThermostat::attributeChanged, thing, [thing](const ZigbeeClusterAttribute &attribute){
+        if (attribute.id() == ZigbeeClusterThermostat::AttributeOccupiedHeatingSetpoint) {
+            thing->setStateValue("targetTemperature", attribute.dataType().toUInt16() * 0.01);
+        }
+        if (attribute.id() == ZigbeeClusterThermostat::AttributeLocalTemperature) {
+            thing->setStateValue("temperature", attribute.dataType().toUInt16() * 0.01);
+        }
+        if (attribute.id() == ZigbeeClusterThermostat::AttributePIHeatingDemand) {
+            thing->setStateValue("heatingOn", attribute.dataType().toUInt8() > 0);
+        }
+        if (attribute.id() == ZigbeeClusterThermostat::AttributePICoolingDemand) {
+            thing->setStateValue("coolingOn", attribute.dataType().toUInt8() > 0);
+        }
+        if (attribute.id() == ZigbeeClusterThermostat::AttributeMinHeatSetpointLimit) {
+            thing->setStateMinValue("targetTemperature", attribute.dataType().toUInt16() * 0.01);
+        }
+        if (attribute.id() == ZigbeeClusterThermostat::AttributeMaxHeatSetpointLimit) {
+            thing->setStateMaxValue("targetTemperature", attribute.dataType().toUInt16() * 0.01);
+        }
+    });
 }
 
 void ZigbeeIntegrationPlugin::connectToOnOffInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName)
 {
     ZigbeeClusterOnOff *onOffCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
-    if (onOffCluster) {
-        if (onOffCluster->hasAttribute(ZigbeeClusterOnOff::AttributeOnOff)) {
-            thing->setStateValue(stateName, onOffCluster->power());
-        }
-        onOffCluster->readAttributes({ZigbeeClusterOnOff::AttributeOnOff});
-        connect(onOffCluster, &ZigbeeClusterOnOff::powerChanged, thing, [thing, stateName](bool power){
-            thing->setStateValue(stateName, power);
-        });
+    if (!onOffCluster) {
+        qCWarning(m_dc) << "No power OnOff cluster on" << thing->name() << "and endpoint" << endpoint->endpointId();
+        return;
     }
+
+    if (onOffCluster->hasAttribute(ZigbeeClusterOnOff::AttributeOnOff)) {
+        thing->setStateValue(stateName, onOffCluster->power());
+    }
+    onOffCluster->readAttributes({ZigbeeClusterOnOff::AttributeOnOff});
+    connect(onOffCluster, &ZigbeeClusterOnOff::powerChanged, thing, [thing, stateName](bool power){
+        thing->setStateValue(stateName, power);
+    });
 }
 
 void ZigbeeIntegrationPlugin::connectToLevelControlInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName)
 {
     ZigbeeClusterLevelControl *levelControlCluster = endpoint->inputCluster<ZigbeeClusterLevelControl>(ZigbeeClusterLibrary::ClusterIdLevelControl);
-    if (levelControlCluster) {
-        if (levelControlCluster->hasAttribute(ZigbeeClusterLevelControl::AttributeCurrentLevel)) {
-            thing->setStateValue(stateName, levelControlCluster->currentLevel() * 100 / 255);
+    if (!levelControlCluster) {
+        qCWarning(m_dc) << "No level control cluster on" << thing->name() << "and endpoint" << endpoint->endpointId();
+        return;
+    }
+
+    if (levelControlCluster->hasAttribute(ZigbeeClusterLevelControl::AttributeCurrentLevel)) {
+        thing->setStateValue(stateName, levelControlCluster->currentLevel() * 100 / 255);
+    }
+    levelControlCluster->readAttributes({ZigbeeClusterLevelControl::AttributeCurrentLevel});
+    connect(levelControlCluster, &ZigbeeClusterLevelControl::currentLevelChanged, thing, [thing, stateName](int currentLevel){
+        thing->setStateValue(stateName, currentLevel * 100 / 255);
+    });
+}
+
+void ZigbeeIntegrationPlugin::connectToColorControlInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterColorControl *colorControlCluster = endpoint->inputCluster<ZigbeeClusterColorControl>(ZigbeeClusterLibrary::ClusterIdColorControl);
+    if (!colorControlCluster) {
+        qCWarning(m_dc) << "No color control cluster on" << thing->name() << "and endpoint" << endpoint->endpointId();
+        return;
+    }
+    if (thing->hasState("color")) {
+        if (colorControlCluster->hasAttribute(ZigbeeClusterColorControl::AttributeCurrentX)
+                && colorControlCluster->hasAttribute(ZigbeeClusterColorControl::AttributeCurrentY)) {
+            quint16 colorX = colorControlCluster->attribute(ZigbeeClusterColorControl::AttributeCurrentX).dataType().toUInt16();
+            quint16 colorY = colorControlCluster->attribute(ZigbeeClusterColorControl::AttributeCurrentY).dataType().toUInt16();
+            QColor color = ZigbeeUtils::convertXYToColor(QPoint(colorX, colorY));
+            thing->setStateValue("color", color);
         }
-        levelControlCluster->readAttributes({ZigbeeClusterLevelControl::AttributeCurrentLevel});
-        connect(levelControlCluster, &ZigbeeClusterLevelControl::currentLevelChanged, thing, [thing, stateName](int currentLevel){
-            thing->setStateValue(stateName, currentLevel * 100 / 255);
+
+        colorControlCluster->readAttributes({ZigbeeClusterColorControl::AttributeCurrentX, ZigbeeClusterColorControl::AttributeCurrentY});
+        connect(colorControlCluster, &ZigbeeClusterColorControl::attributeChanged, thing, [thing, colorControlCluster](const ZigbeeClusterAttribute &attribute){
+            if (attribute.id() == ZigbeeClusterColorControl::AttributeCurrentX || attribute.id() == ZigbeeClusterColorControl::AttributeCurrentY) {
+                quint16 colorX = colorControlCluster->attribute(ZigbeeClusterColorControl::AttributeCurrentX).dataType().toUInt16();
+                quint16 colorY = colorControlCluster->attribute(ZigbeeClusterColorControl::AttributeCurrentY).dataType().toUInt16();
+                QColor color = ZigbeeUtils::convertXYToColor(QPoint(colorX, colorY));
+                thing->setStateValue("color", color);
+            }
+        });
+    }
+    if (thing->hasState("colorTemperature")) {
+        if (colorControlCluster->hasAttribute(ZigbeeClusterColorControl::AttributeColorTemperatureMireds)) {
+            int colorTemperature = mapColorTemperatureToScaledValue(thing, colorControlCluster->colorTemperatureMireds());
+            thing->setStateValue("colorTemperature", colorTemperature);
+        }
+        colorControlCluster->readAttributes({ZigbeeClusterColorControl::AttributeColorTemperatureMireds});
+        connect(colorControlCluster, &ZigbeeClusterColorControl::colorTemperatureMiredsChanged, thing, [this, thing](quint16 colorTemperature) {
+            thing->setStateValue("colorTemperature", mapColorTemperatureToScaledValue(thing, colorTemperature));
         });
     }
 }
@@ -650,61 +806,69 @@ void ZigbeeIntegrationPlugin::connectToLevelControlInputCluster(Thing *thing, Zi
 void ZigbeeIntegrationPlugin::connectToElectricalMeasurementCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeClusterElectricalMeasurement *electricalMeasurementCluster = endpoint->inputCluster<ZigbeeClusterElectricalMeasurement>(ZigbeeClusterLibrary::ClusterIdElectricalMeasurement);
-    if (electricalMeasurementCluster) {
-        connect(electricalMeasurementCluster, &ZigbeeClusterElectricalMeasurement::activePowerPhaseAChanged, thing, [thing](qint16 activePowerPhaseA){
-            thing->setStateValue("currentPower", activePowerPhaseA);
-        });
+    if (!electricalMeasurementCluster) {
+        qCWarning(m_dc) << "No electrical measurement cluster on" << thing->name() << "and endpoint" << endpoint->endpointId();
+        return;
     }
+
+    connect(electricalMeasurementCluster, &ZigbeeClusterElectricalMeasurement::activePowerPhaseAChanged, thing, [thing](qint16 activePowerPhaseA){
+        thing->setStateValue("currentPower", activePowerPhaseA);
+    });
 }
 
 void ZigbeeIntegrationPlugin::connectToMeteringCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeClusterMetering *meteringCluster = endpoint->inputCluster<ZigbeeClusterMetering>(ZigbeeClusterLibrary::ClusterIdMetering);
-    if (meteringCluster) {
-        meteringCluster->readFormatting();
-
-        connect(meteringCluster, &ZigbeeClusterMetering::currentSummationDeliveredChanged, thing, [=](quint64 currentSummationDelivered){
-            thing->setStateValue("totalEnergyConsumed", 1.0 * currentSummationDelivered * meteringCluster->multiplier() / meteringCluster->divisor());
-        });
-
-        connect(meteringCluster, &ZigbeeClusterMetering::instantaneousDemandChanged, thing, [=](qint32 instantaneousDemand){
-            thing->setStateValue("currentPower", instantaneousDemand);
-        });
+    if (!meteringCluster) {
+        qCWarning(m_dc) << "No metering cluster on" << thing->name() << "and endpoint" << endpoint->endpointId();
+        return;
     }
+
+    meteringCluster->readFormatting();
+
+    connect(meteringCluster, &ZigbeeClusterMetering::currentSummationDeliveredChanged, thing, [=](quint64 currentSummationDelivered){
+        thing->setStateValue("totalEnergyConsumed", 1.0 * currentSummationDelivered * meteringCluster->multiplier() / meteringCluster->divisor());
+    });
+
+    connect(meteringCluster, &ZigbeeClusterMetering::instantaneousDemandChanged, thing, [=](qint32 instantaneousDemand){
+        thing->setStateValue("currentPower", instantaneousDemand);
+    });
 }
 
 void ZigbeeIntegrationPlugin::connectToTemperatureMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeClusterTemperatureMeasurement *temperatureMeasurementCluster = endpoint->inputCluster<ZigbeeClusterTemperatureMeasurement>(ZigbeeClusterLibrary::ClusterIdTemperatureMeasurement);
     if (!temperatureMeasurementCluster) {
-        qCWarning(m_dc) << "Could not find temperature measurement cluster on" << thing->name() << endpoint;
-    } else {
-        if (temperatureMeasurementCluster->hasAttribute(ZigbeeClusterTemperatureMeasurement::AttributeMaxMeasuredValue)) {
-            thing->setStateValue("temperature", temperatureMeasurementCluster->temperature());
-        }
-        temperatureMeasurementCluster->readAttributes({ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue});
-        connect(temperatureMeasurementCluster, &ZigbeeClusterTemperatureMeasurement::temperatureChanged, thing, [=](double temperature) {
-            qCDebug(m_dc) << "Temperature for" << thing->name() << "changed to:" << temperature;
-            thing->setStateValue("temperature", temperature);
-        });
+        qCWarning(m_dc) << "No temperature measurement cluster on" << thing->name() << endpoint;
+        return;
     }
+
+    if (temperatureMeasurementCluster->hasAttribute(ZigbeeClusterTemperatureMeasurement::AttributeMaxMeasuredValue)) {
+        thing->setStateValue("temperature", temperatureMeasurementCluster->temperature());
+    }
+    temperatureMeasurementCluster->readAttributes({ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue});
+    connect(temperatureMeasurementCluster, &ZigbeeClusterTemperatureMeasurement::temperatureChanged, thing, [=](double temperature) {
+        qCDebug(m_dc) << "Temperature for" << thing->name() << "changed to:" << temperature;
+        thing->setStateValue("temperature", temperature);
+    });
 }
 
 void ZigbeeIntegrationPlugin::connectToRelativeHumidityMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeClusterRelativeHumidityMeasurement *relativeHumidityMeasurementCluster = endpoint->inputCluster<ZigbeeClusterRelativeHumidityMeasurement>(ZigbeeClusterLibrary::ClusterIdRelativeHumidityMeasurement);
     if (!relativeHumidityMeasurementCluster) {
-        qCWarning(m_dc) << "Could not find relative humidity measurement cluster on" << thing->name() << endpoint;
-    } else {
-        if (relativeHumidityMeasurementCluster->hasAttribute(ZigbeeClusterRelativeHumidityMeasurement::AttributeMaxMeasuredValue)) {
-            thing->setStateValue("humidity", relativeHumidityMeasurementCluster->humidity());
-        }
-        relativeHumidityMeasurementCluster->readAttributes({ZigbeeClusterRelativeHumidityMeasurement::AttributeMeasuredValue});
-        connect(relativeHumidityMeasurementCluster, &ZigbeeClusterRelativeHumidityMeasurement::humidityChanged, thing, [=](double humidity) {
-            qCDebug(m_dc) << "Humidity for" << thing->name() << "changed to:" << humidity;
-            thing->setStateValue("humidity", humidity);
-        });
+        qCWarning(m_dc) << "No relative humidity measurement cluster on" << thing->name() << endpoint;
+        return;
     }
+
+    if (relativeHumidityMeasurementCluster->hasAttribute(ZigbeeClusterRelativeHumidityMeasurement::AttributeMaxMeasuredValue)) {
+        thing->setStateValue("humidity", relativeHumidityMeasurementCluster->humidity());
+    }
+    relativeHumidityMeasurementCluster->readAttributes({ZigbeeClusterRelativeHumidityMeasurement::AttributeMeasuredValue});
+    connect(relativeHumidityMeasurementCluster, &ZigbeeClusterRelativeHumidityMeasurement::humidityChanged, thing, [=](double humidity) {
+        qCDebug(m_dc) << "Humidity for" << thing->name() << "changed to:" << humidity;
+        thing->setStateValue("humidity", humidity);
+    });
 }
 
 void ZigbeeIntegrationPlugin::connectToIasZoneInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &alarmStateName, bool inverted)
@@ -712,45 +876,228 @@ void ZigbeeIntegrationPlugin::connectToIasZoneInputCluster(Thing *thing, ZigbeeN
     ZigbeeClusterIasZone *iasZoneCluster = endpoint->inputCluster<ZigbeeClusterIasZone>(ZigbeeClusterLibrary::ClusterIdIasZone);
     if (!iasZoneCluster) {
         qCWarning(m_dc) << "Could not find IAS zone cluster on" << thing << endpoint;
-    } else {
-        qCDebug(m_dc) << "Cluster attributes:" << iasZoneCluster->attributes();
-        qCDebug(m_dc) << "Zone state:" << thing->name() << iasZoneCluster->zoneState();
-        qCDebug(m_dc) << "Zone type:" << thing->name() << iasZoneCluster->zoneType();
-        qCDebug(m_dc) << "Zone status:" << thing->name() << iasZoneCluster->zoneStatus();
-        if (iasZoneCluster->hasAttribute(ZigbeeClusterIasZone::AttributeZoneStatus)) {
-            ZigbeeClusterIasZone::ZoneStatusFlags zoneStatus = iasZoneCluster->zoneStatus();
-            bool zoneAlarm = zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2);
-            thing->setStateValue(alarmStateName, inverted ? !zoneAlarm : zoneAlarm);
-            if (thing->thingClass().hasStateType("tampered")) {
-                thing->setStateValue("tampered", zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusTamper));
-            }
-        }
-        connect(iasZoneCluster, &ZigbeeClusterIasZone::zoneStatusChanged, thing, [=](ZigbeeClusterIasZone::ZoneStatusFlags zoneStatus, quint8 extendedStatus, quint8 zoneId, quint16 delays) {
-            qCDebug(m_dc) << "Zone status changed to:" << zoneStatus << extendedStatus << zoneId << delays;
-            bool zoneAlarm = zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2);
-            thing->setStateValue(alarmStateName, inverted ? !zoneAlarm : zoneAlarm);
-            if (thing->thingClass().hasStateType("tampered")) {
-                thing->setStateValue("tampered", zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusTamper));
-            }
-        });
+        return;
     }
+
+    qCDebug(m_dc) << "Cluster attributes:" << iasZoneCluster->attributes();
+    qCDebug(m_dc) << "Zone state:" << thing->name() << iasZoneCluster->zoneState();
+    qCDebug(m_dc) << "Zone type:" << thing->name() << iasZoneCluster->zoneType();
+    qCDebug(m_dc) << "Zone status:" << thing->name() << iasZoneCluster->zoneStatus();
+    if (iasZoneCluster->hasAttribute(ZigbeeClusterIasZone::AttributeZoneStatus)) {
+        ZigbeeClusterIasZone::ZoneStatusFlags zoneStatus = iasZoneCluster->zoneStatus();
+        bool zoneAlarm = zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2);
+        thing->setStateValue(alarmStateName, inverted ? !zoneAlarm : zoneAlarm);
+        if (thing->thingClass().hasStateType("tampered")) {
+            thing->setStateValue("tampered", zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusTamper));
+        }
+    }
+    connect(iasZoneCluster, &ZigbeeClusterIasZone::zoneStatusChanged, thing, [=](ZigbeeClusterIasZone::ZoneStatusFlags zoneStatus, quint8 extendedStatus, quint8 zoneId, quint16 delays) {
+        qCDebug(m_dc) << "Zone status changed to:" << zoneStatus << extendedStatus << zoneId << delays;
+        bool zoneAlarm = zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2);
+        thing->setStateValue(alarmStateName, inverted ? !zoneAlarm : zoneAlarm);
+        if (thing->thingClass().hasStateType("tampered")) {
+            thing->setStateValue("tampered", zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusTamper));
+        }
+    });
 }
 
 void ZigbeeIntegrationPlugin::connectToIlluminanceMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeClusterIlluminanceMeasurement *illuminanceMeasurementCluster = endpoint->inputCluster<ZigbeeClusterIlluminanceMeasurement>(ZigbeeClusterLibrary::ClusterIdIlluminanceMeasurement);
     if (!illuminanceMeasurementCluster) {
-        qCWarning(m_dc) << "Could not find illuminance measurement cluster on" << thing->name() << endpoint;
+        qCWarning(m_dc) << "No illuminance measurement cluster on" << thing->name() << endpoint;
+        return;
+    }
+
+    if (illuminanceMeasurementCluster->hasAttribute(ZigbeeClusterIlluminanceMeasurement::AttributeMaxMeasuredValue)) {
+        thing->setStateValue("lightIntensity", qPow(10, (illuminanceMeasurementCluster->illuminance() - 1) / 10000));
+    }
+    illuminanceMeasurementCluster->readAttributes({ZigbeeClusterIlluminanceMeasurement::AttributeMeasuredValue});
+    connect(illuminanceMeasurementCluster, &ZigbeeClusterIlluminanceMeasurement::illuminanceChanged, thing, [=](double illuminance) {
+        qCDebug(m_dc) << "Illuminance for" << thing->name() << "changed to:" << illuminance;
+        thing->setStateValue("lightIntensity", qPow(10, (illuminance - 1) / 10000));
+    });
+}
+
+void ZigbeeIntegrationPlugin::connectToOccupancySensingInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterOccupancySensing *occupancyCluster = endpoint->inputCluster<ZigbeeClusterOccupancySensing>(ZigbeeClusterLibrary::ClusterIdOccupancySensing);
+    if (!occupancyCluster) {
+        qCWarning(m_dc) << "Occupancy cluster not found on" << thing;
     } else {
-        if (illuminanceMeasurementCluster->hasAttribute(ZigbeeClusterTemperatureMeasurement::AttributeMaxMeasuredValue)) {
-            thing->setStateValue("lightIntensity", illuminanceMeasurementCluster->illuminance());
-        }
-        illuminanceMeasurementCluster->readAttributes({ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue});
-        connect(illuminanceMeasurementCluster, &ZigbeeClusterIlluminanceMeasurement::illuminanceChanged, thing, [=](double illuminance) {
-            qCDebug(m_dc) << "Illuminance for" << thing->name() << "changed to:" << illuminance;
-            thing->setStateValue("lightIntensity", illuminance);
+        connect(occupancyCluster, &ZigbeeClusterOccupancySensing::occupancyChanged, thing, [=](bool occupancy){
+            qCDebug(m_dc) << thing << "occupancy cluster changed" << occupancy;
+            thing->setStateValue("isPresent", occupancy);
+            if (occupancy) {
+                thing->setStateValue("lastSeenTime", QDateTime::currentMSecsSinceEpoch() / 1000);
+            }
         });
     }
+}
+
+void ZigbeeIntegrationPlugin::connectToOtaOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterOta *otaCluster = endpoint->outputCluster<ZigbeeClusterOta>(ZigbeeClusterLibrary::ClusterIdOtaUpgrade);
+    if (!otaCluster) {
+        qCWarning(m_dc) << "OTA cluster not found for" << thing->name();
+        return;
+    }
+    qCDebug(m_dc) << "Connecting to OTA cluster for" << thing->name();
+    qCDebug(m_dc) << "Sending image notify to" << thing->name();
+
+    connect(endpoint->node(), &ZigbeeNode::lastSeenChanged, otaCluster, [otaCluster, thing, this](){
+        if (!otaCluster->property("imageNotifyPending").toBool() && otaCluster->property("lastFirmwareCheck").toDateTime().addSecs(60 * 60 * 24) < QDateTime::currentDateTime()) {
+            qCDebug(m_dc) << "Sending image notify to" << thing->name();
+            ZigbeeClusterReply *reply = otaCluster->sendImageNotify();
+            otaCluster->setProperty("imageNotifyPending", true);
+
+            connect(reply, &ZigbeeClusterReply::finished, thing, [this, reply, otaCluster](){
+                qCDebug(m_dc) << "Image notify command finished" << reply->error();
+                otaCluster->setProperty("imageNotifyPending", false);
+            });
+        }
+    });
+
+    connect(otaCluster, &ZigbeeClusterOta::queryNextImageRequestReceived, thing, [this, otaCluster, thing](quint8 transactionSequenceNumber, quint16 manufacturerCode, quint16 imageType, quint32 currentFileVersion, quint16 /*hardwareVersion*/){
+        otaCluster->setProperty("lastFirmwareCheck", QDateTime::currentDateTime());
+
+        ZigbeeNode *node = nodeForThing(thing);
+        FirmwareIndexEntry newInfo = checkFirmwareAvailability(m_firmwareIndex, manufacturerCode, imageType, currentFileVersion, node->modelName());
+        ZigbeeClusterOta::FileVersion currentParsed = ZigbeeClusterOta::parseFileVersion(currentFileVersion);
+        thing->setStateValue("currentVersion", QString("%0.%1.%2.%3")
+                             .arg(currentParsed.applicationRelease)
+                             .arg(currentParsed.applicationBuild)
+                             .arg(currentParsed.stackRelease)
+                             .arg(currentParsed.stackBuild));
+        if (newInfo.fileVersion > 0) {
+            ZigbeeClusterOta::FileVersion newParsed = ZigbeeClusterOta::parseFileVersion(newInfo.fileVersion);
+            qCDebug(m_dc) << QString("Device %0 requested firmware. Old version: %1.%2.%3.%4, new version: %5.%6.%7.%8")
+                             .arg(thing->name())
+                             .arg(currentParsed.applicationRelease)
+                             .arg(currentParsed.applicationBuild)
+                             .arg(currentParsed.stackRelease)
+                             .arg(currentParsed.stackBuild)
+                             .arg(newParsed.applicationRelease)
+                             .arg(newParsed.applicationBuild)
+                             .arg(newParsed.stackRelease)
+                             .arg(newParsed.stackBuild);
+            thing->setStateValue("availableVersion", QString("%0.%1.%2.%3")
+                                 .arg(newParsed.applicationRelease)
+                                 .arg(newParsed.applicationBuild)
+                                 .arg(newParsed.stackRelease)
+                                 .arg(newParsed.stackBuild));
+            thing->setStateValue("updateStatus", "available");
+            thing->setStateValue("updateProgress", 0);
+
+            if (!m_enabledFirmwareUpdates.contains(thing)) {
+                qCDebug(m_dc) << "Update not enabled for thing" << thing->name();
+                otaCluster->sendQueryNextImageResponse(transactionSequenceNumber, ZigbeeClusterOta::StatusCodeNoImageAvailable);
+                return;
+            }
+
+            thing->setStateValue("updateStatus", "updating");
+            if (firmwareFileExists(newInfo)) {
+                qCDebug(m_dc) << "Firmware file is present. Starting update...";
+                otaCluster->sendQueryNextImageResponse(transactionSequenceNumber, ZigbeeClusterOta::StatusCodeSuccess, manufacturerCode, imageType, newInfo.fileVersion, newInfo.fileSize);
+            } else {
+                qCDebug(m_dc) << "Downloading firmware file...";
+                FetchFirmwareReply *reply = fetchFirmware(newInfo);
+                connect(reply, &FetchFirmwareReply::finished, otaCluster, [=](){
+                    if (firmwareFileExists(newInfo)) {
+                        qCDebug(m_dc) << "Firmware file downloaded successfully. Starting update...";
+                        otaCluster->sendQueryNextImageResponse(transactionSequenceNumber, ZigbeeClusterOta::StatusCodeSuccess, manufacturerCode, imageType, newInfo.fileVersion, newInfo.fileSize);
+                    } else {
+                        qCWarning(m_dc) << "Failed to download firmware.";
+                        otaCluster->sendQueryNextImageResponse(transactionSequenceNumber, ZigbeeClusterOta::StatusCodeNoImageAvailable);
+                        thing->setStateValue("availableVersion", "-");
+                        thing->setStateValue("updateStatus", "idle");
+                        thing->setStateValue("updateProgress", 0);
+                    }
+                });
+            }
+        } else {
+            qCDebug(m_dc) << QString("Device %0 requested firmware. Old version: %1.%2.%3.%4, no new version available.").arg(thing->name()).arg(currentParsed.applicationRelease).arg(currentParsed.applicationBuild).arg(currentParsed.stackRelease).arg(currentParsed.stackBuild);
+            thing->setStateValue("availableVersion", "-");
+            thing->setStateValue("updateStatus", "idle");
+            thing->setStateValue("updateProgress", 0);
+        }
+    });
+
+    connect(otaCluster, &ZigbeeClusterOta::imageBlockRequestReceived, thing, [this, thing, otaCluster](quint8 transactionSequenceNumber, quint16 manufacturerCode, quint16 imageType, quint32 fileVersion, quint32 fileOffset, quint8 maximumDataSize, const ZigbeeAddress &requestNodeAddress, quint16 minimumBlockPeriod){
+        Q_UNUSED(requestNodeAddress)
+        Q_UNUSED(minimumBlockPeriod)
+        if (!m_enabledFirmwareUpdates.contains(thing)) {
+            // If nymea restarted during the process, or the upgrade process has been cancelled in some other way, let's cancel the OTA.
+            qCDebug(m_dc) << "Device requested an image block but update is not enabled for" << thing->name();
+            otaCluster->sendAbortImageBlockResponse(transactionSequenceNumber);
+            return;
+        }
+        FirmwareIndexEntry info = firmwareInfo(manufacturerCode, imageType, fileVersion);
+        QString fileName = firmwareFileName(info);
+        QFile file(fileName);
+        if (!file.open(QFile::ReadOnly)) {
+            qCWarning(m_dc) << "Unable to open firmware file for reading";
+            otaCluster->sendAbortImageBlockResponse(transactionSequenceNumber);
+            m_enabledFirmwareUpdates.removeAll(thing);
+            return;
+        }
+        if (!file.seek(fileOffset)) {
+            qCWarning(m_dc) << "Unable to seek in firmware file";
+            otaCluster->sendAbortImageBlockResponse(transactionSequenceNumber);
+            m_enabledFirmwareUpdates.removeAll(thing);
+            return;
+        }
+        QByteArray data = file.read(maximumDataSize);
+        double progress = 100.0 * (fileOffset + data.size()) / info.fileSize;
+        qCDebug(m_dc).nospace() << "Sending firmware image data block to device (" << progress << "%, offset: " << fileOffset << ", size: " << data.size() << ")";
+        thing->setStateValue("updateProgress", qRound(progress));
+        otaCluster->sendImageBlockResponse(transactionSequenceNumber, manufacturerCode, imageType, fileVersion, fileOffset, data);
+    });
+
+    connect(otaCluster, &ZigbeeClusterOta::upgradeEndRequestReceived, thing, [this, thing, otaCluster](quint8 transactionSequenceNumber, ZigbeeClusterOta::StatusCode statusCode, quint16 manufacturerCode, quint16 imageType, quint32 fileVersion) {
+        m_enabledFirmwareUpdates.removeAll(thing);
+        if (statusCode != ZigbeeClusterOta::StatusCodeSuccess) {
+            qCWarning(m_dc) << "Image integrity checks failed on the device. Upgrade aborted. Status code:" << statusCode;
+            QFile::remove(firmwareFileName(firmwareInfo(manufacturerCode, imageType, fileVersion)));
+            thing->setStateValue("updateStatus", "idle");
+            thing->setStateValue("updateProgress", 0);
+            otaCluster->sendImageNotify();
+            return;
+        }
+
+//        // Only for testing, to not actually finish the OTA
+//        otaCluster->sendAbortUpgradeEndResponse(transactionSequenceNumber);
+//        otaCluster->sendImageNotify();
+//        return;
+
+        //Validating the image checksums once again now to make sure it didn't change during the possibly long lasting data transmission.
+        FirmwareIndexEntry info = firmwareInfo(manufacturerCode, imageType, fileVersion);
+        if (firmwareFileExists(info)) { // this also checks the checksum
+            qCDebug(m_dc) << "Completing update.";
+            ZigbeeClusterReply *upgradeEndReply = otaCluster->sendUpgradeEndResponse(transactionSequenceNumber, manufacturerCode, imageType, fileVersion);
+            connect(upgradeEndReply, &ZigbeeClusterReply::finished, thing, [thing, otaCluster, upgradeEndReply, this](){
+                if (upgradeEndReply->error() != ZigbeeClusterReply::ErrorNoError) {
+                    qCWarning(m_dc) << "Failed to send the upgrade end reply" << upgradeEndReply->error();
+                } else {
+                    qCDebug(m_dc) << "Update complete.";
+                }
+
+                otaCluster->setProperty("lastFirmwareCheck", QDateTime());
+
+                thing->setStateValue("updateStatus", "idle");
+                thing->setStateValue("updateProgress", 0);
+            });
+        } else {
+            qCWarning(m_dc) << "Image verification failed. Aborting update.";
+            otaCluster->sendAbortUpgradeEndResponse(transactionSequenceNumber);
+
+            thing->setStateValue("updateStatus", "idle");
+            thing->setStateValue("updateProgress", 0);
+
+            // Notifying again to obtain the installed firmware version
+            otaCluster->sendImageNotify();
+        }
+    });
 }
 
 void ZigbeeIntegrationPlugin::executePowerOnOffInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint)
@@ -848,6 +1195,38 @@ void ZigbeeIntegrationPlugin::executeColorColorControlInputCluster(ThingActionIn
     });
 }
 
+void ZigbeeIntegrationPlugin::executeIdentifyIdentifyInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterIdentify *identifyCluster = endpoint->inputCluster<ZigbeeClusterIdentify>(ZigbeeClusterLibrary::ClusterIdIdentify);
+    if (!identifyCluster) {
+        qCWarning(m_dc) << "Could not find identify cluster for" << info->thing()->name();
+        info->finish(Thing::ThingErrorHardwareFailure);
+        return;
+    }
+
+    ZigbeeClusterReply *reply = identifyCluster->identify(2);
+    connect(reply, &ZigbeeClusterReply::finished, this, [reply, info](){
+        if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
+            info->finish(Thing::ThingErrorHardwareFailure);
+        } else {
+            info->finish(Thing::ThingErrorNoError);
+        }
+    });
+}
+
+void ZigbeeIntegrationPlugin::executeImageNotifyOtaOutputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterOta *otaCluster = endpoint->outputCluster<ZigbeeClusterOta>(ZigbeeClusterLibrary::ClusterIdOtaUpgrade);
+    if (!otaCluster) {
+        qCWarning(m_dc) << "Could not find OTA cluster for" << info->thing()->name();
+        info->finish(Thing::ThingErrorHardwareFailure);
+        return;
+    }
+
+    otaCluster->sendImageNotify(); // imageNotify has no default response flag set. So don't wait for a confirmation
+    info->finish(Thing::ThingErrorNoError);
+}
+
 void ZigbeeIntegrationPlugin::readColorTemperatureRange(Thing *thing, ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeClusterColorControl *colorCluster = endpoint->inputCluster<ZigbeeClusterColorControl>(ZigbeeClusterLibrary::ClusterIdColorControl);
@@ -927,3 +1306,301 @@ int ZigbeeIntegrationPlugin::mapColorTemperatureToScaledValue(Thing *thing, quin
     return static_cast<int>(qRound(mappedValue));
 }
 
+void ZigbeeIntegrationPlugin::readAttributesDelayed(ZigbeeCluster *cluster, const QList<quint16> &attributes, quint16 manufacturerCode)
+{
+    DelayedAttributeReadRequest request {cluster, attributes, manufacturerCode};
+    m_delayedReadRequests[cluster->node()].append(request);
+}
+
+void ZigbeeIntegrationPlugin::writeAttributesDelayed(ZigbeeCluster *cluster, const QList<ZigbeeClusterLibrary::WriteAttributeRecord> &records, quint16 manufacturerCode)
+{
+    DelayedAttributeWriteRequest request {cluster, records, manufacturerCode};
+    m_delayedWriteRequests[cluster->node()].append(request);
+}
+
+void ZigbeeIntegrationPlugin::setFirmwareIndexUrl(const QUrl &url)
+{
+    m_firmwareIndexUrl = url;
+}
+
+ZigbeeIntegrationPlugin::FirmwareIndexEntry ZigbeeIntegrationPlugin::checkFirmwareAvailability(const QList<FirmwareIndexEntry> &index, quint16 manufacturerCode, quint16 imageType, quint32 currentFileVersion, const QString &modelName) const
+{
+    qCDebug(m_dc) << "Requesting OTA for" << manufacturerCode << imageType << currentFileVersion;
+    foreach (const FirmwareIndexEntry &image, index) {
+        if (image.manufacturerCode == manufacturerCode
+                && image.imageType == imageType
+                && image.fileVersion > currentFileVersion
+                && (image.minFileVersion == 0 || image.minFileVersion <= currentFileVersion)
+                && (image.maxFileVersion == 0 || image.maxFileVersion >= currentFileVersion)
+                && (image.modelId.isEmpty() || image.modelId == modelName)) {
+            return image;
+        }
+    }
+    return FirmwareIndexEntry();
+}
+
+void ZigbeeIntegrationPlugin::enableFirmwareUpdate(Thing *thing)
+{
+    m_enabledFirmwareUpdates.append(thing);
+    thing->setStateValue("updateStatus", "updating");
+}
+
+void ZigbeeIntegrationPlugin::updateFirmwareIndex()
+{
+    if (m_lastFirmwareIndexUpdate.isNull()) {
+        QFileInfo cacheFileInfo(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/zigbee-firmwares/" + m_firmwareIndexUrl.path());
+        if (cacheFileInfo.exists()) {
+            QFile cache(cacheFileInfo.absoluteFilePath());
+            if (cache.open(QFile::ReadOnly)) {
+                m_firmwareIndex = firmwareIndexFromJson(cache.readAll());
+                m_lastFirmwareIndexUpdate = cacheFileInfo.lastModified();
+            }
+        }
+    }
+
+    if (m_lastFirmwareIndexUpdate.addDays(1) > QDateTime::currentDateTime()) {
+        return;
+    }
+    QNetworkRequest request(m_firmwareIndexUrl);
+    QNetworkReply *reply = hardwareManager()->networkManager()->get(request);
+    qCDebug(m_dc) << "Fetching firmware index...";
+    connect(reply, &QNetworkReply::finished, reply, &QNetworkReply::deleteLater);
+    connect(reply, &QNetworkReply::finished, this, [=](){
+        if (reply->error() != QNetworkReply::NoError) {
+            qCWarning(m_dc) << "Unable to fetch firmware update index file. Zigbee device firmware updates won't work.";
+            return;
+        }
+        QByteArray data = reply->readAll();
+        m_firmwareIndex = firmwareIndexFromJson(data);
+        m_lastFirmwareIndexUpdate = QDateTime::currentDateTime();
+        QFileInfo cacheFileInfo(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/zigbee-firmwares/" + m_firmwareIndexUrl.path());
+        QDir cacheDir(cacheFileInfo.absolutePath());
+        if (!cacheDir.exists() && !cacheDir.mkpath(cacheFileInfo.absolutePath())) {
+            qCWarning(m_dc) << "Unable to create cache file path" << cacheFileInfo.absolutePath();
+            return;
+        }
+        QFile cache(cacheFileInfo.absoluteFilePath());
+        if (!cache.open(QFile::WriteOnly | QFile::Truncate)) {
+            qCWarning(m_dc) << "Unable to open cache file for writing" << cacheFileInfo.absoluteFilePath();
+            return;
+        }
+        cache.write(data);
+        cache.close();
+    });
+}
+
+ZigbeeIntegrationPlugin::FirmwareIndexEntry ZigbeeIntegrationPlugin::firmwareInfo(quint16 manufacturerId, quint16 imageType, quint32 fileVersion) const
+{
+    foreach (const FirmwareIndexEntry &entry, m_firmwareIndex) {
+        if (entry.manufacturerCode == manufacturerId
+                && entry.imageType == imageType
+                && entry.fileVersion == fileVersion) {
+            return entry;
+        }
+    }
+    return FirmwareIndexEntry();
+}
+
+QString ZigbeeIntegrationPlugin::firmwareFileName(const ZigbeeIntegrationPlugin::FirmwareIndexEntry &info) const
+{
+    return QString("%1/zigbee-firmwares/%2/%3/%4")
+            .arg(QStandardPaths::writableLocation(QStandardPaths::CacheLocation))
+            .arg(info.manufacturerCode)
+            .arg(info.imageType)
+            .arg(info.url.fileName());
+}
+
+FetchFirmwareReply *ZigbeeIntegrationPlugin::fetchFirmware(const ZigbeeIntegrationPlugin::FirmwareIndexEntry &info)
+{
+    FetchFirmwareReply *reply = new FetchFirmwareReply(this);
+    QFuture<bool> future;
+    qCDebug(m_dc) << "Downloading firmware from" << info.url.toString();
+    QNetworkRequest request(info.url);
+    QNetworkReply *networkReply = hardwareManager()->networkManager()->get(request);
+
+    connect(networkReply, &QNetworkReply::finished, networkReply, &QNetworkReply::deleteLater);
+    connect(networkReply, &QNetworkReply::finished, this, [=](){
+        if (networkReply->error() != QNetworkReply::NoError) {
+            qCWarning(m_dc) << "Error downloading firmware" << info.url.toString();
+            emit reply->finished();
+            return;
+        }
+        if (networkReply->attribute(QNetworkRequest::RedirectionTargetAttribute).isValid()) {
+            QUrl newUrl = networkReply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+            qCDebug(m_dc) << "Firmware download redirected to" << newUrl;
+            FirmwareIndexEntry newInfo = info;
+            newInfo.url = newUrl;
+            FetchFirmwareReply *newReply = fetchFirmware(newInfo);
+            connect(newReply, &FetchFirmwareReply::finished, reply, &FetchFirmwareReply::finished);
+            return;
+        }
+        QFileInfo fileInfo(firmwareFileName(info));
+        QDir path(fileInfo.absolutePath());
+        if (!path.exists() && !path.mkpath(fileInfo.absolutePath())) {
+            qCWarning(m_dc) << "Error creating cache path for firmware" << fileInfo.absolutePath();
+            emit reply->finished();
+            return;
+        }
+        QByteArray data = extractImage(info, networkReply->readAll());
+        if (data.isEmpty()) {
+            qCWarning(m_dc) << "Unable to extract image";
+            emit reply->finished();
+            return;
+        }
+
+        QFile file(fileInfo.absoluteFilePath());
+        if (!file.open(QFile::WriteOnly | QFile::Truncate)) {
+            qCWarning(m_dc) << "Error opening firmware cache file for writing" << fileInfo.absoluteFilePath();
+            emit reply->finished();
+            return;
+        }
+        file.write(data);
+        file.close();
+        emit reply->finished();
+    });
+    return reply;
+}
+
+bool ZigbeeIntegrationPlugin::firmwareFileExists(const ZigbeeIntegrationPlugin::FirmwareIndexEntry &info) const
+{
+    QFile file(firmwareFileName(info));
+    if (!file.exists()) {
+        qCDebug(m_dc) << "File does not exist";
+        return false;
+    }
+    if (file.size() != info.fileSize) {
+        qCDebug(m_dc) << "File size not matching:" << file.size() << "!=" << info.fileSize;
+        return false;
+    }
+    if (!file.open(QFile::ReadOnly)) {
+        return false;
+    }
+    if (!info.sha512.isEmpty()) {
+        QByteArray hash = QCryptographicHash::hash(file.readAll(), QCryptographicHash::Sha512);
+        if (info.sha512 != hash.toHex()) {
+            qCDebug(m_dc) << "SHA512 verification failed";
+            return false;
+        }
+        qCDebug(m_dc) << "SHA512 verified successfully";
+    }
+    file.close();
+
+    return true;
+}
+
+QByteArray ZigbeeIntegrationPlugin::extractImage(const FirmwareIndexEntry &info, const QByteArray &data) const
+{
+    QDataStream stream(data);
+    stream.setByteOrder(QDataStream::LittleEndian);
+
+    // Trying to find the OTA upgrade file identifier 0x0BEEF11E
+    bool found = false;
+    quint32 otaFileIdentifier = 0x0BEEF11E;
+    quint8 searchPos = 0;
+    quint64 startPos = 0;
+    while (!stream.atEnd()) {
+        quint8 tmp;
+        stream >> tmp;
+        if (tmp == (otaFileIdentifier & (0xff << (searchPos * 8))) >> (searchPos * 8)) {
+            searchPos++;
+        } else {
+            searchPos = 0;
+        }
+        if (searchPos == 4) {
+            found = true;
+            startPos -= 3;
+            break;
+        }
+        startPos++;
+    }
+
+    if (!found) {
+        qCDebug(m_dc) << "Image identifier not found in download.";
+        return QByteArray();
+    }
+
+    quint16 headerVersion, headerLength, fieldControl, manufacturerCode, imageType, zigbeeStackVersion;
+    quint32 fileVersion, totalImageSize;
+    stream >> headerVersion >> headerLength >> fieldControl >> manufacturerCode >> imageType >> fileVersion >> zigbeeStackVersion;
+    char headerStr[32];
+    stream.readRawData(headerStr, 32);
+    QByteArray headerString(headerStr, 32);
+    stream >> totalImageSize;
+
+    quint8 securityCredentialVersion = 0;
+    if (fieldControl & 0x01) {
+        stream >> securityCredentialVersion;
+    }
+
+    ZigbeeAddress upgradeFileDestination;
+    if (fieldControl & 0x02) {
+        quint64 destinationAddr;
+        stream >> destinationAddr;
+        upgradeFileDestination = ZigbeeAddress(destinationAddr);
+    }
+
+    quint16 minimumHardwareVersion = 0;
+    quint16 maximumHardwareVersion = 0;
+    if (fieldControl & 0x04) {
+        stream >> minimumHardwareVersion >> maximumHardwareVersion;
+    }
+
+    qCDebug(m_dc) << "Header version:" << headerVersion;
+    qCDebug(m_dc) << "Header length:" << headerLength;
+    qCDebug(m_dc) << "Field control:" << fieldControl;
+    qCDebug(m_dc) << "Manufacturer code:" << manufacturerCode;
+    qCDebug(m_dc) << "Image type:" << imageType;
+    ZigbeeClusterOta::FileVersion parsedVersion = ZigbeeClusterOta::parseFileVersion(fileVersion);
+    qCDebug(m_dc) << "File version:" << fileVersion << QString("%0.%1.%2.%3").arg(parsedVersion.applicationRelease).arg(parsedVersion.applicationBuild).arg(parsedVersion.stackRelease).arg(parsedVersion.stackBuild);
+    qCDebug(m_dc) << "Zigbee Stack version:" << zigbeeStackVersion;
+    qCDebug(m_dc) << "Header string:" << headerString;
+    qCDebug(m_dc) << "Image size:" << totalImageSize;
+    qCDebug(m_dc) << "Security credentials version:" << securityCredentialVersion;
+    qCDebug(m_dc) << "Min HW version:" << minimumHardwareVersion << "Max HW version:" << maximumHardwareVersion;
+
+    qCDebug(m_dc) << "Download file size:" << data.size() << "Image start position:" << startPos;
+
+    if (totalImageSize != info.fileSize || data.size() - startPos < totalImageSize) {
+        qCWarning(m_dc) << "Image file size not matching";
+        return QByteArray();
+    }
+    if (manufacturerCode != info.manufacturerCode) {
+        qCWarning(m_dc) << "Manufacturer code not matching in downloaded image" << manufacturerCode << "!=" << info.manufacturerCode;
+        return QByteArray();
+    }
+    if (imageType != info.imageType) {
+        qCWarning(m_dc) << "Image type not matching in downloaded image" << imageType << "!=" << info.imageType;
+        return QByteArray();
+    }
+    qCDebug(m_dc) << "Image data:" << data.mid(startPos, 16).toHex();
+    return data.mid(startPos, totalImageSize);
+}
+
+QList<ZigbeeIntegrationPlugin::FirmwareIndexEntry> ZigbeeIntegrationPlugin::firmwareIndexFromJson(const QByteArray &data) const
+{
+    QList<ZigbeeIntegrationPlugin::FirmwareIndexEntry> ret;
+
+    QJsonParseError error;
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(data, &error);
+    if (error.error != QJsonParseError::NoError) {
+        qCWarning(m_dc) << "Unable to parse firmware update index.";
+        return ret;
+    }
+
+    foreach (const QVariant &entryVariant, jsonDoc.toVariant().toList()) {
+        QVariantMap map = entryVariant.toMap();
+        FirmwareIndexEntry entry;
+        entry.manufacturerCode = map.value("manufacturerCode").toUInt();
+        entry.imageType = map.value("imageType").toUInt();
+        entry.fileVersion = map.value("fileVersion").toUInt();
+        entry.minFileVersion = map.value("minFileVersion").toUInt();
+        entry.maxFileVersion = map.value("maxFileVersion").toUInt();
+        entry.fileSize = map.value("fileSize").toUInt();
+        entry.url = map.value("url").toUrl();
+        entry.modelId = map.value("modelId").toString();
+        entry.sha512 = map.value("sha512").toByteArray();
+        ret.append(entry);
+    }
+    return ret;
+
+}

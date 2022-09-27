@@ -87,18 +87,21 @@ bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &n
         ZigbeeNodeEndpoint *iasZoneEndpoint = node->getEndpoint(DEVELCO_EP_IAS_ZONE);
 
         bindPowerConfigurationCluster(iasZoneEndpoint);
+        configurePowerConfigurationInputClusterAttributeReporting(iasZoneEndpoint);
         bindIasZoneInputCluster(iasZoneEndpoint);
 
         // IAS Zone devices (at least fire, water and sensors) have a temperature sensor endpoint too
         ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR);
         if (temperatureSensorEndpoint) {
             bindTemperatureMeasurementInputCluster(temperatureSensorEndpoint);
+            configureTemperatureMeasurementInputClusterAttributeReporting(temperatureSensorEndpoint);
         }
 
         // Some have a light sensor (at least the motion sensor)
         ZigbeeNodeEndpoint *lightSensorEndpoint = node->getEndpoint(DEVELCO_EP_LIGHT_SENSOR);
         if (lightSensorEndpoint) {
-            bindIlluminanceMeasurementInputCluster(lightSensorEndpoint);
+            bindIlluminanceMeasurementCluster(lightSensorEndpoint);
+            configureIlluminanceMeasurementInputClusterAttributeReporting(lightSensorEndpoint);
         }
 
         // We need to read the Type attribute to determine what this actually is...

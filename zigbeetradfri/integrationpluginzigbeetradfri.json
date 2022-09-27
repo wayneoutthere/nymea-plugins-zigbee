@@ -9,12 +9,376 @@
             "id": "1a4fdeb3-2eab-47f2-9775-569552988a88",
             "thingClasses": [
                 {
+                    "id": "b89762f6-056f-442d-8edc-6ab877ae9a57",
+                    "name": "dimmableLight",
+                    "displayName": "Dimmable Light",
+                    "setupMethod": "JustAdd",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "dimmablelight", "alert", "wirelessconnectable", "update" ],
+                    "paramTypes": [
+                        {
+                            "id": "31268cb8-669a-48b1-a417-761541d9ea73",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE address",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "8de1e87c-1952-4a07-81dc-ad5b7c13866d",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "d6f7b579-08c2-4193-9eca-9b37a77e9a65",
+                            "name": "connected",
+                            "displayName": "Available",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "9edb92b1-8a78-4628-9e2c-c0640860dbf8",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "cached": false
+                        },
+                        {
+                            "id": "a0945256-b0ba-4767-b856-6c518eb9f6df",
+                            "name": "power",
+                            "displayName": "Power",
+                            "displayNameAction": "Set power",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "writable": true
+                        },
+                        {
+                            "id": "55a1b729-b865-4f05-a6b7-388a50e275f7",
+                            "name": "brightness",
+                            "displayName": "Brightness",
+                            "displayNameAction": "Set brightness",
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "int",
+                            "defaultValue": 100,
+                            "writable": true
+                        },
+                        {
+                            "id": "0173bd05-ce4e-46df-a0dd-e565dd56db4a",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle",
+                            "cached": false
+                        },
+                        {
+                            "id": "0c1388fb-fb1d-4b66-ac3c-4e0ba907b030",
+                            "name": "currentVersion",
+                            "displayName": "Version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "6c202e40-f7f8-4472-8d76-a3845dca3439",
+                            "name": "availableVersion",
+                            "displayName": "Available firmware version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "26d1277d-6868-4738-a2c2-f95b97da4117",
+                            "name": "updateProgress",
+                            "displayName": "Update progress",
+                            "type": "uint",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": 0,
+                            "cached": false
+                        }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "c4ef7e85-b3cc-4c17-8347-e3e3c28771eb",
+                            "name": "alert",
+                            "displayName": "Identify"
+                        },
+                        {
+                            "id": "7e644f8e-5f95-44db-9abc-a1d66986cee0",
+                            "name": "performUpdate",
+                            "displayName": "Start update"
+                        }
+                    ]
+                },
+                {
+                    "id": "be811592-6fe7-41be-b924-4a0a7e33295b",
+                    "name": "colorTemperatureLight",
+                    "displayName": "Color Temperature Light",
+                    "setupMethod": "JustAdd",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "colortemperaturelight", "alert", "wirelessconnectable", "update" ],
+                    "paramTypes": [
+                        {
+                            "id": "f8b929b0-15d7-4f9b-aeb5-17b741fa69a6",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE address",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "9c691ffa-1f50-4dba-ad2e-215a79b864af",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "95c072ba-516a-43b5-8d68-a4712c5989b6",
+                            "name": "connected",
+                            "displayName": "Available",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "c6d12225-e5bb-4cc7-a69f-601b8ea07e70",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "cached": false
+                        },
+                        {
+                            "id": "d815fd02-ebe2-456a-ba3f-6d649b90a094",
+                            "name": "power",
+                            "displayName": "Power",
+                            "displayNameAction": "Set power",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "writable": true
+                        },
+                        {
+                            "id": "7c4b6949-46ab-41f7-8a78-09e4eaf2a01f",
+                            "name": "brightness",
+                            "displayName": "Brightness",
+                            "displayNameAction": "Set brightness",
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "int",
+                            "defaultValue": 100,
+                            "writable": true
+                        },
+                        {
+                            "id": "889f758f-f0b9-40ba-abe2-e2100188b86e",
+                            "name": "colorTemperature",
+                            "displayName": "Color temperature scaled",
+                            "displayNameAction": "Set color temperature scaled",
+                            "defaultValue": 100,
+                            "minValue": 0,
+                            "maxValue": 200,
+                            "type": "int",
+                            "writable": true
+                        },
+                        {
+                            "id": "99aa4d81-cd35-478c-88b8-cfa9e26bf8ae",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle",
+                            "cached": false
+                        },
+                        {
+                            "id": "2bf3f759-4793-426b-ad05-bf4eb199e6de",
+                            "name": "currentVersion",
+                            "displayName": "Version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "a5dc8a78-f818-461e-b0a7-97c6d2cdbd3c",
+                            "name": "availableVersion",
+                            "displayName": "Available firmware version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "a2279a96-8c72-455e-a0c4-38db3fe76f17",
+                            "name": "updateProgress",
+                            "displayName": "Update progress",
+                            "type": "uint",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": 0,
+                            "cached": false
+                        }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "a1677c81-a68a-4268-a289-1d62b31605e3",
+                            "name": "alert",
+                            "displayName": "Identify"
+                        },
+                        {
+                            "id": "7aaa9757-3b78-4dd2-86a6-07b72883e0fa",
+                            "name": "performUpdate",
+                            "displayName": "Start update"
+                        }
+                    ]
+                },
+                {
+                    "id": "b11a3f24-8011-42ca-939c-ab110c5f350e",
+                    "name": "colorLight",
+                    "displayName": "Color Light",
+                    "setupMethod": "JustAdd",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "colorlight", "alert", "wirelessconnectable", "update" ],
+                    "paramTypes": [
+                        {
+                            "id": "670921c0-44d7-4e69-893a-38dba178ed50",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE address",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "58cdd269-f9e4-48e0-90af-1572f62c550f",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "e78b8264-d888-4cbd-bf90-2eaec0c83ee0",
+                            "name": "connected",
+                            "displayName": "Available",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "84990224-7579-4d99-8a19-e98b62381881",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "cached": false
+                        },
+                        {
+                            "id": "c3c02756-6cc7-455a-ae59-dd97b9e9a1e6",
+                            "name": "power",
+                            "displayName": "Power",
+                            "displayNameAction": "Set power",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "writable": true
+                        },
+                        {
+                            "id": "e81e7c79-96a4-4e80-ae85-d33278c75de0",
+                            "name": "brightness",
+                            "displayName": "Brightness",
+                            "displayNameAction": "Set brightness",
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "int",
+                            "defaultValue": 100,
+                            "writable": true
+                        },
+                        {
+                            "id": "d78650c5-68d3-4d08-991c-cb054cdcf6fd",
+                            "name": "colorTemperature",
+                            "displayName": "Color temperature scaled",
+                            "displayNameAction": "Set color temperature scaled",
+                            "defaultValue": 100,
+                            "minValue": 0,
+                            "maxValue": 200,
+                            "type": "int",
+                            "writable": true
+                        },
+                        {
+                            "id": "9e49f581-eed3-499f-8927-270dfde472e9",
+                            "name": "color",
+                            "displayName": "color",
+                            "displayNameAction": "Set color",
+                            "type": "QColor",
+                            "defaultValue": "#000000",
+                            "writable": true
+                        },
+                        {
+                            "id": "8e6ff7a1-d1d7-4aaf-a719-7bb35c3b0f89",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle",
+                            "cached": false
+                        },
+                        {
+                            "id": "54bfb270-59bf-434b-ac5c-539d05aaa4a6",
+                            "name": "currentVersion",
+                            "displayName": "Version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "5201e76b-2cc2-4de3-a0f2-43aee3d5fad7",
+                            "name": "availableVersion",
+                            "displayName": "Available firmware version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "01c7f30d-108b-4fe6-b9cc-6a0dca7e5c2f",
+                            "name": "updateProgress",
+                            "displayName": "Update progress",
+                            "type": "uint",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": 0,
+                            "cached": false
+                        }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "b0175457-b763-45d6-89fd-573f279c40b3",
+                            "name": "alert",
+                            "displayName": "Identify"
+                        },
+                        {
+                            "id": "c7c24bb7-9ad1-4584-bc4d-96ce848918da",
+                            "name": "performUpdate",
+                            "displayName": "Start update"
+                        }
+                    ]
+                },
+                {
                     "name": "onOffSwitch",
                     "displayName": "TRÅDFRI On/Off switch",
                     "id": "2007e8ae-4849-47f6-98d6-ea6769c8ebd9",
                     "setupMethod": "JustAdd",
                     "createMethods": [ "Auto" ],
-                    "interfaces": [ "longpressmultibutton", "battery", "wirelessconnectable" ],
+                    "interfaces": [ "longpressmultibutton", "battery", "wirelessconnectable", "update" ],
                     "paramTypes": [
                         {
                             "id": "8b33f5cb-d1a3-4ae6-837a-d88e77252185",
@@ -29,13 +393,6 @@
                             "displayName": "Zigbee network UUID",
                             "type": "QString",
                             "defaultValue": ""
-                        },
-                        {
-                            "id": "4dafffae-af3b-40c0-8a61-8a15b9d24f64",
-                            "name": "endpointId",
-                            "displayName": "Endpoint ID",
-                            "type": "uint",
-                            "defaultValue": 1
                         }
                     ],
                     "stateTypes": [
@@ -60,15 +417,6 @@
                             "unit": "Percentage"
                         },
                         {
-                            "id": "41c74445-4d2d-46dc-8a63-c98f1df8e742",
-                            "name": "version",
-                            "displayName": "Version",
-                            "displayNameEvent": "Version changed",
-                            "type": "QString",
-                            "cached": true,
-                            "defaultValue": ""
-                        },
-                        {
                             "id": "103fba1d-79a6-4b48-b7a1-f91090f1c699",
                             "name": "batteryLevel",
                             "displayName": "Battery level",
@@ -86,10 +434,42 @@
                             "displayNameEvent": "Battery critical changed",
                             "type": "bool",
                             "defaultValue": false
+                        },
+                        {
+                            "id": "41c74445-4d2d-46dc-8a63-c98f1df8e742",
+                            "name": "currentVersion",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "69495a25-e6da-4fb3-956e-5218a925db93",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle",
+                            "cached": false
+                        },
+                        {
+                            "id": "86759c02-7007-4cb6-a349-c63c851f9849",
+                            "name": "availableVersion",
+                            "displayName": "Available version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "743113cd-d2bc-4279-bcaa-cee2483b072a",
+                            "name": "updateProgress",
+                            "displayName": "Update progress",
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "defaultValue": 0
                         }
-                    ],
-                    "actionTypes": [
-
                     ],
                     "eventTypes": [
                         {
@@ -120,6 +500,13 @@
                                 }
                             ]
                         }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "4760aeee-c8ec-4645-b676-344d427b40ed",
+                            "name": "performUpdate",
+                            "displayName": "Start firmware update"
+                        }
                     ]
                 },
                 {
@@ -128,7 +515,7 @@
                     "id": "7a81dd57-0b79-4735-840d-69775d937095",
                     "setupMethod": "JustAdd",
                     "createMethods": [ "Auto" ],
-                    "interfaces": [ "longpressbutton", "battery", "wirelessconnectable" ],
+                    "interfaces": [ "longpressbutton", "battery", "wirelessconnectable", "update" ],
                     "paramTypes": [
                         {
                             "id": "c2baffda-d09d-47ea-a2be-e9e48336d063",
@@ -143,13 +530,6 @@
                             "displayName": "Zigbee network UUID",
                             "type": "QString",
                             "defaultValue": ""
-                        },
-                        {
-                            "id": "271a933c-e62a-4714-b098-289ce8cddd41",
-                            "name": "endpointId",
-                            "displayName": "Endpoint ID",
-                            "type": "uint",
-                            "defaultValue": 1
                         }
                     ],
                     "stateTypes": [
@@ -174,15 +554,6 @@
                             "unit": "Percentage"
                         },
                         {
-                            "id": "065f348a-54f2-4203-9a6c-b747e92d169a",
-                            "name": "version",
-                            "displayName": "Version",
-                            "displayNameEvent": "Version changed",
-                            "type": "QString",
-                            "cached": true,
-                            "defaultValue": ""
-                        },
-                        {
                             "id": "164e8d24-e4b7-4d88-a5d4-5649dfaf0180",
                             "name": "batteryLevel",
                             "displayName": "Battery level",
@@ -200,10 +571,42 @@
                             "displayNameEvent": "Battery critical changed",
                             "type": "bool",
                             "defaultValue": false
+                        },
+                        {
+                            "id": "065f348a-54f2-4203-9a6c-b747e92d169a",
+                            "name": "currentVersion",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "a1254e8e-ac96-40b4-a2dd-dcdbbb3653a8",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle",
+                            "cached": false
+                        },
+                        {
+                            "id": "352aa728-61e4-4d04-9bb9-9c438ccfb531",
+                            "name": "availableVersion",
+                            "displayName": "Available version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "af65f485-117f-4a26-911c-ece1d6e07ce9",
+                            "name": "updateProgress",
+                            "displayName": "Update progress",
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "defaultValue": 0
                         }
-                    ],
-                    "actionTypes": [
-
                     ],
                     "eventTypes": [
                         {
@@ -216,6 +619,13 @@
                             "name": "longPressed",
                             "displayName": "Button longpressed"
                         }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "83b33b50-a8fd-4234-be89-7b6e7da83b06",
+                            "name": "performUpdate",
+                            "displayName": "Perform firmware update"
+                        }
                     ]
                 },
                 {
@@ -224,7 +634,7 @@
                     "id": "19ee3f56-f958-4b04-8ea3-747b72d7c7d6",
                     "setupMethod": "JustAdd",
                     "createMethods": [ "Auto" ],
-                    "interfaces": [ "longpressmultibutton", "battery", "wirelessconnectable" ],
+                    "interfaces": [ "longpressmultibutton", "battery", "wirelessconnectable", "update" ],
                     "paramTypes": [
                         {
                             "id": "2ee18d3e-5fb8-4809-a52a-8e420b677f6e",
@@ -239,13 +649,6 @@
                             "displayName": "Zigbee network UUID",
                             "type": "QString",
                             "defaultValue": ""
-                        },
-                        {
-                            "id": "09cbf843-0036-47b8-8c2b-a58939075203",
-                            "name": "endpointId",
-                            "displayName": "Endpoint ID",
-                            "type": "uint",
-                            "defaultValue": 1
                         }
                     ],
                     "stateTypes": [
@@ -270,15 +673,6 @@
                             "unit": "Percentage"
                         },
                         {
-                            "id": "340444fa-b158-4d03-9967-7fa45a96bd45",
-                            "name": "version",
-                            "displayName": "Version",
-                            "displayNameEvent": "Version changed",
-                            "type": "QString",
-                            "cached": true,
-                            "defaultValue": ""
-                        },
-                        {
                             "id": "4a72d569-44be-4689-bda6-addc0c6351d4",
                             "name": "batteryLevel",
                             "displayName": "Battery level",
@@ -296,6 +690,41 @@
                             "displayNameEvent": "Battery critical changed",
                             "type": "bool",
                             "defaultValue": false
+                        },
+                        {
+                            "id": "66c95514-6c23-4029-a3de-79f69f30cddb",
+                            "name": "currentVersion",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "73f99785-7a4b-4cd3-96e7-fc2deef92227",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle",
+                            "cached": false
+                        },
+                        {
+                            "id": "f6979f9f-0f41-4520-899d-8dc52905cbaf",
+                            "name": "availableVersion",
+                            "displayName": "Available version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "a0fa549a-12c3-47fb-88b5-373c4f81794b",
+                            "name": "updateProgress",
+                            "displayName": "Update progress",
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "defaultValue": 0
                         }
                     ],
                     "eventTypes": [
@@ -327,6 +756,13 @@
                                 }
                             ]
                         }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "28f2ae38-a592-4a7c-8f2a-58e1c3f43ac0",
+                            "name": "performUpdate",
+                            "displayName": "Perform update"
+                        }
                     ]
                 },
                 {
@@ -335,7 +771,7 @@
                     "id": "a18e398d-c14b-4bcd-8e6d-b64737436814",
                     "setupMethod": "JustAdd",
                     "createMethods": [ "Auto" ],
-                    "interfaces": [ "button", "battery", "wirelessconnectable" ],
+                    "interfaces": [ "button", "battery", "wirelessconnectable", "update" ],
                     "paramTypes": [
                         {
                             "id": "fa6544fd-9023-4c01-8600-7cc2f93aa4ca",
@@ -350,13 +786,6 @@
                             "displayName": "Zigbee network UUID",
                             "type": "QString",
                             "defaultValue": ""
-                        },
-                        {
-                            "id": "194f1d90-fcdc-4489-b4d3-2448200b21d0",
-                            "name": "endpointId",
-                            "displayName": "Endpoint ID",
-                            "type": "uint",
-                            "defaultValue": 1
                         }
                     ],
                     "settingsTypes": [
@@ -392,15 +821,6 @@
                             "unit": "Percentage"
                         },
                         {
-                            "id": "36c0a07a-7e20-4303-b6c7-7711c8ae36ad",
-                            "name": "version",
-                            "displayName": "Version",
-                            "displayNameEvent": "Version changed",
-                            "type": "QString",
-                            "cached": true,
-                            "defaultValue": ""
-                        },
-                        {
                             "id": "1a0e2e7b-1b2a-461c-a24f-1323c2aea4a1",
                             "name": "batteryLevel",
                             "displayName": "Battery level",
@@ -429,10 +849,42 @@
                             "defaultValue": 0,
                             "minValue": 0,
                             "maxValue": 100
+                        },
+                        {
+                            "id": "1958f3f7-509b-4222-9598-b6edd1bb9c1c",
+                            "name": "currentVersion",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "73255d32-c21e-467a-86aa-3458660ac2ea",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle",
+                            "cached": false
+                        },
+                        {
+                            "id": "0780be81-d4e3-4dc2-86dd-85bd8624737e",
+                            "name": "availableVersion",
+                            "displayName": "Available version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "7f53f37a-fccc-4909-8cb0-223b75046c79",
+                            "name": "updateProgress",
+                            "displayName": "Update progress",
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "defaultValue": 0
                         }
-                    ],
-                    "actionTypes": [
-
                     ],
                     "eventTypes": [
                         {
@@ -450,6 +902,13 @@
                             "name": "decrease",
                             "displayName": "Decrease"
                         }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "5f8d2a0e-b80c-4479-8699-8ac46c98c34b",
+                            "name": "performUpdate",
+                            "displayName": "Perform update"
+                        }
                     ]
                 },
                 {
@@ -458,7 +917,7 @@
                     "id": "30a1090e-8058-4a5b-aee3-4ba112ba3ba7",
                     "setupMethod": "JustAdd",
                     "createMethods": [ "Auto" ],
-                    "interfaces": [ "presencesensor", "battery", "wirelessconnectable" ],
+                    "interfaces": [ "presencesensor", "battery", "wirelessconnectable", "update" ],
                     "paramTypes": [
                         {
                             "id": "a03fabac-df59-4f4c-a691-237b1c37270f",
@@ -473,13 +932,6 @@
                             "displayName": "Zigbee network UUID",
                             "type": "QString",
                             "defaultValue": ""
-                        },
-                        {
-                            "id": "11e97521-0108-4157-8d85-26d64ecd7723",
-                            "name": "endpointId",
-                            "displayName": "Endpoint ID",
-                            "type": "uint",
-                            "defaultValue": 1
                         }
                     ],
                     "settingsTypes": [
@@ -513,15 +965,6 @@
                             "minValue": 0,
                             "type": "uint",
                             "unit": "Percentage"
-                        },
-                        {
-                            "id": "709a215b-5664-4cea-b841-54dd01e387b8",
-                            "name": "version",
-                            "displayName": "Version",
-                            "displayNameEvent": "Version changed",
-                            "type": "QString",
-                            "cached": true,
-                            "defaultValue": ""
                         },
                         {
                             "id": "e2e414c1-5f21-4244-942a-ee17cb25f1c0",
@@ -559,13 +1002,49 @@
                             "type": "int",
                             "unit": "UnixTime",
                             "defaultValue": 0
+                        },
+                        {
+                            "id": "09704fdb-f2da-4d1c-bddd-f85f85847e29",
+                            "name": "currentVersion",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "8ff400f3-0b53-401e-b330-1a419f078734",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle",
+                            "cached": false
+                        },
+                        {
+                            "id": "d634f289-e6d6-4685-8636-64c41481adb2",
+                            "name": "availableVersion",
+                            "displayName": "Available version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "15e02d98-badf-4961-a3db-b70d515d064c",
+                            "name": "updateProgress",
+                            "displayName": "Update progress",
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "defaultValue": 0
                         }
                     ],
                     "actionTypes": [
-
-                    ],
-                    "eventTypes": [
-
+                        {
+                            "id": "aea08384-f841-4d46-97c6-d9803632a476",
+                            "name": "performUpdate",
+                            "displayName": "Perform update"
+                        }
                     ]
                 },
                 {
@@ -574,7 +1053,7 @@
                     "id": "ac51f426-195e-472a-837f-4ba7e4666e6e",
                     "setupMethod": "JustAdd",
                     "createMethods": [ "Auto" ],
-                    "interfaces": [ "wirelessconnectable" ],
+                    "interfaces": [ "wirelessconnectable", "update" ],
                     "paramTypes": [
                         {
                             "id": "fcaf0646-ef18-4e16-afde-39823437b7f4",
@@ -589,13 +1068,6 @@
                             "displayName": "Zigbee network UUID",
                             "type": "QString",
                             "defaultValue": ""
-                        },
-                        {
-                            "id": "3ff01f62-83dc-4856-a7f0-5605091845cc",
-                            "name": "endpointId",
-                            "displayName": "Endpoint ID",
-                            "type": "uint",
-                            "defaultValue": 1
                         }
                     ],
                     "stateTypes": [
@@ -620,20 +1092,47 @@
                             "unit": "Percentage"
                         },
                         {
-                            "id": "a7ad66f1-7b4c-4458-8a13-e1bb9467bc17",
-                            "name": "version",
+                            "id": "05d9a4f4-5d7e-474b-b57c-445f795a0d90",
+                            "name": "currentVersion",
                             "displayName": "Version",
                             "displayNameEvent": "Version changed",
                             "type": "QString",
                             "cached": true,
                             "defaultValue": ""
+                        },
+                        {
+                            "id": "7cf5dbb5-672f-4c17-ab52-bd62a4289f44",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle",
+                            "cached": false
+                        },
+                        {
+                            "id": "b092b5e3-496d-44a2-a15b-00cb6b7462f4",
+                            "name": "availableVersion",
+                            "displayName": "Available version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "3ff0a3ab-f3fe-4dac-8b1a-d30676fde7f3",
+                            "name": "updateProgress",
+                            "displayName": "Update progress",
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "defaultValue": 0
                         }
                     ],
                     "actionTypes": [
-
-                    ],
-                    "eventTypes": [
-
+                        {
+                            "id": "4e6544cc-0f99-460f-92aa-f00c77f8131a",
+                            "name": "performUpdate",
+                            "displayName": "Perform update"
+                        }
                     ]
                 }
             ]

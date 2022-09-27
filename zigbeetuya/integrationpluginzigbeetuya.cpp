@@ -64,10 +64,13 @@ bool IntegrationPluginZigbeeTuya::handleNode(ZigbeeNode *node, const QUuid &/*ne
         }
 
         bindOnOffCluster(endpoint);
-        configureOnOffInputAttributeReporting(endpoint);
+        configureOnOffInputClusterAttributeReporting(endpoint);
 
         bindElectricalMeasurementCluster(endpoint);
+        configureElectricalMeasurementInputClusterAttributeReporting(endpoint);
+
         bindMeteringCluster(endpoint);
+        configureMeteringInputClusterAttributeReporting(endpoint);
 
         createThing(powerSocketThingClassId, node);
 
@@ -126,10 +129,10 @@ void IntegrationPluginZigbeeTuya::setupThing(ThingSetupInfo *info)
             onOffCluster->readAttributes({ATTRIBUTE_ID_SOCKET_POWER_ON_DEFAULT_MODE});
             connect(thing, &Thing::settingChanged, onOffCluster, [onOffCluster, map](const ParamTypeId &paramTypeId, const QVariant &value){
                 if (paramTypeId == powerSocketSettingsDefaultPowerStateParamTypeId) {
-                    ZigbeeDataType dataType(map.key(value.toString()), Zigbee::Enum8);
+                    ZigbeeDataType dataType(static_cast<quint8>(map.key(value.toString())));
                     ZigbeeClusterLibrary::WriteAttributeRecord record;
                     record.attributeId = ATTRIBUTE_ID_SOCKET_POWER_ON_DEFAULT_MODE;
-                    record.dataType = dataType.dataType();
+                    record.dataType = Zigbee::Enum8;
                     record.data = dataType.data();
                     onOffCluster->writeAttributes({record});
                 }

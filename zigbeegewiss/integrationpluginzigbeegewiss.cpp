@@ -70,6 +70,7 @@ bool IntegrationPluginZigbeeGewiss::handleNode(ZigbeeNode *node, const QUuid &/*
         }
 
         bindPowerConfigurationCluster(endpoint1);
+        configurePowerConfigurationInputClusterAttributeReporting(endpoint1);
 
         bindOnOffCluster(endpoint2);
         bindOnOffCluster(endpoint1);
@@ -121,7 +122,7 @@ void IntegrationPluginZigbeeGewiss::setupThing(ThingSetupInfo *info)
             return;
         }
 
-        connectToPowerConfigurationCluster(thing, endpoint1);
+        connectToPowerConfigurationInputCluster(thing, endpoint1);
         connectToOnOffOutputCluster(thing, endpoint1, "Toggle 1", "On 1", "Off 1", "input1");
         connectToOnOffOutputCluster(thing, endpoint2, "Toggle 2", "On 2", "Off 2", "input2");
 

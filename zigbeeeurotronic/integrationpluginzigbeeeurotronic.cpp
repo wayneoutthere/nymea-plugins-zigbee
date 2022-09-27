@@ -55,6 +55,7 @@ bool IntegrationPluginZigbeeEurotronic::handleNode(ZigbeeNode *node, const QUuid
 
         ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
         bindPowerConfigurationCluster(endpoint);
+        configurePowerConfigurationInputClusterAttributeReporting(endpoint);
         bindThermostatCluster(endpoint);
 
         createThing(spiritThingClassId, node);
@@ -78,8 +79,9 @@ void IntegrationPluginZigbeeEurotronic::setupThing(ThingSetupInfo *info)
     ZigbeeNode *node = nodeForThing(thing);
     ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
 
-    connectToPowerConfigurationCluster(thing, endpoint);
+    connectToPowerConfigurationInputCluster(thing, endpoint);
     connectToThermostatCluster(thing, endpoint);
+    connectToOtaOutputCluster(thing, endpoint);
 
     ZigbeeClusterThermostat *thermostatCluster = endpoint->inputCluster<ZigbeeClusterThermostat>(ZigbeeClusterLibrary::ClusterIdThermostat);
     if (!thermostatCluster) {
@@ -216,6 +218,12 @@ void IntegrationPluginZigbeeEurotronic::executeAction(ThingActionInfo *info)
             info->finish(Thing::ThingErrorNoError);
         });
 
+        return;
+    }
+
+    if (info->action().actionTypeId() == spiritPerformUpdateActionTypeId) {
+        enableFirmwareUpdate(info->thing());
+        executeImageNotifyOtaOutputCluster(info, endpoint);
         return;
     }
 

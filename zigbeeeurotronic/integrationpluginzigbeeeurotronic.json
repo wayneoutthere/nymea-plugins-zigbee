@@ -13,7 +13,7 @@
                     "name": "spirit",
                     "displayName": "SPIRIT ZigBee ",
                     "createMethods": ["auto"],
-                    "interfaces": ["thermostat", "temperaturesensor", "battery",  "wirelessconnectable"],
+                    "interfaces": ["thermostat", "temperaturesensor", "battery",  "wirelessconnectable", "update"],
                     "paramTypes": [
                         {
                             "id": "5aff538a-f56d-4e36-b406-b24ef8ef198d",
@@ -140,6 +140,47 @@
                             "type": "bool",
                             "defaultValue": false,
                             "writable": true
+                        },
+                        {
+                            "id": "89c21b2c-0007-4da6-9bbf-4170b716858d",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle",
+                            "cached": false
+                        },
+                        {
+                            "id": "9a3987df-87d5-4b97-9f31-1e0b0a6468ad",
+                            "name": "currentVersion",
+                            "displayName": "Version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "dc94b759-71ec-4d86-8984-089ed3573cd8",
+                            "name": "availableVersion",
+                            "displayName": "Available firmware version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "97278a2d-4242-433f-815f-29d861e437c5",
+                            "name": "updateProgress",
+                            "displayName": "Update progress",
+                            "type": "uint",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": 0,
+                            "cached": false
+                        }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "9dfcb8ce-298f-45c0-9abf-714c9ece9357",
+                            "name": "performUpdate",
+                            "displayName": "Start update"
                         }
                     ]
                 }

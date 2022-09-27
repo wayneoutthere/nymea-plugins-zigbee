@@ -1,6 +1,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 *
-* Copyright 2013 - 2020, nymea GmbH
+* Copyright 2013 - 2022, nymea GmbH
 * Contact: contact@nymea.io
 *
 * This file is part of nymea.
@@ -32,6 +32,7 @@
 #define INTEGRATIONPLUGINZIGBEETRADFRI_H
 
 #include "extern-plugininfo.h"
+#include "../common/zigbeeintegrationplugin.h"
 
 #include <integrations/integrationplugin.h>
 #include <hardware/zigbee/zigbeehandler.h>
@@ -40,7 +41,7 @@
 
 #include <QTimer>
 
-class IntegrationPluginZigbeeTradfri: public IntegrationPlugin, public ZigbeeHandler
+class IntegrationPluginZigbeeTradfri: public ZigbeeIntegrationPlugin
 {
     Q_OBJECT
 
@@ -52,38 +53,22 @@ public:
 
     QString name() const override;
     bool handleNode(ZigbeeNode *node, const QUuid &networkUuid) override;
-    void handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid) override;
 
-    void init() override;
     void setupThing(ThingSetupInfo *info) override;
     void executeAction(ThingActionInfo *info) override;
     void thingRemoved(Thing *thing) override;
+
+protected:
+    QList<FirmwareIndexEntry> firmwareIndexFromJson(const QByteArray &data) const override;
 
 private slots:
     void soundRemoteMove(Thing *thing, ZigbeeClusterLevelControl::MoveMode mode);
 
 private:
     PluginTimer *m_presenceTimer = nullptr;
-    QHash<Thing*, ZigbeeNode*> m_thingNodes;
     quint8 m_lastReceivedTransactionSequenceNumber = 0;
 
-    QHash<ThingClassId, ParamTypeId> m_ieeeAddressParamTypeIds;
-    QHash<ThingClassId, ParamTypeId> m_networkUuidParamTypeIds;
-    QHash<ThingClassId, ParamTypeId> m_endpointIdParamTypeIds;
-
-    QHash<ThingClassId, StateTypeId> m_connectedStateTypeIds;
-    QHash<ThingClassId, StateTypeId> m_signalStrengthStateTypeIds;
-    QHash<ThingClassId, StateTypeId> m_versionStateTypeIds;
-
     QHash<Thing*, QTimer*> m_soundRemoteMoveTimers;
-
-    ZigbeeNodeEndpoint *findEndpoint(Thing *thing);
-    void createThing(const ThingClassId &thingClassId, const QUuid &networkUuid, ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-
-    void initOnOffSwitch(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void initShortcutButton(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void initRemote(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void initMotionSensor(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
 
     bool isDuplicate(quint8 transactionSequenceNumber);
 };

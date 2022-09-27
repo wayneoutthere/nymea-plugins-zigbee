@@ -1,6 +1,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 *
-* Copyright 2013 - 2020, nymea GmbH
+* Copyright 2013 - 2022, nymea GmbH
 * Contact: contact@nymea.io
 *
 * This file is part of nymea.
@@ -33,7 +33,6 @@
 
 #include "../common/zigbeeintegrationplugin.h"
 #include "hardware/zigbee/zigbeehandler.h"
-#include "plugintimer.h"
 #include "extern-plugininfo.h"
 #include <QTimer>
 
@@ -53,19 +52,13 @@ public:
     void setupThing(ThingSetupInfo *info) override;
     void executeAction(ThingActionInfo *info) override;
 
+private slots:
+    void pollLight(Thing *thing);
+
 private:
-    PluginTimer *m_presenceTimer = nullptr;
+    void bindManufacturerSpecificPhilipsCluster(ZigbeeNodeEndpoint *endpoint);
 
-    void initDimmerSwitch(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void initMotionSensor(ZigbeeNode *node);
-    void initSmartButton(ZigbeeNode *node);
-    void initWallSwitchModule(ZigbeeNode *node);
-
-    void bindBatteryCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void bindOnOffCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void bindLevelControlCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-
-    void dumpBindingTable(ZigbeeNode *node);
+    QHash<Thing*, PluginTimer*> m_pollTimers;
 };
 
 #endif // INTEGRATIONPLUGINZIGBEEPHILIPSHUE_H
