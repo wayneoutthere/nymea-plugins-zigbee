@@ -50,6 +50,17 @@ Description: nymea integration plugin for ZigBee devices by Gewiss
  made by Gewiss.
 
 
+Package: nymea-plugin-zigbee-jung
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+Replaces: nymea-plugin-zigbee-remotes
+Conflicts: nymea-plugin-zigbee-remotes
+Description: nymea integration plugin for Zigbee devices by Jung.
+ This package contains the nymea integration plugin for ZigBee devices
+ by Jung.
+
+
 Package: nymea-plugin-zigbee-lumi
 Architecture: any
 Depends: ${shlibs:Depends},
@@ -67,15 +78,6 @@ Description: nymea integration plugin for Philips Hue devices via ZigBee
  This package contains the nymea integration plugin for Philips Hue devices.
  Please note that this plugin does not work togehter with a Hue Bridge but instead
  connects to the devices directly via ZigBee without the need of a Hue bridge.
-
-
-Package: nymea-plugin-zigbee-remotes
-Architecture: any
-Depends: ${shlibs:Depends},
-         ${misc:Depends},
-Description: nymea integration plugin for various zigbee remote controls.
- This package contains the nymea integration plugin for various ZigBee based
- remote controls and/or wall switches.
 
 
 Package: nymea-plugin-zigbee-tradfri
@@ -103,11 +105,11 @@ Section: libs
 Architecture: all
 Depends: nymea-plugin-zigbee-develco,
          nymea-plugin-zigbee-eurotronic,
-         nymea-plugin-zigbee-lumi,
          nymea-plugin-zigbee-generic,
          nymea-plugin-zigbee-gewiss,
+         nymea-plugin-zigbee-jung,
+         nymea-plugin-zigbee-lumi,
          nymea-plugin-zigbee-philipshue,
-         nymea-plugin-zigbee-remotes,
          nymea-plugin-zigbee-tradfri,
          nymea-plugin-zigbee-tuya,
 Description: ZigBee integration plugins for nymea - meta package

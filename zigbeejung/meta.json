@@ -1,6 +1,6 @@
 {
-    "title": "ZigBee remotes",
-    "tagline": "A plugin for various zigbee remotes.",
+    "title": "ZigBee Jung",
+    "tagline": "A plugin the Jung ZLL5004M.",
     "icon": "zigbee.svg",
     "stability": "consumer",
     "offline": true,

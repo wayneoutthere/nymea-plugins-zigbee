@@ -1,6 +1,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 *
-* Copyright 2013 - 2020, nymea GmbH
+* Copyright 2013 - 2022, nymea GmbH
 * Contact: contact@nymea.io
 *
 * This file is part of nymea.
@@ -28,9 +28,10 @@
 *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifndef INTEGRATIONPLUGINZIGBEEREMOTES_H
-#define INTEGRATIONPLUGINZIGBEEREMOTES_H
+#ifndef INTEGRATIONPLUGINZIGBEEJUNG_H
+#define INTEGRATIONPLUGINZIGBEEJUNG_H
 
+#include "../common/zigbeeintegrationplugin.h"
 #include "integrations/integrationplugin.h"
 #include "hardware/zigbee/zigbeehandler.h"
 #include "plugintimer.h"
@@ -39,35 +40,21 @@
 
 #include <QTimer>
 
-class IntegrationPluginZigbeeRemotes: public IntegrationPlugin, public ZigbeeHandler
+class IntegrationPluginZigbeeJung: public ZigbeeIntegrationPlugin
 {
     Q_OBJECT
 
-    Q_PLUGIN_METADATA(IID "io.nymea.IntegrationPlugin" FILE "integrationpluginzigbeeremotes.json")
+    Q_PLUGIN_METADATA(IID "io.nymea.IntegrationPlugin" FILE "integrationpluginzigbeejung.json")
     Q_INTERFACES(IntegrationPlugin)
 
 public:
-    explicit IntegrationPluginZigbeeRemotes();
+    explicit IntegrationPluginZigbeeJung();
 
     QString name() const override;
     bool handleNode(ZigbeeNode *node, const QUuid &networkUuid) override;
-    void handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid) override;
 
-    void init() override;
     void setupThing(ThingSetupInfo *info) override;
-    void thingRemoved(Thing *thing) override;
-
-private:
-    QHash<Thing*, ZigbeeNode*> m_thingNodes;
-
-    void createThing(const ThingClassId &thingClassId, const QUuid &networkUuid, ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-
-    void bindPowerConfigurationCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void bindOnOffCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void bindLevelControlCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void bindScenesCluster(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-
-    void connectToPowerConfigurationCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
+    void executeAction(ThingActionInfo *info) override;
 };
 
-#endif // INTEGRATIONPLUGINZIGBEEREMOTES_H
+#endif // INTEGRATIONPLUGINZIGBEEJUNG_H

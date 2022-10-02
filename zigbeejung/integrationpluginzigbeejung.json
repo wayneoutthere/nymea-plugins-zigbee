@@ -1,6 +1,6 @@
 {
-    "name": "ZigbeeRemotes",
-    "displayName": "Zigbee remotes",
+    "name": "ZigbeeJung",
+    "displayName": "JUNG GbmH Zigbee devices",
     "id": "d0184b49-6e6d-42fe-92e1-e2ede67ca7df",
     "vendors": [
         {
@@ -13,7 +13,7 @@
                     "name": "insta",
                     "displayName": "JUNG ZLL 5004",
                     "createMethods": ["auto"],
-                    "interfaces": ["multibutton", "wirelessconnectable"],
+                    "interfaces": ["multibutton", "wirelessconnectable", "update"],
                     "paramTypes": [
                         {
                             "id": "93da9fd8-9068-476c-8ff3-53fe51a11808",
@@ -50,6 +50,47 @@
                             "maxValue": 100,
                             "unit": "Percentage",
                             "defaultValue": 0
+                        },
+                        {
+                            "id": "50196581-9dfe-4371-bb97-ba6498ca4ffc",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle",
+                            "cached": false
+                        },
+                        {
+                            "id": "6e5285d5-1a80-47b8-a9b5-e951a4236477",
+                            "name": "currentVersion",
+                            "displayName": "Version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "81d7f41e-e09d-40cc-8a18-6f19c0877f5b",
+                            "name": "availableVersion",
+                            "displayName": "Available firmware version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "a39bef41-5aae-4bdf-8e47-23417b214bcf",
+                            "name": "updateProgress",
+                            "displayName": "Update progress",
+                            "type": "uint",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": 0,
+                            "cached": false
+                        }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "299bfa23-da89-495d-85b0-d8233481ced3",
+                            "name": "performUpdate",
+                            "displayName": "Start update"
                         }
                     ],
                     "eventTypes": [
