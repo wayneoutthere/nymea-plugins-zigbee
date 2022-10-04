@@ -42,6 +42,18 @@
 #include <QMetaMethod>
 #include <QJsonDocument>
 
+
+#define AIR_PURIFIER_CLUSTER_ID 0xfc7d // Input cluster on endopint 1
+#define AIR_PURIFIER_CLUSTER_ATTRIBUTE_FILTER_RUNTIME 0x0000 // uint32
+#define AIR_PURIFIER_CLUSTER_ATTRIBUTE_REPLACE_FILTER 0x0001 // uint8
+#define AIR_PURIFIER_CLUSTER_ATTRIBUTE_FILTER_LIFETIME 0x0002 // uint32
+#define AIR_PURIFIER_CLUSTER_ATTRIBUTE_CONTROL_PANEL_LIGHT 0x0003 // bool
+#define AIR_PURIFIER_CLUSTER_ATTRIBUTE_PM25_MEASUREMENT 0x0004 // uint16
+#define AIR_PURIFIER_CLUSTER_ATTRIBUTE_CHILD_LOCK 0x0005 // bool
+#define AIR_PURIFIER_CLUSTER_ATTRIBUTE_FAN_MODE 0x0006 // uint8
+#define AIR_PURIFIER_CLUSTER_ATTRIBUTE_FAN_SPEED 0x0007 // uint8
+#define AIR_PURIFIER_CLUSTER_ATTRIBUTE_DEVICE_RUNTIME 0x0008 // uint32
+
 IntegrationPluginZigbeeTradfri::IntegrationPluginZigbeeTradfri():
     ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor, dcZigbeeTradfri())
 {
@@ -158,6 +170,14 @@ bool IntegrationPluginZigbeeTradfri::handleNode(ZigbeeNode *node, const QUuid &/
         configurePowerConfigurationInputClusterAttributeReporting(endpoint);
         bindOnOffCluster(endpoint);
         bindLevelControlCluster(endpoint);
+        return true;
+    }
+
+    if (endpoint->modelIdentifier().contains("STARKVIND")) {
+        qCDebug(dcZigbeeTradfri()) << "Handling STARKVIND Air Purifier" << node << endpoint;
+        createThing(airPurifierThingClassId, node);
+        bindCluster(endpoint, AIR_PURIFIER_CLUSTER_ID);
+        configureAirPurifierAttributeReporting(endpoint);
         return true;
     }
 
@@ -474,6 +494,60 @@ void IntegrationPluginZigbeeTradfri::setupThing(ThingSetupInfo *info)
         }
     }
 
+    if (thing->thingClassId() == airPurifierThingClassId) {
+        connectToOtaOutputCluster(thing, endpoint);
+
+        ZigbeeCluster *airPurifierCluster = endpoint->getInputCluster((ZigbeeClusterLibrary::ClusterId)AIR_PURIFIER_CLUSTER_ID);
+        if (!airPurifierCluster) {
+            qCWarning(dcZigbeeTradfri()) << "Air purifier cluster not foud on thing" << thing->name();
+        } else {
+            airPurifierCluster->readAttributes({AIR_PURIFIER_CLUSTER_ATTRIBUTE_FILTER_RUNTIME,
+                                               AIR_PURIFIER_CLUSTER_ATTRIBUTE_REPLACE_FILTER,
+                                               AIR_PURIFIER_CLUSTER_ATTRIBUTE_CONTROL_PANEL_LIGHT,
+                                               AIR_PURIFIER_CLUSTER_ATTRIBUTE_PM25_MEASUREMENT,
+                                               AIR_PURIFIER_CLUSTER_ATTRIBUTE_CHILD_LOCK,
+                                               AIR_PURIFIER_CLUSTER_ATTRIBUTE_FAN_MODE,
+                                               AIR_PURIFIER_CLUSTER_ATTRIBUTE_FAN_SPEED},
+                                               Zigbee::Ikea);
+            connect(airPurifierCluster, &ZigbeeCluster::attributeChanged, thing, [thing](const ZigbeeClusterAttribute &attribute){
+                qCDebug(dcZigbeeTradfri()) << "Air Purifier Attribute changed:" << attribute;
+                switch (attribute.id()) {
+                case AIR_PURIFIER_CLUSTER_ATTRIBUTE_FILTER_RUNTIME:
+                    thing->setStateValue(airPurifierFilterRuntimeStateTypeId, attribute.dataType().toUInt32());
+                    return;
+                case AIR_PURIFIER_CLUSTER_ATTRIBUTE_REPLACE_FILTER:
+                    thing->setStateValue(airPurifierReplaceFilterStateTypeId, attribute.dataType().toBool());
+                    return;
+                case AIR_PURIFIER_CLUSTER_ATTRIBUTE_CONTROL_PANEL_LIGHT:
+                    thing->setStateValue(airPurifierLightPowerStateTypeId, !attribute.dataType().toBool());
+                    return;
+                case AIR_PURIFIER_CLUSTER_ATTRIBUTE_PM25_MEASUREMENT: {
+                    quint16 pm25 = attribute.dataType().toUInt16();
+                    if (pm25 < 0xFFFF) {
+                        thing->setStateValue(airPurifierPm25StateTypeId, attribute.dataType().toUInt16());
+                    }
+                    return;
+                }
+                case AIR_PURIFIER_CLUSTER_ATTRIBUTE_CHILD_LOCK:
+                    thing->setStateValue(airPurifierChildLockStateTypeId, attribute.dataType().toBool());
+                    return;
+                case AIR_PURIFIER_CLUSTER_ATTRIBUTE_FAN_MODE: {
+                    quint8 fanMode = attribute.dataType().toUInt8();
+                    thing->setStateValue(airPurifierPowerStateTypeId, fanMode > 0);
+                    thing->setStateValue(airPurifierAutoStateTypeId, fanMode == 1);
+                    return;
+                }
+                case AIR_PURIFIER_CLUSTER_ATTRIBUTE_FAN_SPEED: {
+                    quint8 fanSpeed = attribute.dataType().toUInt8();
+                    thing->setStateValue(airPurifierPowerStateTypeId, fanSpeed > 0);
+                    thing->setStateValue(airPurifierFlowRateStateTypeId, fanSpeed / 10);
+                    return;
+                }
+                }
+            });
+        }
+
+    }
     if (thing->thingClassId() == signalRepeaterThingClassId) {
         connectToOtaOutputCluster(thing, endpoint);
     }
@@ -487,6 +561,57 @@ void IntegrationPluginZigbeeTradfri::executeAction(ThingActionInfo *info)
     ZigbeeNodeEndpoint *endpoint = node->getEndpoint(1);
 
     ActionType actionType = info->thing()->thingClass().actionTypes().findById(info->action().actionTypeId());
+
+    if (info->thing()->thingClassId() == airPurifierThingClassId) {
+        ZigbeeCluster *airPurifierCluster = endpoint->getInputCluster((ZigbeeClusterLibrary::ClusterId)AIR_PURIFIER_CLUSTER_ID);
+        if (!airPurifierCluster) {
+            qCWarning(dcZigbeeTradfri()) << "Could not find air purifier cluster for" << info->thing()->name();
+            info->finish(Thing::ThingErrorHardwareFailure);
+            return;
+        }
+
+        ZigbeeClusterLibrary::WriteAttributeRecord record;
+        if (actionType.id() == airPurifierPowerActionTypeId) {
+            record.attributeId = AIR_PURIFIER_CLUSTER_ATTRIBUTE_FAN_MODE;
+            record.dataType = Zigbee::Uint8;
+            bool power = info->action().paramValue(airPurifierPowerActionPowerParamTypeId).toBool();
+            record.data = ZigbeeDataType(static_cast<quint8>(power ? 1 : 0)).data();
+        }
+        if (actionType.id() == airPurifierAutoActionTypeId) {
+            record.attributeId = AIR_PURIFIER_CLUSTER_ATTRIBUTE_FAN_MODE;
+            record.dataType = Zigbee::Uint8;
+            bool autoMode = info->action().paramValue(airPurifierAutoActionAutoParamTypeId).toBool();
+            record.data = ZigbeeDataType(static_cast<quint8>(autoMode ? 1 : info->thing()->stateValue(airPurifierFlowRateStateTypeId).toUInt() * 10)).data();
+        }
+        if (actionType.id() == airPurifierFlowRateActionTypeId) {
+            record.attributeId = AIR_PURIFIER_CLUSTER_ATTRIBUTE_FAN_MODE;
+            record.dataType = Zigbee::Uint8;
+            quint8 value =  info->action().paramValue(airPurifierFlowRateActionFlowRateParamTypeId).toUInt() * 10;
+            record.data = ZigbeeDataType(value).data();
+        }
+        if (actionType.id() == airPurifierLightPowerActionTypeId) {
+            record.attributeId = AIR_PURIFIER_CLUSTER_ATTRIBUTE_CONTROL_PANEL_LIGHT;
+            record.dataType = Zigbee::Bool;
+            bool power = info->action().paramValue(airPurifierLightPowerActionLightPowerParamTypeId).toBool();
+            record.data = ZigbeeDataType(!power).data();
+        }
+        if (actionType.id() == airPurifierChildLockActionTypeId) {
+            record.attributeId = AIR_PURIFIER_CLUSTER_ATTRIBUTE_CHILD_LOCK;
+            record.dataType = Zigbee::Bool;
+            bool power = info->action().paramValue(airPurifierChildLockActionChildLockParamTypeId).toBool();
+            record.data = ZigbeeDataType(power).data();
+        }
+
+        ZigbeeClusterReply *reply = airPurifierCluster->writeAttributes({record}, Zigbee::Ikea);
+        connect(reply, &ZigbeeClusterReply::finished, this, [reply, info](){
+            if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
+                info->finish(Thing::ThingErrorHardwareFailure);
+            } else {
+                info->finish(Thing::ThingErrorNoError);
+            }
+        });
+        return;
+    }
 
     if (actionType.name() == "power") {
         executePowerOnOffInputCluster(info, endpoint);
@@ -585,3 +710,68 @@ bool IntegrationPluginZigbeeTradfri::isDuplicate(quint8 transactionSequenceNumbe
     return false;
 }
 
+void IntegrationPluginZigbeeTradfri::configureAirPurifierAttributeReporting(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeCluster *airPurifierCluster = endpoint->getInputCluster((ZigbeeClusterLibrary::ClusterId)AIR_PURIFIER_CLUSTER_ID);
+    if (!airPurifierCluster) {
+        qCWarning(dcZigbeeTradfri()) << "Air purifier cluster not found on this endpoint";
+        return;
+    }
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration filterRuntimeConfig;
+    filterRuntimeConfig.attributeId = AIR_PURIFIER_CLUSTER_ATTRIBUTE_FILTER_RUNTIME;
+    filterRuntimeConfig.dataType = Zigbee::Uint32;
+    filterRuntimeConfig.minReportingInterval = 60;
+    filterRuntimeConfig.maxReportingInterval = 1200;
+    filterRuntimeConfig.reportableChange = ZigbeeDataType(static_cast<quint32>(0)).data();
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration replaceFilterConfig;
+    replaceFilterConfig.attributeId = AIR_PURIFIER_CLUSTER_ATTRIBUTE_REPLACE_FILTER;
+    replaceFilterConfig.dataType = Zigbee::Uint8;
+    replaceFilterConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(0)).data();
+
+//    ZigbeeClusterLibrary::AttributeReportingConfiguration filterLifetimeConfig;
+//    filterLifetimeConfig.attributeId = AIR_PURIFIER_CLUSTER_ATTRIBUTE_FILTER_LIFETIME;
+//    filterLifetimeConfig.dataType = Zigbee::Uint32;
+//    filterLifetimeConfig.minReportingInterval = 60;
+//    filterLifetimeConfig.maxReportingInterval = 1200;
+//    replaceFilterConfig.reportableChange = ZigbeeDataType(static_cast<quint32>(0)).data();
+
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration lightConfig;
+    lightConfig.attributeId = AIR_PURIFIER_CLUSTER_ATTRIBUTE_CONTROL_PANEL_LIGHT;
+    lightConfig.dataType = Zigbee::Bool;
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration pm25Config;
+    pm25Config.attributeId = AIR_PURIFIER_CLUSTER_ATTRIBUTE_PM25_MEASUREMENT;
+    pm25Config.dataType = Zigbee::Uint16;
+    pm25Config.minReportingInterval = 60;
+    pm25Config.maxReportingInterval = 1200;
+    pm25Config.reportableChange = ZigbeeDataType(static_cast<quint16>(1)).data();
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration childLockConfig;
+    childLockConfig.attributeId = AIR_PURIFIER_CLUSTER_ATTRIBUTE_CHILD_LOCK;
+    childLockConfig.dataType = Zigbee::Bool;
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration fanModeConfig;
+    fanModeConfig.attributeId = AIR_PURIFIER_CLUSTER_ATTRIBUTE_FAN_MODE;
+    fanModeConfig.dataType = Zigbee::Uint8;
+    fanModeConfig.minReportingInterval = 0;
+    fanModeConfig.maxReportingInterval = 1200;
+    fanModeConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+    ZigbeeClusterLibrary::AttributeReportingConfiguration fanSpeedConfig;
+    fanSpeedConfig.attributeId = AIR_PURIFIER_CLUSTER_ATTRIBUTE_FAN_SPEED;
+    fanSpeedConfig.dataType = Zigbee::Uint8;
+    fanSpeedConfig.minReportingInterval = 0;
+    fanSpeedConfig.maxReportingInterval = 1200;
+    fanSpeedConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
+
+    ZigbeeClusterReply *reportingReply = airPurifierCluster->configureReporting({filterRuntimeConfig, replaceFilterConfig, lightConfig, pm25Config, childLockConfig, fanModeConfig, fanSpeedConfig}, Zigbee::Ikea);
+    connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+        if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+            qCWarning(dcZigbeeTradfri()) << "Failed to configure fan control attribute reporting" << reportingReply->error();
+        }
+    });
+}

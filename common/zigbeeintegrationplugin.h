@@ -75,6 +75,7 @@ protected:
 
     void createThing(const ThingClassId &thingClassId, ZigbeeNode *node, const ParamList &additionalParams = ParamList());
 
+    void bindCluster(ZigbeeNodeEndpoint *endpoint, quint16 clusterId);
     void bindPowerConfigurationCluster(ZigbeeNodeEndpoint *endpoint);
     void bindThermostatCluster(ZigbeeNodeEndpoint *endpoint);
     void bindOnOffCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
@@ -87,6 +88,7 @@ protected:
     void bindIasZoneCluster(ZigbeeNodeEndpoint *endpoint);
     void bindIlluminanceMeasurementCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
     void bindOccupancySensingCluster(ZigbeeNodeEndpoint *endpoint);
+    void bindFanControlCluster(ZigbeeNodeEndpoint *endpoint);
 
     void configurePowerConfigurationInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
     void configureOnOffInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
@@ -98,6 +100,7 @@ protected:
     void configureRelativeHumidityMeasurementInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
     void configureIlluminanceMeasurementInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
     void configureOccupancySensingInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
+    void configureFanControlInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
 
     void connectToPowerConfigurationInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToThermostatCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
@@ -111,6 +114,7 @@ protected:
     void connectToIasZoneInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &alarmStateName, bool inverted = false);
     void connectToIlluminanceMeasurementInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToOccupancySensingInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
+    void connectToFanControlInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToOtaOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
 
     void executePowerOnOffInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);
@@ -118,6 +122,8 @@ protected:
     void executeColorTemperatureColorControlInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);
     void executeColorColorControlInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);
     void executeIdentifyIdentifyInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);
+    void executePowerFanControlInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);
+    void executeFlowRateFanControlInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);
     void executeImageNotifyOtaOutputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);
 
     void readColorTemperatureRange(Thing *thing, ZigbeeNodeEndpoint *endpoint);

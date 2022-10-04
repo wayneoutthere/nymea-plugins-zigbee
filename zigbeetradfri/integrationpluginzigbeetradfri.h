@@ -71,6 +71,8 @@ private:
     QHash<Thing*, QTimer*> m_soundRemoteMoveTimers;
 
     bool isDuplicate(quint8 transactionSequenceNumber);
+
+    void configureAirPurifierAttributeReporting(ZigbeeNodeEndpoint *endpoint);
 };
 
 #endif // INTEGRATIONPLUGINZIGBEETRADFRI_H

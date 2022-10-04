@@ -39,6 +39,7 @@
 #include <zcl/general/zigbeeclusteronoff.h>
 #include <zcl/general/zigbeeclusterlevelcontrol.h>
 #include <zcl/hvac/zigbeeclusterthermostat.h>
+#include <zcl/hvac/zigbeeclusterfancontrol.h>
 #include <zcl/smartenergy/zigbeeclustermetering.h>
 #include <zcl/measurement/zigbeeclusterelectricalmeasurement.h>
 #include <zcl/measurement/zigbeeclustertemperaturemeasurement.h>
@@ -162,6 +163,18 @@ void ZigbeeIntegrationPlugin::createThing(const ThingClassId &thingClassId, Zigb
     params.append(additionalParams);
     descriptor.setParams(params);
     emit autoThingsAppeared({descriptor});
+}
+
+void ZigbeeIntegrationPlugin::bindCluster(ZigbeeNodeEndpoint *endpoint, quint16 clusterId)
+{
+    ZigbeeNode *node = endpoint->node();
+    ZigbeeDeviceObjectReply *bindClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), clusterId,
+                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
+    connect(bindClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+        if (bindClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to cluster" << clusterId << bindClusterReply->error();
+        }
+    });
 }
 
 void ZigbeeIntegrationPlugin::bindPowerConfigurationCluster(ZigbeeNodeEndpoint *endpoint)
@@ -400,6 +413,18 @@ void ZigbeeIntegrationPlugin::bindOccupancySensingCluster(ZigbeeNodeEndpoint *en
     connect(bindOccupancySensingClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
         if (bindOccupancySensingClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
             qCWarning(m_dc) << "Failed to bind occupancy sensing cluster" << bindOccupancySensingClusterReply->error();
+        }
+    });
+}
+
+void ZigbeeIntegrationPlugin::bindFanControlCluster(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeNode *node = endpoint->node();
+    ZigbeeDeviceObjectReply *bindFanControlClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdFanControl,
+                                                                                           hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
+    connect(bindFanControlClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
+        if (bindFanControlClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to bind fan control cluster" << bindFanControlClusterReply->error();
         }
     });
 }
@@ -657,6 +682,27 @@ void ZigbeeIntegrationPlugin::configureOccupancySensingInputClusterAttributeRepo
     connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
         if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
             qCWarning(m_dc) << "Failed to configure occupancy cluster attribute reporting" << reportingReply->error();
+        }
+    });
+}
+
+void ZigbeeIntegrationPlugin::configureFanControlInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterFanControl *fanControlInputCluster = endpoint->inputCluster<ZigbeeClusterFanControl>(ZigbeeClusterLibrary::ClusterIdFanControl);
+    if (!fanControlInputCluster) {
+        qCWarning(m_dc) << "No fan control cluster on this endpoint";
+        return;
+    }
+    ZigbeeClusterLibrary::AttributeReportingConfiguration reportingConfig;
+    reportingConfig.attributeId = ZigbeeClusterFanControl::AttributeFanMode;
+    reportingConfig.dataType = Zigbee::BitMap8;
+    reportingConfig.minReportingInterval = 0;
+    reportingConfig.maxReportingInterval = 300;
+
+    ZigbeeClusterReply *reportingReply = fanControlInputCluster->configureReporting({reportingConfig});
+    connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
+        if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
+            qCWarning(m_dc) << "Failed to configure fan control attribute reporting" << reportingReply->error();
         }
     });
 }
@@ -937,6 +983,44 @@ void ZigbeeIntegrationPlugin::connectToOccupancySensingInputCluster(Thing *thing
     }
 }
 
+void ZigbeeIntegrationPlugin::connectToFanControlInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterFanControl *fanControlCluster = endpoint->inputCluster<ZigbeeClusterFanControl>(ZigbeeClusterLibrary::ClusterIdFanControl);
+    if (!fanControlCluster) {
+        qCWarning(m_dc) << "Fan control cluster not found on" << thing;
+    } else {
+        connect(fanControlCluster, &ZigbeeClusterFanControl::fanModeChanged, thing, [=](ZigbeeClusterFanControl::FanMode fanMode){
+            qCDebug(m_dc) << thing << "fan mode changed" << fanMode;
+            switch (fanMode) {
+            case ZigbeeClusterFanControl::FanModeOff:
+                thing->setStateValue("power", false);
+                break;
+            case ZigbeeClusterFanControl::FanModeLow:
+                thing->setStateValue("power", true);
+                thing->setStateValue("flowRate", 1);
+                break;
+            case ZigbeeClusterFanControl::FanModeMedium:
+                thing->setStateValue("power", true);
+                thing->setStateValue("flowRate", 2);
+                break;
+            case ZigbeeClusterFanControl::FanModeHigh:
+                thing->setStateValue("power", true);
+                thing->setStateValue("flowRate", 3);
+                break;
+            case ZigbeeClusterFanControl::FanModeOn:
+                thing->setStateValue("power", true);
+                break;
+            case ZigbeeClusterFanControl::FanModeAuto:
+                thing->setStateValue("power", true);
+                break;
+            case ZigbeeClusterFanControl::FanModeSmart:
+                thing->setStateValue("power", true);
+                break;
+            }
+        });
+    }
+}
+
 void ZigbeeIntegrationPlugin::connectToOtaOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeClusterOta *otaCluster = endpoint->outputCluster<ZigbeeClusterOta>(ZigbeeClusterLibrary::ClusterIdOtaUpgrade);
@@ -1207,6 +1291,44 @@ void ZigbeeIntegrationPlugin::executeIdentifyIdentifyInputCluster(ThingActionInf
     }
 
     ZigbeeClusterReply *reply = identifyCluster->identify(2);
+    connect(reply, &ZigbeeClusterReply::finished, this, [reply, info](){
+        if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
+            info->finish(Thing::ThingErrorHardwareFailure);
+        } else {
+            info->finish(Thing::ThingErrorNoError);
+        }
+    });
+}
+
+void ZigbeeIntegrationPlugin::executePowerFanControlInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterFanControl *fanControlCluster = endpoint->inputCluster<ZigbeeClusterFanControl>(ZigbeeClusterLibrary::ClusterIdFanControl);
+    if (!fanControlCluster) {
+        qCWarning(m_dc) << "Could not find fan control cluster for" << info->thing()->name();
+        info->finish(Thing::ThingErrorHardwareFailure);
+        return;
+    }
+
+    ZigbeeClusterReply *reply = fanControlCluster->setFanMode(info->action().paramValue(info->thing()->thingClass().actionTypes().findByName("power").id()).toBool() ? ZigbeeClusterFanControl::FanModeOn : ZigbeeClusterFanControl::FanModeOff);
+    connect(reply, &ZigbeeClusterReply::finished, this, [reply, info](){
+        if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
+            info->finish(Thing::ThingErrorHardwareFailure);
+        } else {
+            info->finish(Thing::ThingErrorNoError);
+        }
+    });
+}
+
+void ZigbeeIntegrationPlugin::executeFlowRateFanControlInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterFanControl *fanControlCluster = endpoint->inputCluster<ZigbeeClusterFanControl>(ZigbeeClusterLibrary::ClusterIdFanControl);
+    if (!fanControlCluster) {
+        qCWarning(m_dc) << "Could not find fan control cluster for" << info->thing()->name();
+        info->finish(Thing::ThingErrorHardwareFailure);
+        return;
+    }
+
+    ZigbeeClusterReply *reply = fanControlCluster->setFanMode(static_cast<ZigbeeClusterFanControl::FanMode>(info->action().paramValue(info->thing()->thingClass().actionTypes().findByName("flowRate").id()).toUInt()));
     connect(reply, &ZigbeeClusterReply::finished, this, [reply, info](){
         if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
             info->finish(Thing::ThingErrorHardwareFailure);

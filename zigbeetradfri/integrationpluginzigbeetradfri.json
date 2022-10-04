@@ -1048,6 +1048,166 @@
                     ]
                 },
                 {
+                    "name": "airPurifier",
+                    "displayName": "TRÅDFRI STARKVIND Air purifier",
+                    "id": "1580b37e-9f4f-474a-9a38-a40060f93861",
+                    "setupMethod": "JustAdd",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "ventilation", "pm25sensor", "wirelessconnectable", "update" ],
+                    "paramTypes": [
+                        {
+                            "id": "fe269a78-9535-4f50-94b8-8b6b8530e23c",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "9f1c720d-ec00-453b-b57e-550d65bc6454",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "31565f01-0287-4f82-9dbf-894c20e06f69",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "displayNameEvent": "Connected changed",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "ad88fa3d-eebf-42e2-98f4-e58281da03e0",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "displayNameEvent": "Signal strength changed",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage"
+                        },
+                        {
+                            "id": "7bcce1da-fc9c-4972-8df2-f17baee95023",
+                            "name": "power",
+                            "displayName": "Power",
+                            "displayNameAction": "Turn on/off",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "writable": true
+                        },
+                        {
+                            "id": "15ae0037-e85a-406f-878a-907bcf5bea63",
+                            "name": "auto",
+                            "displayName": "Auto mode",
+                            "displayNameAction": "Enable/disable auto mode",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "writable": true
+                        },
+                        {
+                            "id": "7ad8ce8c-36ab-41b8-8768-4f765a1fa291",
+                            "name": "flowRate",
+                            "displayName": "Flow rate",
+                            "displayNameAction": "Flow rate changed",
+                            "type": "int",
+                            "minValue": 1,
+                            "maxValue": 5,
+                            "defaultValue": 1,
+                            "writable": true
+                        },
+                        {
+                            "id": "7b1a33b8-6f81-46c2-b1f1-a1a46fffd990",
+                            "name": "filterRuntime",
+                            "displayName": "Filter runtime",
+                            "type": "uint",
+                            "unit": "Minutes",
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "d01b170d-8985-4b33-b907-1c7e0a35bff6",
+                            "name": "replaceFilter",
+                            "displayName": "Replace filter",
+                            "type": "bool",
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "c71f3fb0-7cd1-4868-846d-a261c24627c2",
+                            "name": "lightPower",
+                            "displayName": "Light power",
+                            "displayNameAction": "Turn on/off light",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "writable": true
+                        },
+                        {
+                            "id": "a71956ec-af44-4dab-86b1-dd7a2baece1c",
+                            "name": "pm25",
+                            "displayName": "PM 2.5",
+                            "type": "double",
+                            "unit": "MicroGrammPerCubicalMeter",
+                            "minValue": 0,
+                            "maxValue": 500,
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "d8e6ff6d-5b0e-4071-a749-1e2f19175e4d",
+                            "name": "childLock",
+                            "displayName": "Child lock",
+                            "displayNameAction": "Enable/disable child lock",
+                            "type": "bool",
+                            "writable": true,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "d7bea835-e91b-4a04-826a-aaacf7233faa",
+                            "name": "currentVersion",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "5636514d-40a9-464e-bdfb-5877b22b3e69",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle",
+                            "cached": false
+                        },
+                        {
+                            "id": "676491ec-2c20-4a05-a75d-c515f4f4bd18",
+                            "name": "availableVersion",
+                            "displayName": "Available version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "acbac78e-d65e-4698-bed7-9b15057cbf44",
+                            "name": "updateProgress",
+                            "displayName": "Update progress",
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "defaultValue": 0
+                        }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "5f195fde-2b76-4789-9c7f-8f335a5b450a",
+                            "name": "performUpdate",
+                            "displayName": "Perform update"
+                        }
+                    ]
+                },
+                {
                     "name": "signalRepeater",
                     "displayName": "TRÅDFRI signal repeater",
                     "id": "ac51f426-195e-472a-837f-4ba7e4666e6e",
