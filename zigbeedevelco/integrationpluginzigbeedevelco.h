@@ -103,7 +103,6 @@ private:
     QString parseDevelcoVersionString(ZigbeeNodeEndpoint *endpoint);
 
     void initIoModule(ZigbeeNode *node);
-    void initAirQualitySensor(ZigbeeNode *node);
 
     void configureOnOffPowerReporting(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void configureBinaryInputReporting(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
@@ -112,7 +111,6 @@ private:
     void configureHumidityReporting(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void configureBattryVoltageReporting(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void configureVocReporting(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
-    void updateIndoorAirQuality(Thing *thing, uint voc);
 
     void readDevelcoFirmwareVersion(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);
     void readOnOffPowerAttribute(ZigbeeNode *node, ZigbeeNodeEndpoint *endpoint);

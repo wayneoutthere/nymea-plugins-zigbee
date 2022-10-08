@@ -130,7 +130,7 @@ bool IntegrationPluginZigbeePhilipsHue::handleNode(ZigbeeNode *node, const QUuid
             configurePowerConfigurationInputClusterAttributeReporting(endpointTwo);
             bindOccupancySensingCluster(endpointTwo);
             configureOccupancySensingInputClusterAttributeReporting(endpointTwo);
-            bindTemperatureMeasurementInputCluster(endpointTwo);
+            bindTemperatureMeasurementCluster(endpointTwo);
             configureTemperatureMeasurementInputClusterAttributeReporting(endpointTwo);
             bindIlluminanceMeasurementCluster(endpointTwo);
             configureIlluminanceMeasurementInputClusterAttributeReporting(endpointTwo);

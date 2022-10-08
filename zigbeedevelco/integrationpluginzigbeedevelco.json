@@ -153,7 +153,7 @@
                     "name": "airQualitySensor",
                     "displayName": "Air qualiy sensor",
                     "createMethods": ["auto"],
-                    "interfaces": ["indoorairquality", "temperaturesensor", "humiditysensor", "battery", "wirelessconnectable"],
+                    "interfaces": ["vocsensor", "temperaturesensor", "humiditysensor", "battery", "wirelessconnectable"],
                     "paramTypes": [
                         {
                             "id": "dbad9e63-1adc-45ef-8bfc-4947060f19f4",
@@ -207,8 +207,7 @@
                             "displayNameEvent": "Temperature changed",
                             "type": "double",
                             "unit": "DegreeCelsius",
-                            "defaultValue": 0.0,
-                            "filter": "adaptive"
+                            "defaultValue": 0.0
                         },
                         {
                             "id": "5bc2825c-666f-4013-9583-3a88ceebecc2",
@@ -219,8 +218,7 @@
                             "minValue": 0,
                             "unit": "Percentage",
                             "type": "double",
-                            "defaultValue": 0.0,
-                            "filter": "adaptive"
+                            "defaultValue": 0.0
                         },
                         {
                             "id": "048ed452-785f-4361-b7a1-f955f4a622b2",
@@ -231,30 +229,16 @@
                             "defaultValue": false
                         },
                         {
-                            "id": "8396ec7e-54d4-452f-9558-c366e0904b2f",
-                            "name": "indoorAirQuality",
-                            "displayName": "Air quality",
-                            "displayNameEvent": "Air quality changed",
-                            "type": "QString",
-                            "defaultValue": "Good",
-                            "possibleValues": [
-                                "Excellent",
-                                "Good",
-                                "Moderate",
-                                "Poor",
-                                "Unhealthy"
-                            ]
-                        },
-                        {
                             "id": "1ba14107-4241-46d0-b65f-eb6e8c6f8e08",
                             "name": "voc",
                             "displayName": "VOC",
                             "displayNameEvent": "VOC changed",
                             "type": "uint",
-                            "unit": "PartsPerMillion",
+                            "minValue": 0,
+                            "maxValue": 65353,
+                            "unit": "PartsPerBillion",
                             "suggestLogging": true,
-                            "defaultValue": 0,
-                            "filter": "adaptive"
+                            "defaultValue": 0
                         }
                     ],
                     "actionTypes": [ ]
@@ -326,8 +310,7 @@
                             "displayNameEvent": "Temperature changed",
                             "type": "double",
                             "unit": "DegreeCelsius",
-                            "defaultValue": 0.0,
-                            "filter": "adaptive"
+                            "defaultValue": 0.0
                         },
                         {
                             "id": "d34ecef2-ceea-4e6f-8cd7-06f54593d594",
@@ -425,8 +408,7 @@
                             "displayNameEvent": "Temperature changed",
                             "type": "double",
                             "unit": "DegreeCelsius",
-                            "defaultValue": 0.0,
-                            "filter": "adaptive"
+                            "defaultValue": 0.0
                         },
                         {
                             "id": "b5eb9897-eabf-455b-9958-91db6b1c4868",
@@ -505,8 +487,7 @@
                             "displayNameEvent": "Temperature changed",
                             "type": "double",
                             "unit": "DegreeCelsius",
-                            "defaultValue": 0.0,
-                            "filter": "adaptive"
+                            "defaultValue": 0.0
                         },
                         {
                             "id": "14907cf7-0acf-4dcb-b397-bd7bd3055479",

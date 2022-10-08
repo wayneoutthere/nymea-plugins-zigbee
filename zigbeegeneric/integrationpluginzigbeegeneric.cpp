@@ -185,7 +185,7 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
                     return;
                 }
 
-                bindIasZoneInputCluster(endpoint);
+                bindIasZoneCluster(endpoint);
 
                 ZigbeeClusterLibrary::ReadAttributeStatusRecord iasZoneTypeRecord = attributeStatusRecords.first();
                 qCDebug(dcZigbeeGeneric()) << "IAS Zone device type:" << iasZoneTypeRecord.dataType.toUInt16();
@@ -219,13 +219,13 @@ bool IntegrationPluginZigbeeGeneric::handleNode(ZigbeeNode *node, const QUuid &/
         if (endpoint->profile() == Zigbee::ZigbeeProfile::ZigbeeProfileHomeAutomation && endpoint->deviceId() == Zigbee::HomeAutomationDeviceTemperatureSensor) {
             bindPowerConfigurationCluster(endpoint);
             configurePowerConfigurationInputClusterAttributeReporting(endpoint);
-            bindTemperatureMeasurementInputCluster(endpoint);
+            bindTemperatureMeasurementCluster(endpoint);
             configureTemperatureMeasurementInputClusterAttributeReporting(endpoint);
 
             if (endpoint->hasInputCluster(ZigbeeClusterLibrary::ClusterIdRelativeHumidityMeasurement)) {
                 qCInfo(dcZigbeeGeneric()) << "H/T sensor device found!";
                 createThing(htSensorThingClassId, node, {Param(htSensorThingEndpointIdParamTypeId, endpoint->endpointId())});
-                bindRelativeHumidityMeasurementInputCluster(endpoint);
+                bindRelativeHumidityMeasurementCluster(endpoint);
             } else {
                 qCInfo(dcZigbeeGeneric()) << "Temperature sensor device found!";
                 createThing(temperatureSensorThingClassId, node, {Param(temperatureSensorThingEndpointIdParamTypeId, endpoint->endpointId())});

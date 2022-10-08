@@ -82,9 +82,9 @@ protected:
     void bindColorControlCluster(ZigbeeNodeEndpoint *endpoint);
     void bindElectricalMeasurementCluster(ZigbeeNodeEndpoint *endpoint);
     void bindMeteringCluster(ZigbeeNodeEndpoint *endpoint);
-    void bindTemperatureMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
-    void bindRelativeHumidityMeasurementInputCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
-    void bindIasZoneInputCluster(ZigbeeNodeEndpoint *endpoint);
+    void bindTemperatureMeasurementCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
+    void bindRelativeHumidityMeasurementCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
+    void bindIasZoneCluster(ZigbeeNodeEndpoint *endpoint);
     void bindIlluminanceMeasurementCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
     void bindOccupancySensingCluster(ZigbeeNodeEndpoint *endpoint);
 
@@ -95,6 +95,7 @@ protected:
     void configureElectricalMeasurementInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
     void configureMeteringInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
     void configureTemperatureMeasurementInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
+    void configureRelativeHumidityMeasurementInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
     void configureIlluminanceMeasurementInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
     void configureOccupancySensingInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
 
