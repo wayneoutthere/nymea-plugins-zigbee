@@ -48,7 +48,8 @@
 
 #include <QDebug>
 
-IntegrationPluginZigbeeLumi::IntegrationPluginZigbeeLumi()
+IntegrationPluginZigbeeLumi::IntegrationPluginZigbeeLumi():
+    ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor, dcZigbeeLumi())
 {
     m_networkUuidParamTypeIds[lumiHTSensorThingClassId] = lumiHTSensorThingNetworkUuidParamTypeId;
     m_networkUuidParamTypeIds[lumiButtonSensorThingClassId] = lumiButtonSensorThingNetworkUuidParamTypeId;
@@ -75,44 +76,6 @@ IntegrationPluginZigbeeLumi::IntegrationPluginZigbeeLumi()
     m_zigbeeAddressParamTypeIds[lumiRelayThingClassId] = lumiRelayThingIeeeAddressParamTypeId;
     m_zigbeeAddressParamTypeIds[lumiRemoteThingClassId] = lumiRemoteThingIeeeAddressParamTypeId;
 
-    m_connectedStateTypeIds[lumiHTSensorThingClassId] = lumiHTSensorConnectedStateTypeId;
-    m_connectedStateTypeIds[lumiButtonSensorThingClassId] = lumiButtonSensorConnectedStateTypeId;
-    m_connectedStateTypeIds[lumiLongpressButtonSensorThingClassId] = lumiLongpressButtonSensorConnectedStateTypeId;
-    m_connectedStateTypeIds[lumiMagnetSensorThingClassId] = lumiMagnetSensorConnectedStateTypeId;
-    m_connectedStateTypeIds[lumiMotionSensorThingClassId] = lumiMotionSensorConnectedStateTypeId;
-    m_connectedStateTypeIds[xiaomiMotionSensorThingClassId] = xiaomiMotionSensorConnectedStateTypeId;
-    m_connectedStateTypeIds[lumiWaterSensorThingClassId] = lumiWaterSensorConnectedStateTypeId;
-    m_connectedStateTypeIds[lumiWeatherSensorThingClassId] = lumiWeatherSensorConnectedStateTypeId;
-    m_connectedStateTypeIds[lumiVibrationSensorThingClassId] = lumiVibrationSensorConnectedStateTypeId;
-    m_connectedStateTypeIds[lumiPowerSocketThingClassId] = lumiPowerSocketConnectedStateTypeId;
-    m_connectedStateTypeIds[lumiRelayThingClassId] = lumiRelayConnectedStateTypeId;
-    m_connectedStateTypeIds[lumiRemoteThingClassId] = lumiRemoteConnectedStateTypeId;
-
-    m_versionStateTypeIds[lumiHTSensorThingClassId] = lumiHTSensorVersionStateTypeId;
-    m_versionStateTypeIds[lumiButtonSensorThingClassId] = lumiButtonSensorVersionStateTypeId;
-    m_versionStateTypeIds[lumiLongpressButtonSensorThingClassId] = lumiLongpressButtonSensorVersionStateTypeId;
-    m_versionStateTypeIds[lumiMagnetSensorThingClassId] = lumiMagnetSensorVersionStateTypeId;
-    m_versionStateTypeIds[lumiMotionSensorThingClassId] = lumiMotionSensorVersionStateTypeId;
-    m_versionStateTypeIds[xiaomiMotionSensorThingClassId] = xiaomiMotionSensorVersionStateTypeId;
-    m_versionStateTypeIds[lumiWaterSensorThingClassId] = lumiWaterSensorVersionStateTypeId;
-    m_versionStateTypeIds[lumiWeatherSensorThingClassId] = lumiWeatherSensorVersionStateTypeId;
-    m_versionStateTypeIds[lumiVibrationSensorThingClassId] = lumiVibrationSensorVersionStateTypeId;
-    m_versionStateTypeIds[lumiPowerSocketThingClassId] = lumiPowerSocketVersionStateTypeId;
-    m_versionStateTypeIds[lumiRelayThingClassId] = lumiRelayVersionStateTypeId;
-    m_versionStateTypeIds[lumiRemoteThingClassId] = lumiRemoteVersionStateTypeId;
-
-    m_signalStrengthStateTypeIds[lumiHTSensorThingClassId] = lumiHTSensorSignalStrengthStateTypeId;
-    m_signalStrengthStateTypeIds[lumiButtonSensorThingClassId] = lumiButtonSensorSignalStrengthStateTypeId;
-    m_signalStrengthStateTypeIds[lumiLongpressButtonSensorThingClassId] = lumiLongpressButtonSensorSignalStrengthStateTypeId;
-    m_signalStrengthStateTypeIds[lumiMagnetSensorThingClassId] = lumiMagnetSensorSignalStrengthStateTypeId;
-    m_signalStrengthStateTypeIds[lumiMotionSensorThingClassId] = lumiMotionSensorSignalStrengthStateTypeId;
-    m_signalStrengthStateTypeIds[xiaomiMotionSensorThingClassId] = xiaomiMotionSensorSignalStrengthStateTypeId;
-    m_signalStrengthStateTypeIds[lumiWaterSensorThingClassId] = lumiWaterSensorSignalStrengthStateTypeId;
-    m_signalStrengthStateTypeIds[lumiWeatherSensorThingClassId] = lumiWeatherSensorSignalStrengthStateTypeId;
-    m_signalStrengthStateTypeIds[lumiVibrationSensorThingClassId] = lumiVibrationSensorSignalStrengthStateTypeId;
-    m_signalStrengthStateTypeIds[lumiPowerSocketThingClassId] = lumiPowerSocketSignalStrengthStateTypeId;
-    m_signalStrengthStateTypeIds[lumiRelayThingClassId] = lumiRelaySignalStrengthStateTypeId;
-    m_signalStrengthStateTypeIds[lumiRemoteThingClassId] = lumiRemoteSignalStrengthStateTypeId;
 
     // Known model identifier
     m_knownLumiDevices.insert("lumi.sensor_ht", lumiHTSensorThingClassId);
@@ -196,36 +159,16 @@ bool IntegrationPluginZigbeeLumi::handleNode(ZigbeeNode *node, const QUuid &netw
     return false;
 }
 
-void IntegrationPluginZigbeeLumi::handleRemoveNode(ZigbeeNode *node, const QUuid &networkUuid)
-{
-    Q_UNUSED(networkUuid)
-
-    if (m_thingNodes.values().contains(node)) {
-        Thing *thing = m_thingNodes.key(node);
-        qCDebug(dcZigbeeLumi()) << node << "for" << thing << "has left the network.";
-        m_thingNodes.remove(thing);
-        emit autoThingDisappeared(thing->id());
-    }
-}
-
-void IntegrationPluginZigbeeLumi::init()
-{
-    hardwareManager()->zigbeeResource()->registerHandler(this);
-}
-
 void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
 {
     Thing *thing = info->thing();
-
-    // Get the node for this thing
-    QUuid networkUuid = thing->paramValue(m_networkUuidParamTypeIds.value(thing->thingClassId())).toUuid();
-    ZigbeeAddress zigbeeAddress = ZigbeeAddress(thing->paramValue(m_zigbeeAddressParamTypeIds.value(thing->thingClassId())).toString());
-    ZigbeeNode *node = hardwareManager()->zigbeeResource()->claimNode(this, networkUuid, zigbeeAddress);
-    if (!node) {
-        qCWarning(dcZigbeeLumi()) << "Zigbee node for" << info->thing()->name() << "not found.´";
+    if (!manageNode(thing)) {
+        qCWarning(dcZigbeeLumi()) << "Failed to claim node during setup.";
         info->finish(Thing::ThingErrorHardwareNotAvailable);
         return;
     }
+
+    ZigbeeNode *node = nodeForThing(thing);
 
     // Get the endpoint of interest (0x01) for this device
     ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
@@ -235,25 +178,8 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
         return;
     }
 
-    // Store the node thing association for removing
-    m_thingNodes.insert(thing, node);
-
-    // Update connected state
-    thing->setStateValue(m_connectedStateTypeIds.value(thing->thingClassId()), node->reachable());
-    connect(node, &ZigbeeNode::reachableChanged, thing, [thing, this](bool reachable){
-        thing->setStateValue(m_connectedStateTypeIds.value(thing->thingClassId()), reachable);
-    });
-
-    // Update signal strength
-    thing->setStateValue(m_signalStrengthStateTypeIds.value(thing->thingClassId()), qRound(node->lqi() * 100.0 / 255.0));
-    connect(node, &ZigbeeNode::lqiChanged, thing, [this, thing](quint8 lqi){
-        uint signalStrength = qRound(lqi * 100.0 / 255.0);
-        qCDebug(dcZigbeeLumi()) << thing << "signal strength changed" << signalStrength << "%";
-        thing->setStateValue(m_signalStrengthStateTypeIds.value(thing->thingClassId()), signalStrength);
-    });
-
     // Set the version
-    thing->setStateValue(m_versionStateTypeIds.value(thing->thingClassId()), endpoint->softwareBuildId());
+    thing->setStateValue("version", endpoint->softwareBuildId());
 
     // Thing specific setup
     if (thing->thingClassId() == lumiMagnetSensorThingClassId) {
@@ -287,7 +213,6 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
             });
         }
     }
-
 
     if (thing->thingClassId() == lumiMotionSensorThingClassId) {
         ZigbeeClusterOccupancySensing *occupancyCluster = endpoint->inputCluster<ZigbeeClusterOccupancySensing>(ZigbeeClusterLibrary::ClusterIdOccupancySensing);
@@ -341,7 +266,6 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
         }
     }
 
-
     if (thing->thingClassId() == xiaomiMotionSensorThingClassId) {
         ZigbeeClusterOccupancySensing *occupancyCluster = endpoint->inputCluster<ZigbeeClusterOccupancySensing>(ZigbeeClusterLibrary::ClusterIdOccupancySensing);
         if (occupancyCluster) {
@@ -380,67 +304,13 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
     }
 
     if (thing->thingClassId() == lumiHTSensorThingClassId) {
-        ZigbeeClusterTemperatureMeasurement *temperatureCluster = endpoint->inputCluster<ZigbeeClusterTemperatureMeasurement>(ZigbeeClusterLibrary::ClusterIdTemperatureMeasurement);
-        if (temperatureCluster) {
-            // Only set the state if the cluster actually has the attribute
-            if (temperatureCluster->hasAttribute(ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue)) {
-                thing->setStateValue(lumiHTSensorTemperatureStateTypeId, temperatureCluster->temperature());
-            }
-
-            connect(temperatureCluster, &ZigbeeClusterTemperatureMeasurement::temperatureChanged, thing, [thing](double temperature){
-                qCDebug(dcZigbeeLumi()) << thing << "temperature changed" << temperature << "°C";
-                thing->setStateValue(lumiHTSensorTemperatureStateTypeId, temperature);
-            });
-        } else {
-            qCWarning(dcZigbeeLumi()) << "Could not find the temperature measurement server cluster on" << thing << endpoint;
-        }
-
-        ZigbeeClusterRelativeHumidityMeasurement *humidityCluster = endpoint->inputCluster<ZigbeeClusterRelativeHumidityMeasurement>(ZigbeeClusterLibrary::ClusterIdRelativeHumidityMeasurement);
-        if (humidityCluster) {
-            // Only set the state if the cluster actually has the attribute
-            if (humidityCluster->hasAttribute(ZigbeeClusterRelativeHumidityMeasurement::AttributeMeasuredValue)) {
-                thing->setStateValue(lumiHTSensorHumidityStateTypeId, humidityCluster->humidity());
-            }
-
-            connect(humidityCluster, &ZigbeeClusterRelativeHumidityMeasurement::humidityChanged, thing, [thing](double humidity){
-                qCDebug(dcZigbeeLumi()) << thing << "humidity changed" << humidity << "%";
-                thing->setStateValue(lumiHTSensorHumidityStateTypeId, humidity);
-            });
-        } else {
-            qCWarning(dcZigbeeLumi()) << "Could not find the relative humidity measurement server cluster on" << thing << endpoint;
-        }
+        connectToTemperatureMeasurementInputCluster(thing, endpoint);
+        connectToRelativeHumidityMeasurementInputCluster(thing, endpoint);
     }
 
     if (thing->thingClassId() == lumiWeatherSensorThingClassId) {
-        ZigbeeClusterTemperatureMeasurement *temperatureCluster = endpoint->inputCluster<ZigbeeClusterTemperatureMeasurement>(ZigbeeClusterLibrary::ClusterIdTemperatureMeasurement);
-        if (temperatureCluster) {
-            // Only set the state if the cluster actually has the attribute
-            if (temperatureCluster->hasAttribute(ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue)) {
-                thing->setStateValue(lumiWeatherSensorTemperatureStateTypeId, temperatureCluster->temperature());
-            }
-
-            connect(temperatureCluster, &ZigbeeClusterTemperatureMeasurement::temperatureChanged, thing, [thing](double temperature){
-                qCDebug(dcZigbeeLumi()) << thing << "temperature changed" << temperature << "°C";
-                thing->setStateValue(lumiWeatherSensorTemperatureStateTypeId, temperature);
-            });
-        } else {
-            qCWarning(dcZigbeeLumi()) << "Could not find the temperature measurement server cluster on" << thing << endpoint;
-        }
-
-        ZigbeeClusterRelativeHumidityMeasurement *humidityCluster = endpoint->inputCluster<ZigbeeClusterRelativeHumidityMeasurement>(ZigbeeClusterLibrary::ClusterIdRelativeHumidityMeasurement);
-        if (humidityCluster) {
-            // Only set the state if the cluster actually has the attribute
-            if (humidityCluster->hasAttribute(ZigbeeClusterRelativeHumidityMeasurement::AttributeMeasuredValue)) {
-                thing->setStateValue(lumiWeatherSensorHumidityStateTypeId, humidityCluster->humidity());
-            }
-
-            connect(humidityCluster, &ZigbeeClusterRelativeHumidityMeasurement::humidityChanged, thing, [thing](double humidity){
-                qCDebug(dcZigbeeLumi()) << thing << "humidity changed" << humidity << "%";
-                thing->setStateValue(lumiWeatherSensorHumidityStateTypeId, humidity);
-            });
-        } else {
-            qCWarning(dcZigbeeLumi()) << "Could not find the relative humidity measurement server cluster on" << thing << endpoint;
-        }
+        connectToTemperatureMeasurementInputCluster(thing, endpoint);
+        connectToRelativeHumidityMeasurementInputCluster(thing, endpoint);
 
         ZigbeeClusterPressureMeasurement *pressureCluster = endpoint->inputCluster<ZigbeeClusterPressureMeasurement>(ZigbeeClusterLibrary::ClusterIdPressureMeasurement);
         if (pressureCluster) {
@@ -456,7 +326,6 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
             qCWarning(dcZigbeeLumi()) << "Could not find the pressure measurement server cluster on" << thing << endpoint;
         }
     }
-
 
     if (thing->thingClassId() == lumiWaterSensorThingClassId) {
         connect(endpoint, &ZigbeeNodeEndpoint::clusterAttributeChanged, this, [thing](ZigbeeCluster *cluster, const ZigbeeClusterAttribute &attribute){
@@ -487,7 +356,6 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
             }
         });
     }
-
 
     if (thing->thingClassId() == lumiVibrationSensorThingClassId) {
         connect(endpoint, &ZigbeeNodeEndpoint::clusterAttributeChanged, this, [this, thing](ZigbeeCluster *cluster, const ZigbeeClusterAttribute &attribute){
@@ -550,52 +418,15 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
     }
 
     if (thing->thingClassId() == lumiPowerSocketThingClassId) {
-        ZigbeeClusterOnOff *onOffCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
-        if (onOffCluster) {
-            if (onOffCluster->hasAttribute(ZigbeeClusterOnOff::AttributeOnOff)) {
-                thing->setStateValue(lumiPowerSocketPowerStateTypeId, onOffCluster->power());
-            }
-            connect(onOffCluster, &ZigbeeClusterOnOff::powerChanged, thing, [thing](bool power){
-                thing->setStateValue(lumiPowerSocketPowerStateTypeId, power);
-            });
-        } else {
-            qCWarning(dcZigbeeLumi()) << "Could not find OnOff cluster on" << thing << endpoint;
-        }
-        if (node->hasEndpoint(0x02)) {
-            ZigbeeClusterAnalogInput *analogInputCluster = node->getEndpoint(0x02)->inputCluster<ZigbeeClusterAnalogInput>(ZigbeeClusterLibrary::ClusterIdAnalogInput);
-            if (analogInputCluster) {
-                // On very low power consumptions on the device (for instance with a fully charged laptop on it drawing virtually nothing),
-                // it seems to produce insanely huge values. Let's correct them down to 0
-                float presentValue = analogInputCluster->presentValue();
-                if (presentValue > 3000) {
-                    qCDebug(dcZigbeeLumi()) << "Discarding unrealistic value:" << presentValue;
-                    presentValue = 0;
-                }
-                thing->setStateValue(lumiPowerSocketCurrentPowerStateTypeId, presentValue);
-                thing->setProperty("lastTimestamp", QDateTime::currentDateTime());
 
-                connect(analogInputCluster, &ZigbeeClusterAnalogInput::presentValueChanged, thing, [thing](float presentValue){
-                    if (presentValue > 3000) {
-                        qCDebug(dcZigbeeLumi()) << "Discarding unrealistic value:" << presentValue;
-                        presentValue = 0;
-                    }
-                    double lastCurrentPower = thing->stateValue(lumiPowerSocketCurrentPowerStateTypeId).toDouble();
-                    QDateTime now = QDateTime::currentDateTime();
-                    QDateTime lastTimestamp = thing->property("lastTimestamp").toDateTime();
-                    if (lastTimestamp.isValid()) {
-                        double lastTotal = thing->stateValue(lumiPowerSocketTotalEnergyConsumedStateTypeId).toDouble();
-                        qint64 msecsSinceLast = lastTimestamp.msecsTo(now);
-                        double wattMs = lastCurrentPower / msecsSinceLast;
-                        double kwh = wattMs / 60 / 60;
-                        qCDebug(dcZigbeeLumi()) << "Updating total power" << msecsSinceLast << kwh << lastTotal;
-                        thing->setStateValue(lumiPowerSocketTotalEnergyConsumedStateTypeId, lastTotal + kwh);
-                    }
-                    thing->setStateValue(lumiPowerSocketCurrentPowerStateTypeId, presentValue);
-                    thing->setProperty("lastTimestamp", now);
-                });
-            } else {
-                qCWarning(dcZigbeeLumi()) << "Could not find AnalogInput cluster on" << thing << endpoint;
-            }
+        connectToOtaOutputCluster(thing, endpoint);
+        connectToOnOffInputCluster(thing, endpoint);
+
+        if (node->hasEndpoint(0x02)) {
+            connectToAnalogInputCluster(thing, node->getEndpoint(0x02), "currentPower");
+        }
+        if (node->hasEndpoint(0x03)) {
+            connectToAnalogInputCluster(thing, node->getEndpoint(0x03), "totalEnergyConsumed");
         }
     }
 
@@ -644,38 +475,14 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
         // Get the 2 endpoints
         ZigbeeNodeEndpoint *endpoint1 = node->getEndpoint(0x01);
         if (endpoint1) {
-            ZigbeeClusterOnOff *onOffCluster = endpoint1->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
-            if (onOffCluster) {
-                if (onOffCluster->hasAttribute(ZigbeeClusterOnOff::AttributeOnOff)) {
-                    thing->setStateValue(lumiRelayRelay1StateTypeId, onOffCluster->power());
-                }
-
-                connect(onOffCluster, &ZigbeeClusterOnOff::powerChanged, thing, [thing](bool power){
-                    qCDebug(dcZigbeeLumi()) << thing << "power changed" << power;
-                    thing->setStateValue(lumiRelayRelay1StateTypeId, power);
-                });
-            } else {
-                qCWarning(dcZigbeeLumi()) << "Could not find the OnOff input cluster on" << thing << endpoint1;
-            }
+            connectToOnOffInputCluster(thing, endpoint1, "relay1");
         } else {
             qCWarning(dcZigbeeLumi()) << "Could not find endpoint 1 on" << thing << node;
         }
 
         ZigbeeNodeEndpoint *endpoint2 = node->getEndpoint(0x02);
         if (endpoint2) {
-            ZigbeeClusterOnOff *onOffCluster = endpoint2->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
-            if (onOffCluster) {
-                if (onOffCluster->hasAttribute(ZigbeeClusterOnOff::AttributeOnOff)) {
-                    thing->setStateValue(lumiRelayRelay2StateTypeId, onOffCluster->power());
-                }
-
-                connect(onOffCluster, &ZigbeeClusterOnOff::powerChanged, thing, [thing](bool power){
-                    qCDebug(dcZigbeeLumi()) << thing << "power changed" << power;
-                    thing->setStateValue(lumiRelayRelay2StateTypeId, power);
-                });
-            } else {
-                qCWarning(dcZigbeeLumi()) << "Could not find the OnOff input cluster on" << thing << endpoint1;
-            }
+            connectToOnOffInputCluster(thing, endpoint2, "relay2");
         } else {
             qCWarning(dcZigbeeLumi()) << "Could not find endpoint 2 on" << thing << node;
         }
@@ -687,15 +494,9 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
 void IntegrationPluginZigbeeLumi::executeAction(ThingActionInfo *info)
 {
     Thing *thing = info->thing();
+    ZigbeeNode *node = nodeForThing(info->thing());
 
     if (thing->thingClassId() == lumiPowerSocketThingClassId) {
-        ZigbeeNode *node = m_thingNodes.value(thing);
-        if (!node) {
-            qCWarning(dcZigbeeLumi()) << "Zigbee node for" << thing << "not found.";
-            info->finish(Thing::ThingErrorHardwareFailure);
-            return;
-        }
-
         ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
         if (!endpoint) {
             qCWarning(dcZigbeeLumi()) << "Unable to get the endpoint from node" << node << "for" << thing;
@@ -703,37 +504,24 @@ void IntegrationPluginZigbeeLumi::executeAction(ThingActionInfo *info)
             return;
         }
 
-        ZigbeeClusterOnOff *onOffCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
-        if (!onOffCluster) {
-            qCWarning(dcZigbeeLumi()) << "Could not find on/off cluster for" << thing << "in" << node;
-            info->finish(Thing::ThingErrorHardwareFailure);
+        if (info->action().actionTypeId() == lumiPowerSocketPerformUpdateActionTypeId) {
+            enableFirmwareUpdate(thing);
+            executeImageNotifyOtaOutputCluster(info, endpoint);
             return;
         }
 
-        bool power = info->action().param(lumiPowerSocketPowerActionPowerParamTypeId).value().toBool();
-        qCDebug(dcZigbeeLumi()) << "Set power for" << info->thing() << "to" << power;
-        ZigbeeClusterReply *reply = (power ? onOffCluster->commandOn() : onOffCluster->commandOff());
-        connect(reply, &ZigbeeClusterReply::finished, info, [=](){
-            // Note: reply will be deleted automatically
-            if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(dcZigbeeLumi()) << "Failed to set power on" << thing << reply->error();
-                info->finish(Thing::ThingErrorHardwareFailure);
-            } else {
-                info->finish(Thing::ThingErrorNoError);
-                qCDebug(dcZigbeeLumi()) << "Set power finished successfully for" << thing;
-                thing->setStateValue(lumiPowerSocketPowerStateTypeId, power);
-            }
-        });
-        return;
+        if (info->action().actionTypeId() == lumiPowerSocketPowerActionTypeId) {
+            executePowerOnOffInputCluster(info, endpoint);
+            return;
+        }
+
+        if (info->action().actionTypeId() == lumiPowerSocketAlertActionTypeId) {
+            executeIdentifyIdentifyInputCluster(info, endpoint);
+            return;
+        }
     }
 
     if (thing->thingClassId() == lumiRelayThingClassId) {
-        ZigbeeNode *node = m_thingNodes.value(thing);
-        if (!node) {
-            qCWarning(dcZigbeeLumi()) << "Zigbee node for" << thing << "not found.";
-            info->finish(Thing::ThingErrorHardwareFailure);
-            return;
-        }
 
         if (info->action().actionTypeId() == lumiRelayRelay1ActionTypeId) {
             ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
@@ -743,23 +531,8 @@ void IntegrationPluginZigbeeLumi::executeAction(ThingActionInfo *info)
                 return;
             }
 
-            ZigbeeClusterOnOff *onOffCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
-            if (!onOffCluster) {
-                qCWarning(dcZigbeeLumi()) << "Unable to get the OnOff cluster from endpoint" << endpoint << "on" << node << "for" << thing;
-                info->finish(Thing::ThingErrorSetupFailed);
-                return;
-            }
-            bool power = info->action().param(lumiRelayRelay1ActionRelay1ParamTypeId).value().toBool();
-            ZigbeeClusterReply *reply = (power ? onOffCluster->commandOn() : onOffCluster->commandOff());
-            connect(reply, &ZigbeeClusterReply::finished, this, [=](){
-                // Note: reply will be deleted automatically
-                if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
-                    info->finish(Thing::ThingErrorHardwareFailure);
-                } else {
-                    info->finish(Thing::ThingErrorNoError);
-                    thing->setStateValue(lumiRelayRelay1StateTypeId, power);
-                }
-            });
+            executePowerOnOffInputCluster(info, endpoint);
+            return;
         }
 
         if (info->action().actionTypeId() == lumiRelayRelay2ActionTypeId) {
@@ -770,34 +543,9 @@ void IntegrationPluginZigbeeLumi::executeAction(ThingActionInfo *info)
                 return;
             }
 
-            ZigbeeClusterOnOff *onOffCluster = endpoint->inputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
-            if (!onOffCluster) {
-                qCWarning(dcZigbeeLumi()) << "Unable to get the OnOff cluster from endpoint" << endpoint << "on" << node << "for" << thing;
-                info->finish(Thing::ThingErrorSetupFailed);
-                return;
-            }
-            bool power = info->action().param(lumiRelayRelay2ActionRelay2ParamTypeId).value().toBool();
-            ZigbeeClusterReply *reply = (power ? onOffCluster->commandOn() : onOffCluster->commandOff());
-            connect(reply, &ZigbeeClusterReply::finished, this, [=](){
-                // Note: reply will be deleted automatically
-                if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
-                    info->finish(Thing::ThingErrorHardwareFailure);
-                } else {
-                    info->finish(Thing::ThingErrorNoError);
-                    thing->setStateValue(lumiRelayRelay2StateTypeId, power);
-                }
-            });
+            executePowerOnOffInputCluster(info, endpoint);
         }
     }
 
     info->finish(Thing::ThingErrorUnsupportedFeature);
-}
-
-void IntegrationPluginZigbeeLumi::thingRemoved(Thing *thing)
-{
-    ZigbeeNode *node = m_thingNodes.take(thing);
-    if (node) {
-        QUuid networkUuid = thing->paramValue(m_networkUuidParamTypeIds.value(thing->thingClassId())).toUuid();
-        hardwareManager()->zigbeeResource()->removeNodeFromNetwork(networkUuid, node);
-    }
 }

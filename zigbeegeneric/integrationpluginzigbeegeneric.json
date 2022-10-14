@@ -13,7 +13,7 @@
                     "displayName": "On/Off Light",
                     "id": "7fbc3165-e618-4dc0-8255-8dac2cc08dfa",
                     "setupMethod": "JustAdd",
-                    "createMethods": [ "Auto" ],
+                    "createMethods": [ "auto" ],
                     "interfaces": [ "light", "alert", "wirelessconnectable" ],
                     "paramTypes": [
                         {
@@ -109,7 +109,7 @@
                     "displayName": "Dimmable Light",
                     "id": "b2eeb554-ca5c-46b5-a897-bc443fb186ea",
                     "setupMethod": "JustAdd",
-                    "createMethods": [ "Auto" ],
+                    "createMethods": [ "auto" ],
                     "interfaces": [ "dimmablelight", "alert", "wirelessconnectable" ],
                     "paramTypes": [
                         {
@@ -217,7 +217,7 @@
                     "displayName": "Color Temperature Light",
                     "id": "498815c1-a6a3-48e9-9c9b-bff974694b26",
                     "setupMethod": "JustAdd",
-                    "createMethods": [ "Auto" ],
+                    "createMethods": [ "auto" ],
                     "interfaces": [ "colortemperaturelight", "alert", "wirelessconnectable" ],
                     "paramTypes": [
                         {
@@ -342,7 +342,7 @@
                     "displayName": "Color Light",
                     "id": "8d157281-73c0-4d2c-96a0-572d26e9dd4f",
                     "setupMethod": "JustAdd",
-                    "createMethods": [ "Auto" ],
+                    "createMethods": [ "auto" ],
                     "interfaces": [ "colorlight", "alert", "wirelessconnectable" ],
                     "paramTypes": [
                         {
@@ -471,7 +471,7 @@
                     "id": "ca9af6cf-2d15-4d54-ba07-3d2ce03445b8",
                     "name": "thermostat",
                     "displayName": "Zigbee Thermostat",
-                    "createMethods": ["auto"],
+                    "createMethods": [ "auto" ],
                     "interfaces": ["thermostat", "temperaturesensor", "battery",  "wirelessconnectable"],
                     "paramTypes": [
                         {
@@ -604,7 +604,7 @@
                     "displayName": "Power socket",
                     "id": "800a8df8-06cb-4d93-8334-944fcce9651a",
                     "setupMethod": "JustAdd",
-                    "createMethods": [ "Auto" ],
+                    "createMethods": [ "auto" ],
                     "interfaces": [ "powersocket", "alert", "wirelessconnectable" ],
                     "paramTypes": [
                         {
@@ -697,7 +697,7 @@
                     "name": "powerMeterSocket",
                     "displayName": "Power socket with energy metering",
                     "id": "7cd9f139-013b-49da-ab71-794cd1e22f5d",
-                    "createMethods": [ "Auto" ],
+                    "createMethods": [ "auto" ],
                     "interfaces": [ "powersocket", "smartmeterconsumer", "alert", "wirelessconnectable" ],
                     "paramTypes": [
                         {
@@ -811,7 +811,7 @@
                     "displayName": "Door lock",
                     "id": "34cb3d09-dd9f-4b95-95d0-30a1cd94adac",
                     "setupMethod": "JustAdd",
-                    "createMethods": [ "Auto" ],
+                    "createMethods": [ "auto" ],
                     "interfaces": [ "simpleclosable", "battery", "wirelessconnectable" ],
                     "paramTypes": [
                         {
@@ -1111,6 +1111,7 @@
                     "id": "6b49bd7e-4331-4e1b-bc1b-7860906fda15",
                     "name": "fireSensor",
                     "displayName": "Fire sensor",
+                    "createMethods": ["auto"],
                     "interfaces": ["firesensor", "alarm", "wirelessconnectable", "battery"],
                     "paramTypes": [
                         {
@@ -1220,6 +1221,7 @@
                     "id": "ff9657f3-4076-41b9-ae7d-537866fd0ddc",
                     "name": "temperatureSensor",
                     "displayName": "Temperature sensor",
+                    "createMethods": ["auto"],
                     "interfaces": ["temperaturesensor", "wirelessconnectable", "battery"],
                     "paramTypes": [
                         {
@@ -1302,6 +1304,7 @@
                     "id": "22a389b6-1b2b-4b88-a47a-d9fd16c8ab2c",
                     "name": "waterSensor",
                     "displayName": "Water sensor",
+                    "createMethods": ["auto"],
                     "interfaces": ["watersensor", "wirelessconnectable", "battery"],
                     "paramTypes": [
                         {
@@ -1392,6 +1395,7 @@
                     "id": "2c35236c-bc5c-4736-beb6-d8dfd0c6bc40",
                     "name": "lightSensor",
                     "displayName": "Light sensor",
+                    "createMethods": ["auto"],
                     "interfaces": ["lightsensor", "wirelessconnectable", "battery"],
                     "paramTypes": [
                         {
@@ -1483,6 +1487,7 @@
                     "id": "3976d3fc-6bd3-4574-8c5b-90c9a07c6440",
                     "name": "htSensor",
                     "displayName": "Temperature & humidity sensor",
+                    "createMethods": ["auto"],
                     "interfaces": ["temperaturesensor", "humiditysensor", "wirelessconnectable", "battery"],
                     "paramTypes": [
                         {

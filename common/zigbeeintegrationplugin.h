@@ -116,6 +116,7 @@ protected:
     void connectToOccupancySensingInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToFanControlInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToOtaOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
+    void connectToAnalogInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName);
 
     void executePowerOnOffInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);
     void executeBrightnessLevelControlInputCluster(ThingActionInfo *info, ZigbeeNodeEndpoint *endpoint);

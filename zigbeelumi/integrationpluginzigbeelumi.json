@@ -743,7 +743,7 @@
                     "id": "76afde12-e781-4723-94ca-5704e800e821",
                     "setupMethod": "JustAdd",
                     "createMethods": [ "Auto" ],
-                    "interfaces": [ "powersocket", "smartmeterconsumer", "alert", "wirelessconnectable" ],
+                    "interfaces": [ "powersocket", "smartmeterconsumer", "alert", "wirelessconnectable", "update" ],
                     "paramTypes": [
                         {
                             "id": "0ebea7b9-488d-490e-9d70-e04ec92efd67",
@@ -783,12 +783,38 @@
                         },
                         {
                             "id": "e4a8e90c-4e38-4b3b-b5e6-fd336e3fa2a8",
-                            "name": "version",
+                            "name": "currentVersion",
                             "displayName": "Version",
                             "displayNameEvent": "Version changed",
                             "type": "QString",
                             "cached": true,
                             "defaultValue": ""
+                        },
+                        {
+                            "id": "21e03a17-7bb8-41f7-8cba-9194354892f9",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle",
+                            "cached": false
+                        },
+                        {
+                            "id": "79ca6068-5532-4b3c-b8e2-d2533b03cc93",
+                            "name": "availableVersion",
+                            "displayName": "Available version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "6655f819-b020-4573-843d-32d17a931db7",
+                            "name": "updateProgress",
+                            "displayName": "Update progress",
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "defaultValue": 0
                         },
                         {
                             "id": "4c81aa6b-3a8a-4d2c-be87-29486ca242af",
@@ -825,6 +851,11 @@
                             "id": "67052e4d-350a-406f-91a9-3ce3f8eaaa7f",
                             "name": "alert",
                             "displayName": "Identify"
+                        },
+                        {
+                            "id": "447936ea-96aa-4e37-a5ae-c62e3f7f3d05",
+                            "name": "performUpdate",
+                            "displayName": "Start update"
                         }
                     ],
                     "eventTypes": [

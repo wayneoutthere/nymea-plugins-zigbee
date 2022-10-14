@@ -38,6 +38,7 @@
 #include <zcl/general/zigbeeclusterpowerconfiguration.h>
 #include <zcl/general/zigbeeclusteronoff.h>
 #include <zcl/general/zigbeeclusterlevelcontrol.h>
+#include <zcl/general/zigbeeclusteranaloginput.h>
 #include <zcl/hvac/zigbeeclusterthermostat.h>
 #include <zcl/hvac/zigbeeclusterfancontrol.h>
 #include <zcl/smartenergy/zigbeeclustermetering.h>
@@ -1183,6 +1184,22 @@ void ZigbeeIntegrationPlugin::connectToOtaOutputCluster(Thing *thing, ZigbeeNode
             // Notifying again to obtain the installed firmware version
             otaCluster->sendImageNotify();
         }
+    });
+}
+
+void ZigbeeIntegrationPlugin::connectToAnalogInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName)
+{
+    ZigbeeClusterAnalogInput *analogInputCluster = endpoint->inputCluster<ZigbeeClusterAnalogInput>(ZigbeeClusterLibrary::ClusterIdAnalogInput);
+    if (!analogInputCluster) {
+        qCWarning(m_dc) << "Analog input cluster not found on" << thing;
+        return;
+    }
+
+    thing->setStateValue(stateName, analogInputCluster->presentValue());
+    analogInputCluster->readAttributes({ZigbeeClusterAnalogInput::AttributePresentValue});
+
+    connect(analogInputCluster, &ZigbeeClusterAnalogInput::presentValueChanged, thing, [thing, stateName](float presentValue){
+        thing->setStateValue(stateName, presentValue);
     });
 }
 
