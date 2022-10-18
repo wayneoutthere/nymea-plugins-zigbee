@@ -51,31 +51,6 @@
 IntegrationPluginZigbeeLumi::IntegrationPluginZigbeeLumi():
     ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor, dcZigbeeLumi())
 {
-    m_networkUuidParamTypeIds[lumiHTSensorThingClassId] = lumiHTSensorThingNetworkUuidParamTypeId;
-    m_networkUuidParamTypeIds[lumiButtonSensorThingClassId] = lumiButtonSensorThingNetworkUuidParamTypeId;
-    m_networkUuidParamTypeIds[lumiLongpressButtonSensorThingClassId] = lumiLongpressButtonSensorThingNetworkUuidParamTypeId;
-    m_networkUuidParamTypeIds[lumiMagnetSensorThingClassId] = lumiMagnetSensorThingNetworkUuidParamTypeId;
-    m_networkUuidParamTypeIds[lumiMotionSensorThingClassId] = lumiMotionSensorThingNetworkUuidParamTypeId;
-    m_networkUuidParamTypeIds[lumiWaterSensorThingClassId] = lumiWaterSensorThingNetworkUuidParamTypeId;
-    m_networkUuidParamTypeIds[lumiWeatherSensorThingClassId] = lumiWeatherSensorThingNetworkUuidParamTypeId;
-    m_networkUuidParamTypeIds[lumiVibrationSensorThingClassId] = lumiVibrationSensorThingNetworkUuidParamTypeId;
-    m_networkUuidParamTypeIds[lumiPowerSocketThingClassId] = lumiPowerSocketThingNetworkUuidParamTypeId;
-    m_networkUuidParamTypeIds[lumiRelayThingClassId] = lumiRelayThingNetworkUuidParamTypeId;
-    m_networkUuidParamTypeIds[lumiRemoteThingClassId] = lumiRemoteThingNetworkUuidParamTypeId;
-
-    m_zigbeeAddressParamTypeIds[lumiHTSensorThingClassId] = lumiHTSensorThingIeeeAddressParamTypeId;
-    m_zigbeeAddressParamTypeIds[lumiButtonSensorThingClassId] = lumiButtonSensorThingIeeeAddressParamTypeId;
-    m_zigbeeAddressParamTypeIds[lumiLongpressButtonSensorThingClassId] = lumiLongpressButtonSensorThingIeeeAddressParamTypeId;
-    m_zigbeeAddressParamTypeIds[lumiMagnetSensorThingClassId] = lumiMagnetSensorThingIeeeAddressParamTypeId;
-    m_zigbeeAddressParamTypeIds[lumiMotionSensorThingClassId] = lumiMotionSensorThingIeeeAddressParamTypeId;
-    m_zigbeeAddressParamTypeIds[xiaomiMotionSensorThingClassId] = xiaomiMotionSensorThingIeeeAddressParamTypeId;
-    m_zigbeeAddressParamTypeIds[lumiWaterSensorThingClassId] = lumiWaterSensorThingIeeeAddressParamTypeId;
-    m_zigbeeAddressParamTypeIds[lumiWeatherSensorThingClassId] = lumiWeatherSensorThingIeeeAddressParamTypeId;
-    m_zigbeeAddressParamTypeIds[lumiVibrationSensorThingClassId] = lumiVibrationSensorThingIeeeAddressParamTypeId;
-    m_zigbeeAddressParamTypeIds[lumiPowerSocketThingClassId] = lumiPowerSocketThingIeeeAddressParamTypeId;
-    m_zigbeeAddressParamTypeIds[lumiRelayThingClassId] = lumiRelayThingIeeeAddressParamTypeId;
-    m_zigbeeAddressParamTypeIds[lumiRemoteThingClassId] = lumiRemoteThingIeeeAddressParamTypeId;
-
 
     // Known model identifier
     m_knownLumiDevices.insert("lumi.sensor_ht", lumiHTSensorThingClassId);
@@ -96,22 +71,16 @@ QString IntegrationPluginZigbeeLumi::name() const
     return "Lumi";
 }
 
-bool IntegrationPluginZigbeeLumi::handleNode(ZigbeeNode *node, const QUuid &networkUuid)
+bool IntegrationPluginZigbeeLumi::handleNode(ZigbeeNode *node, const QUuid &/*networkUuid*/)
 {
-    // Check if this is Lumi
     // Note: Lumi / Xiaomi / Aquara devices are not in the specs, some older models do not
     // send the node descriptor or use a inconsistent manufacturer code. We use the model identifier
-    // for verification since they seem to start always with lumi.
+    // for verification since they seem to start always with lumi.        
     foreach (ZigbeeNodeEndpoint *endpoint, node->endpoints()) {
         // Get the model identifier if present from the first endpoint. Also this is out of spec
         if (!endpoint->hasInputCluster(ZigbeeClusterLibrary::ClusterIdBasic)) {
             qCDebug(dcZigbeeLumi()) << "This lumi endpoint does not have the basic input cluster, so we skipp it" << endpoint;
             continue;
-        }
-
-        // Basic cluster exists, so we should have the model name
-        if (!endpoint->modelIdentifier().toLower().startsWith("lumi.")) {
-            return false;
         }
 
         ThingClassId thingClassId;
@@ -123,16 +92,13 @@ bool IntegrationPluginZigbeeLumi::handleNode(ZigbeeNode *node, const QUuid &netw
                 thingClassId = xiaomiMotionSensorThingClassId;
             }
 
-        } if (endpoint->modelIdentifier() == "lumi.remote.b1acn01") {
-            // This is the only lumi.remote.* which is actually a button (the same case as lumi.sensor_switch.aq2)
-            // All the other lumi.remote.* are on/off rocker switches. So let's leave m_knownLumiDevices to map
-            // lumi.remote to switches, just special handle it here. Once we have more of such special cases
-            // which will sure arise, the m_knownLumiDevices mechanism probably needs a rework and use regular
-            // expressions or force listing every single supported device one by one for precise mapping.. We'll see...
-            // Also, this one supports longpress, unlike the regular lumi.button_sensor.aq2 and implements the multistate
-            // input cluster like the remotes.. Seems this is a chip for a on/off switch remote shoved into the button case
-            // and only connected one of the buttons...
+        } else if (endpoint->modelIdentifier() == "lumi.remote.b1acn01") {
             thingClassId = lumiLongpressButtonSensorThingClassId;
+
+        } else if (endpoint->modelIdentifier() == "lumi.plug.maeu01" || endpoint->modelIdentifier() == "lumi.plug.mmeu01") {
+            thingClassId = lumiPowerSocketThingClassId;
+            bindElectricalMeasurementCluster(endpoint);
+            bindMeteringCluster(endpoint);
 
         } else {
             foreach (const QString &knownLumi, m_knownLumiDevices.keys()) {
@@ -147,12 +113,7 @@ bool IntegrationPluginZigbeeLumi::handleNode(ZigbeeNode *node, const QUuid &netw
             return false;
         }
 
-        ThingDescriptor descriptor(thingClassId, supportedThings().findById(thingClassId).displayName());
-        ParamList params;
-        params << Param(m_networkUuidParamTypeIds.value(thingClassId), networkUuid.toString());
-        params << Param(m_zigbeeAddressParamTypeIds.value(thingClassId), node->extendedAddress().toString());
-        descriptor.setParams(params);
-        emit autoThingsAppeared({descriptor});
+        createThing(thingClassId, node);
         return true;
     }
 
@@ -170,7 +131,6 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
 
     ZigbeeNode *node = nodeForThing(thing);
 
-    // Get the endpoint of interest (0x01) for this device
     ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
     if (!endpoint) {
         qCWarning(dcZigbeeLumi()) << "Zigbee endpoint 1 not found on" << thing;
@@ -422,11 +382,26 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
         connectToOtaOutputCluster(thing, endpoint);
         connectToOnOffInputCluster(thing, endpoint);
 
-        if (node->hasEndpoint(0x02)) {
-            connectToAnalogInputCluster(thing, node->getEndpoint(0x02), "currentPower");
-        }
-        if (node->hasEndpoint(0x03)) {
-            connectToAnalogInputCluster(thing, node->getEndpoint(0x03), "totalEnergyConsumed");
+        if (node->modelName() == "lumi.plug.maeu01" || node->modelName() == "lumi.plug.mmeu01") {
+            // Those seem to have the electricalmeasurement and metering clusters, but at least for some models/version
+            // they don't seem to report anything but some instead offer analogInput clusters that report the values...
+            connectToElectricalMeasurementCluster(thing, endpoint);
+            connectToMeteringCluster(thing, endpoint);
+
+            if (node->hasEndpoint(0x15)) {
+                connectToAnalogInputCluster(thing, node->getEndpoint(0x15), "currentPower");
+            }
+            if (node->hasEndpoint(0x16)) {
+                connectToAnalogInputCluster(thing, node->getEndpoint(0x16), "totalEnergyConsumed");
+            }
+
+        } else if (node->modelName() == "lumi.plug") {
+            if (node->hasEndpoint(0x02)) {
+                connectToAnalogInputCluster(thing, node->getEndpoint(0x02), "currentPower");
+            }
+            if (node->hasEndpoint(0x03)) {
+                connectToAnalogInputCluster(thing, node->getEndpoint(0x03), "totalEnergyConsumed");
+            }
         }
     }
 

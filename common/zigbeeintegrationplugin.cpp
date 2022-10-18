@@ -1474,6 +1474,7 @@ ZigbeeIntegrationPlugin::FirmwareIndexEntry ZigbeeIntegrationPlugin::checkFirmwa
                 && (image.minFileVersion == 0 || image.minFileVersion <= currentFileVersion)
                 && (image.maxFileVersion == 0 || image.maxFileVersion >= currentFileVersion)
                 && (image.modelId.isEmpty() || image.modelId == modelName)) {
+            qCDebug(m_dc) << "Found OTA for" << manufacturerCode << imageType << image.fileVersion;
             return image;
         }
     }

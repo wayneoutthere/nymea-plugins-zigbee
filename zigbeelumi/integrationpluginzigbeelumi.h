@@ -57,9 +57,6 @@ public:
     void executeAction(ThingActionInfo *info) override;
 
 private:
-    QHash<ThingClassId, ParamTypeId> m_networkUuidParamTypeIds;
-    QHash<ThingClassId, ParamTypeId> m_zigbeeAddressParamTypeIds;
-
     QHash<QString, ThingClassId> m_knownLumiDevices;
 
     PluginTimer *m_presenceTimer = nullptr;
