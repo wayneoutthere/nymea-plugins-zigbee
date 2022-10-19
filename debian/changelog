@@ -1,3 +1,16 @@
+nymea-plugins-zigbee (1.5.0) jammy; urgency=medium
+
+  [ Michael Zanetti ]
+  * Enable attribute reporting for lights
+  * Implement OTA mechanism
+  * Rename ZigbeeRemotes to ZigbeeJung and migrate to common plugin code
+  * Tradfri: Add support for STARKVIND
+  * Develco: Update to common code, latest interfaces and remove
+    adaptive filter
+  * Lumi: Update to common code, add some fixes and enable OTA
+
+ -- jenkins <developer@nymea.io>  Wed, 19 Oct 2022 16:01:30 +0200
+
 nymea-plugins-zigbee (1.4.1) jammy; urgency=medium
 
 
