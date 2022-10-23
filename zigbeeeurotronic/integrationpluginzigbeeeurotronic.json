@@ -13,7 +13,7 @@
                     "name": "spirit",
                     "displayName": "SPIRIT ZigBee ",
                     "createMethods": ["auto"],
-                    "interfaces": ["thermostat", "temperaturesensor", "battery",  "wirelessconnectable", "update"],
+                    "interfaces": ["thermostat", "temperaturesensor", "battery",  "wirelessconnectable", "childlock", "update"],
                     "paramTypes": [
                         {
                             "id": "5aff538a-f56d-4e36-b406-b24ef8ef198d",
