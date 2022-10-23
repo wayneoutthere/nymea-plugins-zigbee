@@ -1053,7 +1053,7 @@
                     "id": "1580b37e-9f4f-474a-9a38-a40060f93861",
                     "setupMethod": "JustAdd",
                     "createMethods": [ "Auto" ],
-                    "interfaces": [ "ventilation", "pm25sensor", "wirelessconnectable", "update" ],
+                    "interfaces": [ "ventilation", "pm25sensor", "wirelessconnectable", "childlock", "update" ],
                     "paramTypes": [
                         {
                             "id": "fe269a78-9535-4f50-94b8-8b6b8530e23c",
