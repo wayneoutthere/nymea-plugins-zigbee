@@ -320,7 +320,7 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
     if (thing->thingClassId() == lumiVibrationSensorThingClassId) {
         connect(endpoint, &ZigbeeNodeEndpoint::clusterAttributeChanged, this, [this, thing](ZigbeeCluster *cluster, const ZigbeeClusterAttribute &attribute){
             if (cluster->clusterId() == ZigbeeClusterLibrary::ClusterIdDoorLock) {
-                // Note: shoehow the vibration sensor is using the door lock cluster, with undocumented attribitues.
+                // Note: somehow the vibration sensor is using the door lock cluster, with undocumented attributes.
                 // This device is completly out of spec, so we just recognize the vibration trough tests and it looks like
                 // attribute id 85 is the indicator for vibration. The payload contains an unsigned int, but not sure what it indicates yet
 

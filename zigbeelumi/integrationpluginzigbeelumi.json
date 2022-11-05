@@ -733,7 +733,8 @@
                         {
                             "id": "ce98b90b-f4fb-431d-a7c9-534fd2b76ba4",
                             "name": "vibrationDetected",
-                            "displayName": "Vibration detected"
+                            "displayName": "Vibration detected",
+                            "suggestLogging": true
                         }
                     ]
                 },
