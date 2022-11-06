@@ -1104,6 +1104,7 @@ void ZigbeeIntegrationPlugin::connectToOtaOutputCluster(Thing *thing, ZigbeeNode
             }
         } else {
             qCDebug(m_dc) << QString("Device %0 requested firmware. Old version: %1.%2.%3.%4, no new version available.").arg(thing->name()).arg(currentParsed.applicationRelease).arg(currentParsed.applicationBuild).arg(currentParsed.stackRelease).arg(currentParsed.stackBuild);
+            otaCluster->sendQueryNextImageResponse(transactionSequenceNumber, ZigbeeClusterOta::StatusCodeNoImageAvailable);
             thing->setStateValue("availableVersion", "-");
             thing->setStateValue("updateStatus", "idle");
             thing->setStateValue("updateProgress", 0);
