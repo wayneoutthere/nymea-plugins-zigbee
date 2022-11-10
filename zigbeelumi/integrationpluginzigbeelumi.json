@@ -724,16 +724,72 @@
                             "type": "QString",
                             "cached": true,
                             "defaultValue": ""
+                        },
+                        {
+                            "id": "8ef735ef-332a-40f5-aa57-0408c5d05d46",
+                            "name": "angleX",
+                            "displayName": "Angle X",
+                            "type": "double",
+                            "defaultValue": 0.0,
+                            "cached": false,
+                            "suggestLogging": false
+                        },
+                        {
+                            "id": "0d398c75-9adf-4835-883b-e578e124af98",
+                            "name": "angleY",
+                            "displayName": "Angle Y",
+                            "type": "double",
+                            "defaultValue": 0.0,
+                            "cached": false,
+                            "suggestLogging": false
+                        },
+                        {
+                            "id": "7ead841c-5a20-456b-85ed-983bda234718",
+                            "name": "angleZ",
+                            "displayName": "Angle Z",
+                            "type": "double",
+                            "defaultValue": 0.0,
+                            "cached": false,
+                            "suggestLogging": false
+                        },
+                        {
+                            "id": "10be3741-5bfc-4173-bf4f-e95af0e60d03",
+                            "name": "angleAbsoluteX",
+                            "displayName": "Absolute angle X",
+                            "type": "double",
+                            "defaultValue": 0.0,
+                            "cached": false,
+                            "suggestLogging": false
+                        },
+                        {
+                            "id": "97bf3f80-f70e-4bb1-b4e0-546f153dd3bc",
+                            "name": "angleAbsoluteY",
+                            "displayName": "Absolute angle Y",
+                            "type": "double",
+                            "defaultValue": 0.0,
+                            "cached": false,
+                            "suggestLogging": false
                         }
                     ],
-                    "actionTypes": [
-
-                    ],
+                    "actionTypes": [ ],
                     "eventTypes": [
                         {
                             "id": "ce98b90b-f4fb-431d-a7c9-534fd2b76ba4",
                             "name": "vibrationDetected",
-                            "displayName": "Vibration detected"
+                            "displayName": "Vibration detected",
+                            "suggestLogging": true
+                        },
+                        {
+                            "id": "66830e32-172b-488e-a0c8-56ec6ef802b5",
+                            "name": "tiltDetected",
+                            "displayName": "Tilt detected",
+                            "suggestLogging": true
+                        },
+                        {
+                            "id": "6ee738a9-34ea-45dc-8399-be6bb52ff164",
+                            "name": "dropDetected",
+                            "displayName": "Drop detected",
+                            "suggestLogging": true
                         }
                     ]
                 },
