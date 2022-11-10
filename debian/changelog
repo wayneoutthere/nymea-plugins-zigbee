@@ -1,3 +1,18 @@
+nymea-plugins-zigbee (1.6.0) jammy; urgency=medium
+
+  [ Michael Zanetti ]
+  * Eurotronic, Tradfri: Add childlock interface
+  * Tuya: Add microwave presence sensor
+
+  [ Simon Stürz ]
+  * Lumi: update vibration sensor events, add axis angles and absolute
+    angles
+
+  [ Michael Zanetti ]
+  * Eurotronic: Queue actions
+
+ -- jenkins <developer@nymea.io>  Thu, 10 Nov 2022 10:26:59 +0100
+
 nymea-plugins-zigbee (1.5.1) jammy; urgency=medium
 
   [ Michael Zanetti ]
