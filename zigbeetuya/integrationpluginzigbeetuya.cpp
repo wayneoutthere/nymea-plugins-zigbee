@@ -31,6 +31,7 @@
 
 #include "integrationpluginzigbeetuya.h"
 #include "plugininfo.h"
+#include "dpvalue.h"
 
 #include <hardware/zigbee/zigbeehardwareresource.h>
 
@@ -40,8 +41,27 @@
 #include <zcl/measurement/zigbeeclusterelectricalmeasurement.h>
 
 #include <QDebug>
+#include <QDataStream>
 
 #define ATTRIBUTE_ID_SOCKET_POWER_ON_DEFAULT_MODE 0x8002
+
+#define COMMAND_ID_DATA_REQUEST 0
+#define COMMAND_ID_DATA_RESPONSE 1
+#define COMMAND_ID_DATA_REPORT 2
+#define COMMAND_ID_DATA_QUERY 4
+
+#define CLUSTER_ID_PRESENCE_SENSOR 0xef00
+
+#define PRESENCE_SENSOR_DP_PRESENCE 1
+#define PRESENCE_SENSOR_DP_SENSITIVITY 2
+#define PRESENCE_SENSOR_DP_MINIMUM_RANGE 3
+#define PRESENCE_SENSOR_DP_MAXIMUM_RANGE 4
+#define PRESENCE_SENSOR_DP_SELF_TEST 6
+#define PRESENCE_SENSOR_DP_TARGET_DISTANCE 9
+#define PRESENCE_SENSOR_DP_DETECTION_DELAY 101
+#define PRESENCE_SENSOR_DP_FADING_TIME 102
+#define PRESENCE_SENSOR_DP_CLI 103
+#define PRESENCE_SENSOR_DP_LUX 104
 
 IntegrationPluginZigbeeTuya::IntegrationPluginZigbeeTuya(): ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor, dcZigbeeTuya())
 {
@@ -74,6 +94,11 @@ bool IntegrationPluginZigbeeTuya::handleNode(ZigbeeNode *node, const QUuid &/*ne
 
         createThing(powerSocketThingClassId, node);
 
+        return true;
+    }
+
+    if (node->nodeDescriptor().manufacturerCode == 0x1002 && node->modelName() == "TS0601") {
+        createThing(presenceSensorThingClassId, node);
         return true;
     }
 
@@ -138,6 +163,98 @@ void IntegrationPluginZigbeeTuya::setupThing(ThingSetupInfo *info)
                 }
             });
         }
+    }
+
+    if (thing->thingClassId() == presenceSensorThingClassId) {
+        ZigbeeCluster *cluster = node->getEndpoint(0x01)->getInputCluster(static_cast<ZigbeeClusterLibrary::ClusterId>(CLUSTER_ID_PRESENCE_SENSOR));
+        cluster->executeClusterCommand(COMMAND_ID_DATA_QUERY, QByteArray(), ZigbeeClusterLibrary::DirectionClientToServer, true);
+
+        connect(cluster, &ZigbeeCluster::dataIndication, thing, [thing](const ZigbeeClusterLibrary::Frame &frame){
+
+            if (frame.header.command == COMMAND_ID_DATA_REPORT) {
+                DpValue dpValue = DpValue::fromData(frame.payload);
+
+                switch (dpValue.dp()) {
+                case PRESENCE_SENSOR_DP_PRESENCE:
+                    qCDebug(dcZigbeeTuya()) << "presence changed:" << dpValue;
+                    thing->setStateValue(presenceSensorIsPresentStateTypeId, dpValue.value().toBool());
+                    break;
+                case PRESENCE_SENSOR_DP_SENSITIVITY:
+                    qCDebug(dcZigbeeTuya()) << "Sensitivity changed:" << dpValue << thing->setting(presenceSensorSettingsSensitivityParamTypeId);
+                    thing->setSettingValue(presenceSensorSettingsSensitivityParamTypeId, dpValue.value().toUInt());
+                    break;
+                case PRESENCE_SENSOR_DP_MINIMUM_RANGE:
+                    qCDebug(dcZigbeeTuya()) << "min range changed:" << dpValue;
+                    thing->setSettingValue(presenceSensorSettingsMinimumRangeParamTypeId, dpValue.value().toDouble() / 100.0);
+                    break;
+                case PRESENCE_SENSOR_DP_MAXIMUM_RANGE:
+                    qCDebug(dcZigbeeTuya()) << "max range changed:" << dpValue << thing->setting(presenceSensorSettingsMaximumRangeParamTypeId);
+                    thing->setSettingValue(presenceSensorSettingsMaximumRangeParamTypeId, dpValue.value().toDouble() / 100.0);
+                    break;
+                case PRESENCE_SENSOR_DP_SELF_TEST: {
+                    QHash<int, QString> map = {
+                        {0, "checking"},
+                        {1, "success"},
+                        {2, "failure"},
+                        {3, "other"},
+                        {4, "communication_error"},
+                        {5, "radar_error"}
+                    };
+                    thing->setStateValue(presenceSensorSelfTestStateTypeId, map.value(dpValue.value().toUInt()));
+                    break;
+                }
+                case PRESENCE_SENSOR_DP_TARGET_DISTANCE:
+//                    qCDebug(dcZigbeeTuya()) << "Target distance:" << data.toUInt() / 100.0;
+                    thing->setStateValue(presenceSensorTargetDistanceStateTypeId, dpValue.value().toUInt() / 100.0);
+                    break;
+                case PRESENCE_SENSOR_DP_DETECTION_DELAY:
+                    qCDebug(dcZigbeeTuya()) << "Detection delay:" << dpValue;
+                    thing->setSettingValue(presenceSensorSettingsDetectionDelayParamTypeId, dpValue.value().toUInt() / 10.0);
+                    break;
+                case PRESENCE_SENSOR_DP_FADING_TIME:
+                    qCDebug(dcZigbeeTuya()) << "Fading time:" << dpValue;
+                    thing->setSettingValue(presenceSensorSettingsFadingTimeParamTypeId, dpValue.value().toUInt() / 10.0);
+                    break;
+                case PRESENCE_SENSOR_DP_CLI:
+                    qCDebug(dcZigbeeTuya()) << "CLI:" << dpValue;
+                    break;
+                case PRESENCE_SENSOR_DP_LUX:
+                    qCDebug(dcZigbeeTuya()) << "LUX changed:" << dpValue;
+                    thing->setStateValue(presenceSensorLightIntensityStateTypeId, dpValue.value().toDouble());
+                    break;
+                default:
+                    qCWarning(dcZigbeeTuya()) << "Unhandled data point" << dpValue;
+                }
+
+            } else {
+                qCWarning(dcZigbeeTuya()) << "Unhandled presence sensor cluster command:" << frame.header.command;
+            }
+        });
+
+        connect(thing, &Thing::settingChanged, cluster, [cluster, thing, this](const ParamTypeId &settingTypeId, const QVariant &value) {
+            DpValue dp;
+
+            if (settingTypeId == presenceSensorSettingsDetectionDelayParamTypeId) {
+                dp = DpValue(PRESENCE_SENSOR_DP_DETECTION_DELAY, DpValue::TypeUInt32, value.toUInt() * 10, 4, m_seq++);
+            }
+            if (settingTypeId == presenceSensorSettingsMinimumRangeParamTypeId) {
+                dp = DpValue(PRESENCE_SENSOR_DP_MINIMUM_RANGE, DpValue::TypeUInt32, value.toUInt() * 100, 4, m_seq++);
+            }
+            if (settingTypeId == presenceSensorSettingsMaximumRangeParamTypeId) {
+                dp = DpValue(PRESENCE_SENSOR_DP_MAXIMUM_RANGE, DpValue::TypeUInt32, value.toUInt() * 100, 4, m_seq++);
+            }
+            if (settingTypeId == presenceSensorSettingsSensitivityParamTypeId) {
+                dp = DpValue(PRESENCE_SENSOR_DP_SENSITIVITY, DpValue::TypeUInt32, value.toUInt(), 4, m_seq++);
+            }
+            if (settingTypeId == presenceSensorSettingsFadingTimeParamTypeId) {
+                dp = DpValue(PRESENCE_SENSOR_DP_FADING_TIME, DpValue::TypeUInt32, value.toUInt() * 10, 4, m_seq++);
+            }
+            qCDebug(dcZigbeeTuya()) << "setting" << thing->thingClass().settingsTypes().findById(settingTypeId).name() << dp << dp.toData().toHex();
+            ZigbeeClusterReply *reply = cluster->executeClusterCommand(COMMAND_ID_DATA_REQUEST, dp.toData(), ZigbeeClusterLibrary::DirectionClientToServer, true);
+            connect(reply, &ZigbeeClusterReply::finished, reply, [=](){
+                qCDebug(dcZigbeeTuya()) << "setting set with status" << reply->error();
+            });
+        });
     }
 
     info->finish(Thing::ThingErrorNoError);

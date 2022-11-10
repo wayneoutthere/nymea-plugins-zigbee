@@ -45,7 +45,6 @@
                             "id": "d4e2983a-f4a3-401f-853e-8b0e2f1d245e",
                             "name": "connected",
                             "displayName": "Connected",
-                            "displayNameEvent": "Connected changed",
                             "type": "bool",
                             "cached": false,
                             "defaultValue": false
@@ -54,7 +53,6 @@
                             "id": "0d200118-f5fc-4c88-851f-6c9440830b21",
                             "name": "signalStrength",
                             "displayName": "Signal strength",
-                            "displayNameEvent": "Signal strength changed",
                             "defaultValue": 0,
                             "maxValue": 100,
                             "minValue": 0,
@@ -66,7 +64,6 @@
                             "id": "799129a5-8f4f-4836-822f-d2f26465288b",
                             "name": "power",
                             "displayName": "Power",
-                            "displayNameEvent": "Power changed",
                             "displayNameAction": "Set power",
                             "type": "bool",
                             "defaultValue": false,
@@ -77,7 +74,6 @@
                             "id": "e98e7f15-31b1-44cd-ab9d-cce14a2d2df9",
                             "name": "currentPower",
                             "displayName": "Current power consumption",
-                            "displayNameEvent": "Current power consumption changed",
                             "type": "double",
                             "unit": "Watt",
                             "defaultValue": 0,
@@ -87,10 +83,137 @@
                             "id": "dd36b0be-f34f-406b-be27-0fc374b333f9",
                             "name": "totalEnergyConsumed",
                             "displayName": "Total consumed energy",
-                            "displayNameEvent": "Total energy consumed changed",
                             "type": "double",
                             "unit": "KiloWattHour",
                             "defaultValue": 0
+                        }
+                    ]
+                },
+                {
+                    "id": "17978e89-290f-4101-8a9e-85cb1cb5e12a",
+                    "name": "presenceSensor",
+                    "displayName": "Presence sensor",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "presencesensor", "lightsensor", "wirelessconnectable" ],
+                    "paramTypes": [
+                        {
+                            "id": "e4128cd6-bb47-4e95-b79e-85f7d0d2501f",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "516a82f2-c652-4f0b-a899-1f9aea40722e",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "settingsTypes": [
+                        {
+                            "id": "f33c7b63-8414-4628-b15c-df703c0f1a6a",
+                            "name": "sensitivity",
+                            "displayName": "Sensitvity",
+                            "type": "uint",
+                            "defaultValue": 0,
+                            "minValue": 0,
+                            "maxValue": 9
+                        },
+                        {
+                            "id": "0e5b21ec-0586-4583-9d6f-0240640387c3",
+                            "name": "minimumRange",
+                            "displayName": "Minimum range",
+                            "type": "uint",
+                            "unit": "Meter",
+                            "defaultValue": 0,
+                            "minValue": 0,
+                            "maxValue": 10
+                        },
+                        {
+                            "id": "70ac0832-2bd2-4c97-84e4-ee756dced149",
+                            "name": "maximumRange",
+                            "displayName": "Maximum range",
+                            "type": "uint",
+                            "unit": "Meter",
+                            "defaultValue": 0,
+                            "minValue": 0,
+                            "maxValue": 10
+                        },
+                        {
+                            "id": "177e4575-300e-4300-9ef6-1d0daae9d2bb",
+                            "name": "detectionDelay",
+                            "displayName": "Detection delay",
+                            "type": "double",
+                            "unit": "Seconds",
+                            "defaultValue": 0,
+                            "minValue": 0,
+                            "maxValue": 10
+                        },
+                        {
+                            "id": "5e80e2ad-0225-47f6-9d49-0df5210f294a",
+                            "name": "fadingTime",
+                            "displayName": "Fading time",
+                            "type": "uint",
+                            "unit": "Seconds",
+                            "defaultValue": 0,
+                            "minValue": 0,
+                            "maxValue": 1500
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "af307ed4-6dd0-4e5e-9ea0-822f473613e7",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "dc265b4f-da86-43d0-9d55-aa83a9dff323",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "cached": false
+                        },
+                        {
+                            "id": "98d3096b-4e42-4b6e-ae29-21b876fbfe3b",
+                            "name": "isPresent",
+                            "displayName": "Presence detected",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "cached": false
+                        },
+                        {
+                            "id": "020e64e0-82a3-4bb6-8869-fc32368695f6",
+                            "name": "targetDistance",
+                            "displayName": "Target distance",
+                            "type": "double",
+                            "unit": "Meter",
+                            "defaultValue": 0,
+                            "cached": false
+                        },
+                        {
+                            "id": "242c732d-47d3-496e-9004-1a36647b398a",
+                            "name": "lightIntensity",
+                            "displayName": "Light intensity",
+                            "type": "double",
+                            "unit": "Lux",
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "91e6ba5e-8dd1-4211-9a18-9d1511198614",
+                            "name": "selfTest",
+                            "displayName": "Self test status",
+                            "type": "QString",
+                            "possibleValues": ["checking", "success", "failure", "other", "communication_error", "radar_error"],
+                            "defaultValue": "checking"
                         }
                     ]
                 }

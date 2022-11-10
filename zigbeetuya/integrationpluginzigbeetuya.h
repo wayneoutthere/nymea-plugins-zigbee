@@ -61,6 +61,7 @@ private slots:
 
 private:
     PluginTimer *m_energyPollTimer = nullptr;
+    quint16 m_seq = 0;
 };
 
 #endif // INTEGRATIONPLUGINZIGBEETUYA_H
