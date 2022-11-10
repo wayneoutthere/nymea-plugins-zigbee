@@ -35,6 +35,8 @@
 
 #include "extern-plugininfo.h"
 
+#include <QQueue>
+
 class IntegrationPluginZigbeeEurotronic: public ZigbeeIntegrationPlugin
 {
     Q_OBJECT
@@ -60,6 +62,13 @@ public:
 
     void setupThing(ThingSetupInfo *info) override;
     void executeAction(ThingActionInfo *info) override;
+
+private:
+    void sendNextAction();
+
+private:
+    QQueue<ThingActionInfo*> m_actionQueue;
+    ThingActionInfo *m_pendingAction = nullptr;
 };
 
 #endif // INTEGRATIONPLUGINZIGBEEEUROTRONIC_H
