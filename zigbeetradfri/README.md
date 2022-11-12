@@ -8,7 +8,7 @@ This plugin allows to interact with IKEA TRÅDFRI ZigBee devices using a native 
 * TRADFRI bulb E27 WS clear 806lm (color temperature light)
 * [Wireless dimmer](https://www.ikea.com/us/en/p/tradfri-wireless-dimmer-white-10408598/)*
 * [Shortcut Button](https://www.ikea.com/us/en/p/tradfri-shortcut-button-white-20356382/)*
-* [Remote control](https://www.ikea.com/us/en/p/tradfri-control-outlet-kit-smart-70364803/)**
+* [Remote control](https://zigbee.blakadder.com/Ikea_E1810.html)**May be discontinued.**
 * [Symfonisk sound remote](https://www.ikea.com/us/en/p/symfonisk-sound-remote-white-20370482/)
 * [Motion sensor](https://www.ikea.com/us/en/p/tradfri-wireless-motion-sensor-white-60377655/)
 * [Signal repeater](https://www.ikea.com/us/en/p/tradfri-signal-repeater-30400407/) -**DISCONTINUED**
