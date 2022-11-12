@@ -4,7 +4,7 @@ This plugin adds support for Philips Hue ZigBee devices using a ZigBee network h
 
 ### Hue motion sensor
 
-The [Hue motion sensor](https://www.philips-hue.com/en-us/p/hue-motion-sensor/046677473389) is fully supported. The time period for the present state can be specied in the thing setting.
+The [Hue motion sensor](https://www.philips-hue.com/en-us/p/hue-motion-sensor/046677570972) is fully supported. The time period for the present state can be specied in the thing setting.
 
 **Pairing instructions**: Open the ZigBee network for joining. Press the setup button for 5 seconds until the LED start blinking in different colors.
 
@@ -15,7 +15,7 @@ The [Hue outdoor sensor](https://www.philips-hue.com/en-us/p/hue-outdoor-sensor/
 
 ### Hue dimmer switch
 
-The [Hue dimmer switch](https://www.philips-hue.com/en-us/p/hue-dimmer-switch--latest-model-/046677562779) (including the older model version) is fully supported.
+The [Hue dimmer switch](https://www.philips-hue.com/en-us/p/hue-dimmer-switch--latest-model-/046677562779  https://www.philips-hue.com/en-us/p/hue-dimmer-switch--latest-model-/046677562779) (including the older model version) is fully supported.
 
 **Pairing instructions**: Open the ZigBee network for joining. Press the setup button for 5 seconds until the LED start blinking in different colors.
 
@@ -35,7 +35,7 @@ The [Hue Smart button](https://www.philips-hue.com/en-us/p/hue-philips-hue-wall-
 
 Most of the lights and lamps from Philips Hue should be handled in a generic way by the `nymea-plugin-zigbee-generic-lights` plugin. There are 2 methods for bringing a Hue light / bulb into the nymea ZigBee network.
 
-1. Use a [Hue dimmer switch](https://www.philips-hue.com/en-us/p/hue-dimmer-switch/046677473372) (most reliable):
+1. Use a [Hue dimmer switch](https://www.philips-hue.com/en-us/p/hue-dimmer-switch--latest-model-/046677562779) (most reliable):
 
     * Open the ZigBee network in nymea for allowing new devices to join the network.
     * Switch the lamp off for a few seconds by cutting the power and turn it back on again.
