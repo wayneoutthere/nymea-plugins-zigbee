@@ -165,11 +165,11 @@ bool IntegrationPluginZigbeePhilipsHue::handleNode(ZigbeeNode *node, const QUuid
         if (endpointOne->profile() == Zigbee::ZigbeeProfileHomeAutomation &&
                 endpointOne->deviceId() == Zigbee::HomeAutomationDeviceNonColourController) {
             createThing(wallSwitchModuleThingClassId, node);
+            bindManufacturerSpecificPhilipsCluster(endpointOne);
             bindPowerConfigurationCluster(endpointOne);
             configurePowerConfigurationInputClusterAttributeReporting(endpointOne);
             bindOnOffCluster(endpointOne);
             bindLevelControlCluster(endpointOne);
-            bindManufacturerSpecificPhilipsCluster(endpointOne);
             return true;
         }
     }
@@ -558,7 +558,7 @@ void IntegrationPluginZigbeePhilipsHue::pollLight(Thing *thing)
 void IntegrationPluginZigbeePhilipsHue::bindManufacturerSpecificPhilipsCluster(ZigbeeNodeEndpoint *endpoint)
 {
     qCDebug(dcZigbeePhilipsHue()) << "Binding Manufacturer specific cluster to coordinator";
-    ZigbeeDeviceObjectReply *zdoReply = endpoint->node()->deviceObject()->requestBindGroupAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdManufacturerSpecificPhilips, 0x0000);
+    ZigbeeDeviceObjectReply *zdoReply = endpoint->node()->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdManufacturerSpecificPhilips, hardwareManager()->zigbeeResource()->coordinatorAddress(endpoint->node()->networkUuid()), 0x01);
     connect(zdoReply, &ZigbeeDeviceObjectReply::finished, endpoint->node(), [=](){
         if (zdoReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
             qCWarning(dcZigbeePhilipsHue()) << "Failed to bind manufacturer specific cluster to coordinator" << zdoReply->error();
