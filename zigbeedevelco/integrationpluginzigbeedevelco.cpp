@@ -97,21 +97,6 @@ bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &n
 
         bindPowerConfigurationCluster(iasZoneEndpoint);
         configurePowerConfigurationInputClusterAttributeReporting(iasZoneEndpoint);
-        bindIasZoneCluster(iasZoneEndpoint);
-
-        // IAS Zone devices (at least fire, water and sensors) have a temperature sensor endpoint too
-        ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR);
-        if (temperatureSensorEndpoint) {
-            bindTemperatureMeasurementCluster(temperatureSensorEndpoint);
-            configureTemperatureMeasurementInputClusterAttributeReporting(temperatureSensorEndpoint);
-        }
-
-        // Some have a light sensor (at least the motion sensor)
-        ZigbeeNodeEndpoint *lightSensorEndpoint = node->getEndpoint(DEVELCO_EP_LIGHT_SENSOR);
-        if (lightSensorEndpoint) {
-            bindIlluminanceMeasurementCluster(lightSensorEndpoint);
-            configureIlluminanceMeasurementInputClusterAttributeReporting(lightSensorEndpoint);
-        }
 
         // We need to read the Type attribute to determine what this actually is...
         ZigbeeClusterIasZone *iasZoneCluster = iasZoneEndpoint->inputCluster<ZigbeeClusterIasZone>(ZigbeeClusterLibrary::ClusterIdIasZone);
@@ -150,6 +135,24 @@ bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &n
                 qCWarning(dcZigbeeDevelco()) << "Unhandled IAS Zone device type:" << "0x" + QString::number(iasZoneTypeRecord.dataType.toUInt16(), 16);
 
             }
+
+            bindIasZoneCluster(iasZoneEndpoint);
+
+            // IAS Zone devices (at least fire, water and sensors) have a temperature sensor endpoint too
+            ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR);
+            if (temperatureSensorEndpoint) {
+                bindTemperatureMeasurementCluster(temperatureSensorEndpoint);
+                configureTemperatureMeasurementInputClusterAttributeReporting(temperatureSensorEndpoint);
+            }
+
+            // Some have a light sensor (at least the motion sensor)
+            ZigbeeNodeEndpoint *lightSensorEndpoint = node->getEndpoint(DEVELCO_EP_LIGHT_SENSOR);
+            if (lightSensorEndpoint) {
+                bindIlluminanceMeasurementCluster(lightSensorEndpoint);
+                configureIlluminanceMeasurementInputClusterAttributeReporting(lightSensorEndpoint);
+            }
+
+
         });
 
         handled = true;
@@ -403,9 +406,9 @@ void IntegrationPluginZigbeeDevelco::setupThing(ThingSetupInfo *info)
             });
         }
     } else if (thing->thingClassId() == smokeSensorThingClassId) {
-        ZigbeeNodeEndpoint *iazZoneEndpoint = node->getEndpoint(DEVELCO_EP_IAS_ZONE);
+        ZigbeeNodeEndpoint *iasZoneEndpoint = node->getEndpoint(DEVELCO_EP_IAS_ZONE);
         ZigbeeNodeEndpoint *temperatureSensorEndpoint = node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR);
-        connectToIasZoneInputCluster(thing, iazZoneEndpoint, "fireDetected");
+        connectToIasZoneInputCluster(thing, iasZoneEndpoint, "fireDetected");
         connectToTemperatureMeasurementInputCluster(thing, temperatureSensorEndpoint);
     } else if (thing->thingClassId() == waterSensorThingClassId) {
         ZigbeeNodeEndpoint *iazZoneEndpoint = node->getEndpoint(DEVELCO_EP_IAS_ZONE);
