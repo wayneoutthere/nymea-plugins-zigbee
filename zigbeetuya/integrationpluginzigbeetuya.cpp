@@ -39,6 +39,7 @@
 #include <zcl/hvac/zigbeeclusterthermostat.h>
 #include <zcl/smartenergy/zigbeeclustermetering.h>
 #include <zcl/measurement/zigbeeclusterelectricalmeasurement.h>
+#include <zcl/security/zigbeeclusteriaszone.h>
 
 #include <QDebug>
 #include <QDataStream>
@@ -99,6 +100,18 @@ bool IntegrationPluginZigbeeTuya::handleNode(ZigbeeNode *node, const QUuid &/*ne
 
     if (node->nodeDescriptor().manufacturerCode == 0x1002 && node->modelName() == "TS0601") {
         createThing(presenceSensorThingClassId, node);
+        return true;
+    }
+
+    if (node->nodeDescriptor().manufacturerCode == 0x1141 && node->modelName() == "TS0210") {
+        ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
+        if (!endpoint) {
+            qCWarning(dcZigbeeTuya()) << "Endpoint 1 not found on device....";
+            return false;
+        }
+        bindPowerConfigurationCluster(endpoint);
+        bindIasZoneCluster(endpoint);
+        createThing(vibrationSensorThingClassId, node);
         return true;
     }
 
@@ -254,6 +267,45 @@ void IntegrationPluginZigbeeTuya::setupThing(ThingSetupInfo *info)
             connect(reply, &ZigbeeClusterReply::finished, reply, [=](){
                 qCDebug(dcZigbeeTuya()) << "setting set with status" << reply->error();
             });
+        });
+    }
+
+    if (thing->thingClassId() == vibrationSensorThingClassId) {
+        ZigbeeNodeEndpoint *endpoint = node->getEndpoint(1);
+        if (!endpoint) {
+            qCWarning(dcZigbeeTuya()) << "Endpoint 1 not found on" << node;
+            info->finish(Thing::ThingErrorHardwareNotAvailable);
+            return;
+        }
+        ZigbeeClusterIasZone *iasZoneCluster = endpoint->inputCluster<ZigbeeClusterIasZone>(ZigbeeClusterLibrary::ClusterIdIasZone);
+        if (!iasZoneCluster) {
+            qCWarning(dcZigbeeTuya()) << "Could not find IAS zone cluster on" << thing << endpoint;
+            return;
+        }
+
+        if (iasZoneCluster->hasAttribute(ZigbeeClusterIasZone::AttributeCurrentZoneSensitivityLevel)) {
+            thing->setSettingValue(vibrationSensorSettingsSensitivityParamTypeId, iasZoneCluster->attribute(ZigbeeClusterIasZone::AttributeCurrentZoneSensitivityLevel).dataType().toUInt8());
+        }
+        iasZoneCluster->readAttributes({ZigbeeClusterIasZone::AttributeCurrentZoneSensitivityLevel});
+        connect(iasZoneCluster, &ZigbeeClusterIasZone::attributeChanged, thing, [thing](const ZigbeeClusterAttribute &attribute){
+            thing->setSettingValue(vibrationSensorSettingsSensitivityParamTypeId, attribute.dataType().toUInt8());
+        });
+        connect(thing, &Thing::settingChanged, iasZoneCluster, [iasZoneCluster](const ParamTypeId &settingId, const QVariant &value){
+            Q_UNUSED(settingId)
+            ZigbeeDataType dataType(static_cast<quint8>(value.toUInt()));
+            ZigbeeClusterLibrary::WriteAttributeRecord sensitivityAttribute;
+            sensitivityAttribute.attributeId = ZigbeeClusterIasZone::AttributeCurrentZoneSensitivityLevel;
+            sensitivityAttribute.dataType = dataType.dataType();
+            sensitivityAttribute.data = dataType.data();
+            iasZoneCluster->writeAttributes({sensitivityAttribute});
+        });
+
+        connect(iasZoneCluster, &ZigbeeClusterIasZone::zoneStatusChanged, thing, [=](ZigbeeClusterIasZone::ZoneStatusFlags zoneStatus, quint8 extendedStatus, quint8 zoneId, quint16 delays) {
+            qCDebug(dcZigbeeTuya()) << "Zone status changed to:" << zoneStatus << extendedStatus << zoneId << delays;
+            bool zoneAlarm = zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm1) || zoneStatus.testFlag(ZigbeeClusterIasZone::ZoneStatusAlarm2);
+            if (zoneAlarm) {
+                thing->emitEvent(vibrationSensorVibrationDetectedEventTypeId);
+            }
         });
     }
 

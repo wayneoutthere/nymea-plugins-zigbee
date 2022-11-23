@@ -216,6 +216,86 @@
                             "defaultValue": "checking"
                         }
                     ]
+                },
+                {
+                    "id": "6fb1f16f-ffb2-43e7-92ee-20b1f8137e17",
+                    "name": "vibrationSensor",
+                    "displayName": "Vibration sensor",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "vibrationsensor", "wirelessconnectable", "battery" ],
+                    "paramTypes": [
+                        {
+                            "id": "96be50b7-8c84-454b-be96-09e41f62efc9",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "2a87bd35-56c1-4d90-9f03-b632566a3e0c",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "settingsTypes": [
+                        {
+                            "id": "3dd6b9e7-3cfe-416e-b1a2-16db3c89a768",
+                            "name": "sensitivity",
+                            "displayName": "Sensitvity",
+                            "type": "uint",
+                            "defaultValue": 3,
+                            "minValue": 0,
+                            "maxValue": 6
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "9ecf841f-e542-4f24-b135-458683a43e92",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "b21adc6e-3c6e-4793-b49c-326e220b6059",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "cached": false
+                        },
+                        {
+                            "id": "1990fbc3-c122-424d-96f3-187867d75b82",
+                            "name": "batteryLevel",
+                            "displayName": "Battery level",
+                            "type": "int",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": "100"
+                        },
+                        {
+                            "id": "ab8d043e-88d7-47e3-b157-a52543ae542a",
+                            "name": "batteryCritical",
+                            "displayName": "Battery level critical",
+                            "type": "bool",
+                            "defaultValue": false
+                        }
+                    ],
+                    "eventTypes": [
+                        {
+                            "id": "7559605a-37e7-4319-833d-eed4ff69ee11",
+                            "name": "vibrationDetected",
+                            "displayName": "Vibration detected",
+                            "suggestLogging": true
+                        }
+                    ]
                 }
             ]
         }
