@@ -51,7 +51,7 @@
 #define COMMAND_ID_DATA_REPORT 2
 #define COMMAND_ID_DATA_QUERY 4
 
-#define CLUSTER_ID_PRESENCE_SENSOR 0xef00
+#define CLUSTER_ID_MANUFACTURER_SPECIFIC_TUYA 0xef00
 
 #define PRESENCE_SENSOR_DP_PRESENCE 1
 #define PRESENCE_SENSOR_DP_SENSITIVITY 2
@@ -63,6 +63,12 @@
 #define PRESENCE_SENSOR_DP_FADING_TIME 102
 #define PRESENCE_SENSOR_DP_CLI 103
 #define PRESENCE_SENSOR_DP_LUX 104
+
+#define LUMINANCE_MOTION_SENSOR_DP_PRESENCE 1
+#define LUMINANCE_MOTION_SENSOR_DP_BATTERY 4
+#define LUMINANCE_MOTION_SENSOR_DP_SENSITIVITY 9
+#define LUMINANCE_MOTION_SENSOR_DP_KEEP_TIME 10
+#define LUMINANCE_MOTION_SENSOR_DP_ILLUMINANCE 12
 
 IntegrationPluginZigbeeTuya::IntegrationPluginZigbeeTuya(): ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor, dcZigbeeTuya())
 {
@@ -112,6 +118,12 @@ bool IntegrationPluginZigbeeTuya::handleNode(ZigbeeNode *node, const QUuid &/*ne
         bindPowerConfigurationCluster(endpoint);
         bindIasZoneCluster(endpoint);
         createThing(vibrationSensorThingClassId, node);
+        return true;
+    }
+
+    if ((node->manufacturerName() == "_TZE200_3towulqd" && node->modelName() == "TS0601")
+            ||(node->manufacturerName() == "_TZE200_1ibpyhdc" && node->modelName() == "TS0601")) {
+        createThing(motionSensorThingClassId, node);
         return true;
     }
 
@@ -179,7 +191,7 @@ void IntegrationPluginZigbeeTuya::setupThing(ThingSetupInfo *info)
     }
 
     if (thing->thingClassId() == presenceSensorThingClassId) {
-        ZigbeeCluster *cluster = node->getEndpoint(0x01)->getInputCluster(static_cast<ZigbeeClusterLibrary::ClusterId>(CLUSTER_ID_PRESENCE_SENSOR));
+        ZigbeeCluster *cluster = node->getEndpoint(0x01)->getInputCluster(static_cast<ZigbeeClusterLibrary::ClusterId>(CLUSTER_ID_MANUFACTURER_SPECIFIC_TUYA));
         cluster->executeClusterCommand(COMMAND_ID_DATA_QUERY, QByteArray(), ZigbeeClusterLibrary::DirectionClientToServer, true);
 
         connect(cluster, &ZigbeeCluster::dataIndication, thing, [thing](const ZigbeeClusterLibrary::Frame &frame){
@@ -307,6 +319,80 @@ void IntegrationPluginZigbeeTuya::setupThing(ThingSetupInfo *info)
                 thing->emitEvent(vibrationSensorVibrationDetectedEventTypeId);
             }
         });
+    }
+
+    if (thing->thingClassId() == motionSensorThingClassId) {
+        ZigbeeNodeEndpoint *endpoint = node->getEndpoint(1);
+        if (!endpoint) {
+            qCWarning(dcZigbeeTuya()) << "Unable to find endpoint 1 on node" << node;
+            info->finish(Thing::ThingErrorHardwareNotAvailable, QT_TR_NOOP("Unable to find endpoint 1 on Zigbee node."));
+            return;
+        }
+        ZigbeeCluster *cluster = endpoint->getInputCluster(static_cast<ZigbeeClusterLibrary::ClusterId>(CLUSTER_ID_MANUFACTURER_SPECIFIC_TUYA));
+        if (!cluster) {
+            qCWarning(dcZigbeeTuya()) << "Unable to find Tuya manufacturer specific cliuster on endpoint 1 on node" << node;
+            info->finish(Thing::ThingErrorHardwareNotAvailable, QT_TR_NOOP("Unable to find Tuya cluster on Zigbee node."));
+            return;
+        }
+
+        cluster->executeClusterCommand(COMMAND_ID_DATA_QUERY, QByteArray(), ZigbeeClusterLibrary::DirectionClientToServer, true);
+
+        connect(cluster, &ZigbeeCluster::dataIndication, thing, [thing](const ZigbeeClusterLibrary::Frame &frame){
+
+            if (frame.header.command == COMMAND_ID_DATA_REPORT) {
+                DpValue dpValue = DpValue::fromData(frame.payload);
+
+                switch (dpValue.dp()) {
+                case LUMINANCE_MOTION_SENSOR_DP_PRESENCE:
+                    qCDebug(dcZigbeeTuya()) << "presence changed:" << dpValue;
+                    thing->setStateValue(motionSensorIsPresentStateTypeId, dpValue.value().toInt() == 0);
+                    break;
+                case LUMINANCE_MOTION_SENSOR_DP_BATTERY:
+                    qCDebug(dcZigbeeTuya()) << "Battery changed:" << dpValue;
+                    thing->setStateValue(motionSensorBatteryLevelStateTypeId, dpValue.value().toInt());
+                    thing->setStateValue(motionSensorBatteryCriticalStateTypeId, dpValue.value().toInt() < 5);
+                    break;
+                case LUMINANCE_MOTION_SENSOR_DP_SENSITIVITY:
+                    qCDebug(dcZigbeeTuya()) << "Sensitivity:" << dpValue << thing->setting(motionSensorSettingsSensitivityParamTypeId);
+                    thing->setSettingValue(motionSensorSettingsSensitivityParamTypeId, dpValue.value().toInt() + 1);
+                    break;
+                case LUMINANCE_MOTION_SENSOR_DP_KEEP_TIME: {
+                    qCDebug(dcZigbeeTuya()) << "timeout changed:" << dpValue << thing->setting(motionSensorSettingsTimeoutParamTypeId);
+                    QHash<int, int> map = {{0, 10}, {1, 30}, {2, 60}, {3, 120}};
+                    thing->setSettingValue(motionSensorSettingsTimeoutParamTypeId, map.value(dpValue.value().toInt()));
+                    break;
+                }
+                case LUMINANCE_MOTION_SENSOR_DP_ILLUMINANCE:
+                    qCDebug(dcZigbeeTuya()) << "illuminance changed:" << dpValue;
+                    thing->setStateValue(motionSensorLightIntensityStateTypeId, dpValue.value().toDouble());
+                    break;
+
+                default:
+                    qCWarning(dcZigbeeTuya()) << "Unhandled data point" << dpValue;
+                }
+
+            } else {
+                qCWarning(dcZigbeeTuya()) << "Unhandled presence sensor cluster command:" << frame.header.command;
+            }
+        });
+
+        connect(thing, &Thing::settingChanged, cluster, [cluster, thing, this](const ParamTypeId &settingTypeId, const QVariant &value) {
+            DpValue dp;
+
+            if (settingTypeId == motionSensorSettingsTimeoutParamTypeId) {
+                QHash<int, int> map = {{0, 10}, {1, 30}, {2, 60}, {3, 120}};
+                dp = DpValue(LUMINANCE_MOTION_SENSOR_DP_KEEP_TIME, DpValue::TypeEnum, map.key(value.toUInt()), 4, m_seq++);
+            }
+            if (settingTypeId == motionSensorSettingsSensitivityParamTypeId) {
+                dp = DpValue(LUMINANCE_MOTION_SENSOR_DP_SENSITIVITY, DpValue::TypeEnum, value.toUInt(), 4, m_seq++);
+            }
+            qCDebug(dcZigbeeTuya()) << "setting" << thing->thingClass().settingsTypes().findById(settingTypeId).name() << dp << dp.toData().toHex();
+            ZigbeeClusterReply *reply = cluster->executeClusterCommand(COMMAND_ID_DATA_REQUEST, dp.toData(), ZigbeeClusterLibrary::DirectionClientToServer, true);
+            connect(reply, &ZigbeeClusterReply::finished, reply, [=](){
+                qCDebug(dcZigbeeTuya()) << "setting set with status" << reply->error();
+            });
+        });
+
     }
 
     info->finish(Thing::ThingErrorNoError);
