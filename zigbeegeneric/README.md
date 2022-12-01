@@ -31,6 +31,7 @@ Known to work:
 * Dresden Electronics (FLS-PP3)
 * Silvercrest (Lidl) Motion sensor (TZ1800)
 * Silvercrest (Lidl) power strip (TS011F)
+* Silvercrest (Lidl) smart button (TS004F)
 
 ### Radiator thermostats
 

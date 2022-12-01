@@ -797,11 +797,36 @@ void ZigbeeIntegrationPlugin::connectToOnOffInputCluster(Thing *thing, ZigbeeNod
     });
 }
 
+void ZigbeeIntegrationPlugin::connectToOnOffOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterOnOff *onOffCluster = endpoint->outputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
+    if (!onOffCluster) {
+        qCWarning(m_dc) << "Could not find on/off output cluster on" << thing << endpoint;
+    } else {
+        connect(onOffCluster, &ZigbeeClusterOnOff::commandSent, thing, [=](ZigbeeClusterOnOff::Command command, const QByteArray &/*payload*/, quint8 /*transactionSequenceNumber*/){
+            qCDebug(m_dc) << thing << "button pressed" << command;
+            EventType eventType = thing->thingClass().eventTypes().findByName("pressed");
+            ParamType buttonNameParamType = eventType.paramTypes().findByName("buttonName");
+            if (command == ZigbeeClusterOnOff::CommandOn) {
+                qCDebug(m_dc) << thing << "pressed ON";
+                emit emitEvent(Event(eventType.id(), thing->id(), ParamList() << Param(buttonNameParamType.id(), "ON")));
+            } else if (command == ZigbeeClusterOnOff::CommandOff) {
+                qCDebug(m_dc) << thing << "pressed OFF";
+                emit emitEvent(Event(eventType.id(), thing->id(), ParamList() << Param(buttonNameParamType.id(), "OFF")));
+            } else if (command == ZigbeeClusterOnOff::CommandToggle) {
+                qCDebug(m_dc) << thing << "pressed TOGGLE";
+                emit emitEvent(Event(eventType.id(), thing->id(), ParamList() << Param(buttonNameParamType.id(), "TOGGLE")));
+            }
+        });
+    }
+
+}
+
 void ZigbeeIntegrationPlugin::connectToLevelControlInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName)
 {
     ZigbeeClusterLevelControl *levelControlCluster = endpoint->inputCluster<ZigbeeClusterLevelControl>(ZigbeeClusterLibrary::ClusterIdLevelControl);
     if (!levelControlCluster) {
-        qCWarning(m_dc) << "No level control cluster on" << thing->name() << "and endpoint" << endpoint->endpointId();
+        qCWarning(m_dc) << "No level control input cluster on" << thing->name() << "and endpoint" << endpoint->endpointId();
         return;
     }
 
@@ -812,6 +837,49 @@ void ZigbeeIntegrationPlugin::connectToLevelControlInputCluster(Thing *thing, Zi
     connect(levelControlCluster, &ZigbeeClusterLevelControl::currentLevelChanged, thing, [thing, stateName](int currentLevel){
         thing->setStateValue(stateName, currentLevel * 100 / 255);
     });
+}
+
+void ZigbeeIntegrationPlugin::connectToLevelControlOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+{
+    ZigbeeClusterLevelControl *levelCluster = endpoint->outputCluster<ZigbeeClusterLevelControl>(ZigbeeClusterLibrary::ClusterIdLevelControl);
+    if (!levelCluster) {
+        qCWarning(m_dc) << "Could not find level control output cluster on" << thing << endpoint;
+    } else {
+        connect(levelCluster, &ZigbeeClusterLevelControl::commandMoveSent, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::MoveMode moveMode, quint8 rate, quint8 transactionSeqenceNumber){
+            qCDebug(m_dc) << thing << "move command received" << withOnOff << moveMode << rate << transactionSeqenceNumber;
+            EventType eventType = thing->thingClass().eventTypes().findByName("pressed");
+            ParamType buttonNameParamType = eventType.paramTypes().findByName("buttonName");
+            switch (moveMode) {
+            case ZigbeeClusterLevelControl::MoveModeUp:
+                qCDebug(m_dc) << thing << "Move up pressed";
+                emit emitEvent(Event(eventType.id(), thing->id(), ParamList() << Param(buttonNameParamType.id(), "UP")));
+                break;
+            case ZigbeeClusterLevelControl::MoveModeDown:
+                qCDebug(m_dc) << thing << "Move down pressed";
+                emit emitEvent(Event(eventType.id(), thing->id(), ParamList() << Param(buttonNameParamType.id(), "DOWN")));
+                break;
+            default:
+                break;
+            }
+        });
+        connect(levelCluster, &ZigbeeClusterLevelControl::commandStepSent, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::StepMode stepMode, quint8 stepSize, quint16 transitionTime, quint8 transactionSequenceNumber){
+            qCDebug(m_dc) << thing << "move command received" << withOnOff << stepMode << stepSize << transitionTime << transactionSequenceNumber;
+            EventType eventType = thing->thingClass().eventTypes().findByName("pressed");
+            ParamType buttonNameParamType = eventType.paramTypes().findByName("buttonName");
+            switch (stepMode) {
+            case ZigbeeClusterLevelControl::StepModeUp:
+                qCDebug(m_dc) << thing << "Step up pressed";
+                emit emitEvent(Event(eventType.id(), thing->id(), ParamList() << Param(buttonNameParamType.id(), "UP")));
+                break;
+            case ZigbeeClusterLevelControl::StepModeDown:
+                qCDebug(m_dc) << thing << "Step down pressed";
+                emit emitEvent(Event(eventType.id(), thing->id(), ParamList() << Param(buttonNameParamType.id(), "DOWN")));
+                break;
+            default:
+                break;
+            }
+        });
+    }
 }
 
 void ZigbeeIntegrationPlugin::connectToColorControlInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)

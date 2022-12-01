@@ -73,7 +73,7 @@ protected:
     Thing *thingForNode(ZigbeeNode *node);
     ZigbeeNode *nodeForThing(Thing *thing);
 
-    void createThing(const ThingClassId &thingClassId, ZigbeeNode *node, const ParamList &additionalParams = ParamList());
+    virtual void createThing(const ThingClassId &thingClassId, ZigbeeNode *node, const ParamList &additionalParams = ParamList());
 
     void bindCluster(ZigbeeNodeEndpoint *endpoint, quint16 clusterId);
     void bindPowerConfigurationCluster(ZigbeeNodeEndpoint *endpoint);
@@ -105,7 +105,9 @@ protected:
     void connectToPowerConfigurationInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToThermostatCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToOnOffInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName = "power");
+    void connectToOnOffOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToLevelControlInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName);
+    void connectToLevelControlOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToColorControlInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToElectricalMeasurementCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToMeteringCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);

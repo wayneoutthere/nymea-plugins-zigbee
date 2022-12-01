@@ -1585,6 +1585,116 @@
                             "defaultValue": ""
                         }
                     ]
+                },
+                {
+                    "id": "b909dc16-61fa-4c5f-ad7d-195327f78f8d",
+                    "name": "remoteControl",
+                    "displayName": "Remote control",
+                    "createMethods": ["auto"],
+                    "interfaces": [ "multibutton", "wirelessconnectable", "battery"],
+                    "paramTypes": [
+                        {
+                            "id": "5fafb827-027e-4e32-bff7-a32fb8ee4d27",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "0df88905-7088-4e83-acfb-5bc5c6cd4293",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "a7552ba5-f009-46f5-a0f6-6ce8190dc58a",
+                            "name": "endpointId",
+                            "displayName": "Endpoint ID",
+                            "type": "uint",
+                            "defaultValue": 1
+                        },
+                        {
+                            "id": "0b1c4f87-a7d9-41f1-879a-21fbc8bb416e",
+                            "name": "manufacturer",
+                            "displayName": "Manufacturer",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "aec1e0aa-24f8-4e3f-b14f-858a6d1647c1",
+                            "name": "model",
+                            "displayName": "Model",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "445e279e-31e7-4a80-b382-62417ad61414",
+                            "name": "batteryCritical",
+                            "displayName": "Battery critical",
+                            "displayNameEvent": "Battery critical changed",
+                            "type": "bool",
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "812daed6-1630-4d01-a039-3977edc965c0",
+                            "name": "batteryLevel",
+                            "displayName": "Battery level",
+                            "displayNameEvent": "Battery level changed",
+                            "type": "int",
+                            "unit": "Percentage",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "5b563fa9-1140-4f1f-8b87-4c1a287ccad5",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "displayNameEvent": "Connected or disconnected",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "cached": false
+                        },
+                        {
+                            "id": "599ca06d-a532-4633-8b79-30a50325e4a2",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "displayNameEvent": "Signal strength changed",
+                            "type": "uint",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "87ac4e00-bf34-4a15-9cc3-a98c5099c1eb",
+                            "name": "version",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        }
+                    ],
+                    "eventTypes": [
+                        {
+                            "id": "d49c9768-9726-4d86-a46e-cc34a0d7a2a1",
+                            "name": "pressed",
+                            "displayName": "Pressed",
+                            "paramTypes": [
+                                {
+                                    "id": "066ea514-03c6-4d6a-bfca-a354993f2881",
+                                    "name": "buttonName",
+                                    "displayName": "Button name",
+                                    "type": "QString",
+                                    "allowedValues": ["ON", "OFF", "TOGGLE", "UP", "DOWN"]
+                                }
+                            ]
+                        }
+                    ]
                 }
             ]
         }
