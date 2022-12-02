@@ -78,10 +78,10 @@ void IntegrationPluginZigbeeEurotronic::setupThing(ThingSetupInfo *info)
 
     ZigbeeNode *node = nodeForThing(thing);
     ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
+    thing->setStateValue("currentVersion", endpoint->deviceVersion());
 
     connectToPowerConfigurationInputCluster(thing, endpoint);
     connectToThermostatCluster(thing, endpoint);
-    connectToOtaOutputCluster(thing, endpoint);
 
     ZigbeeClusterThermostat *thermostatCluster = endpoint->inputCluster<ZigbeeClusterThermostat>(ZigbeeClusterLibrary::ClusterIdThermostat);
     if (!thermostatCluster) {

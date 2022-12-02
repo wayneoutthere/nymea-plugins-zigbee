@@ -13,7 +13,7 @@
                     "name": "spirit",
                     "displayName": "SPIRIT ZigBee ",
                     "createMethods": ["auto"],
-                    "interfaces": ["thermostat", "temperaturesensor", "battery",  "wirelessconnectable", "childlock", "update"],
+                    "interfaces": ["thermostat", "temperaturesensor", "battery",  "wirelessconnectable", "childlock"],
                     "paramTypes": [
                         {
                             "id": "5aff538a-f56d-4e36-b406-b24ef8ef198d",
@@ -156,24 +156,6 @@
                             "displayName": "Version",
                             "type": "QString",
                             "defaultValue": ""
-                        },
-                        {
-                            "id": "dc94b759-71ec-4d86-8984-089ed3573cd8",
-                            "name": "availableVersion",
-                            "displayName": "Available firmware version",
-                            "type": "QString",
-                            "defaultValue": ""
-                        },
-                        {
-                            "id": "97278a2d-4242-433f-815f-29d861e437c5",
-                            "name": "updateProgress",
-                            "displayName": "Update progress",
-                            "type": "uint",
-                            "minValue": 0,
-                            "maxValue": 100,
-                            "unit": "Percentage",
-                            "defaultValue": 0,
-                            "cached": false
                         }
                     ],
                     "actionTypes": [
