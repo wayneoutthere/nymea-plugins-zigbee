@@ -678,7 +678,7 @@
                     "id": "775be45e-08d8-4ae8-bc95-5721a5317856",
                     "setupMethod": "JustAdd",
                     "createMethods": [ "Auto" ],
-                    "interfaces": [ "wirelessconnectable" ],
+                    "interfaces": [ "vibrationsensor", "wirelessconnectable" ],
                     "paramTypes": [
                         {
                             "id": "324cd9a0-3381-490b-9537-88b65e0093bf",
@@ -695,12 +695,25 @@
                             "defaultValue": ""
                         }
                     ],
+                    "settingsTypes": [
+                        {
+                            "id": "c593e999-4de4-4b3d-a874-aa35263d74a4",
+                            "name": "sensitivity",
+                            "displayName": "Sensitivity",
+                            "type": "QString",
+                            "allowedValues": [
+                                "high",
+                                "medium",
+                                "low"
+                            ],
+                            "defaultValue": "medium"
+                        }
+                    ],
                     "stateTypes": [
                         {
                             "id": "12970c44-5c59-4c6b-a244-6bc413d32c66",
                             "name": "connected",
                             "displayName": "Available",
-                            "displayNameEvent": "Available changed",
                             "type": "bool",
                             "cached": false,
                             "defaultValue": false
@@ -709,7 +722,6 @@
                             "id": "eb8bbd63-1f1c-4499-8385-06fbe8e301db",
                             "name": "signalStrength",
                             "displayName": "Signal strength",
-                            "displayNameEvent": "Signal strength changed",
                             "defaultValue": 0,
                             "maxValue": 100,
                             "minValue": 0,
@@ -720,7 +732,6 @@
                             "id": "8a4aceef-c8ee-487a-946c-20f26fc2d5ed",
                             "name": "version",
                             "displayName": "Version",
-                            "displayNameEvent": "Version changed",
                             "type": "QString",
                             "cached": true,
                             "defaultValue": ""

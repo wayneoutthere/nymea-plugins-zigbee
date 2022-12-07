@@ -37,6 +37,7 @@
 #include <zigbeenodeendpoint.h>
 #include <hardware/zigbee/zigbeehardwareresource.h>
 
+#include <zcl/general/zigbeeclusterbasic.h>
 #include <zcl/general/zigbeeclusteronoff.h>
 #include <zcl/general/zigbeeclustermultistateinput.h>
 #include <zcl/general/zigbeeclusteranalogoutput.h>
@@ -321,6 +322,40 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
     }
 
     if (thing->thingClassId() == lumiVibrationSensorThingClassId) {
+
+        connect(thing, &Thing::settingChanged, this, [thing, endpoint](const ParamTypeId &paramTypeId, const QVariant &value){
+            qCDebug(dcZigbeeLumi()) << thing->thingClass().displayName() << "settings changed" << thing->thingClass().settingsTypes().findById(paramTypeId).displayName() << value;
+            if (paramTypeId == lumiVibrationSensorSettingsSensitivityParamTypeId) {
+                QString sensitivity = value.toString();
+                quint8 sensitivityValue = 0x0b;
+                if (sensitivity == "high") {
+                    sensitivityValue = 0x01;
+                } else if (sensitivity == "medium") {
+                    sensitivityValue = 0x0b;
+                } else {
+                    sensitivityValue = 0x15;
+                }
+
+                ZigbeeClusterBasic *basicCluster = endpoint->inputCluster<ZigbeeClusterBasic>(ZigbeeClusterLibrary::ClusterIdBasic);
+                if (!basicCluster) {
+                    qCWarning(dcZigbeeLumi()) << "Failed to update sensitivity. The basic cluster could not be found.";
+                    return;
+                }
+
+                ZigbeeClusterLibrary::WriteAttributeRecord record;
+                record.attributeId = 0xFF0D;
+                record.dataType = Zigbee::Uint8;
+                record.data = QByteArray(1, sensitivityValue);
+                ZigbeeClusterReply *reply = basicCluster->writeAttributes({record}, 0x115f);
+                connect(reply, &ZigbeeClusterReply::finished, thing, [sensitivityValue, sensitivity, reply](){
+                    if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
+                        qCWarning(dcZigbeeLumi()) << "Error setting sensitivity to" << sensitivity << sensitivityValue << reply->error();
+                        return;
+                    }
+                });
+            }
+        });
+
         connect(endpoint, &ZigbeeNodeEndpoint::clusterAttributeChanged, this, [this, thing](ZigbeeCluster *cluster, const ZigbeeClusterAttribute &attribute){
             if (cluster->clusterId() == ZigbeeClusterLibrary::ClusterIdDoorLock) {
                 // Note: the vibration sensor is using the door lock cluster, with undocumented attribitues.
