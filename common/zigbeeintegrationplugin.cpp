@@ -226,15 +226,6 @@ void ZigbeeIntegrationPlugin::bindOnOffCluster(ZigbeeNodeEndpoint *endpoint, int
             }
         }
     });
-
-    ZigbeeDeviceObjectReply * zdoReply = endpoint->node()->deviceObject()->requestBindGroupAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdOnOff, 0x0000);
-    connect(zdoReply, &ZigbeeDeviceObjectReply::finished, endpoint->node(), [=](){
-        if (zdoReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
-            qCWarning(m_dc) << "Failed to bind on/off cluster to coordinator" << zdoReply->error();
-        } else {
-            qCDebug(m_dc) << "Bind on/off cluster to coordinator finished successfully";
-        }
-    });
 }
 
 void ZigbeeIntegrationPlugin::bindLevelControlCluster(ZigbeeNodeEndpoint *endpoint)
@@ -264,7 +255,7 @@ void ZigbeeIntegrationPlugin::bindColorControlCluster(ZigbeeNodeEndpoint *endpoi
 void ZigbeeIntegrationPlugin::bindElectricalMeasurementCluster(ZigbeeNodeEndpoint *endpoint)
 {
     ZigbeeNode *node = endpoint->node();
-    ZigbeeDeviceObjectReply *bindElectricalMeasurementClusterReply = node->deviceObject()->requestBindGroupAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdElectricalMeasurement, 0x0000);
+    ZigbeeDeviceObjectReply *bindElectricalMeasurementClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), ZigbeeClusterLibrary::ClusterIdElectricalMeasurement,hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
     connect(bindElectricalMeasurementClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
         if (bindElectricalMeasurementClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
             qCWarning(m_dc) << "Failed to bind electrical measurement cluster" << bindElectricalMeasurementClusterReply->error();
