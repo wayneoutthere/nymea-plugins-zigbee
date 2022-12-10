@@ -728,10 +728,21 @@ void ZigbeeIntegrationPlugin::connectToPowerConfigurationInputCluster(Thing *thi
         thing->setStateValue("batteryCritical", alarmState > 0);
     });
 
-    powerCluster->readAttributes({
-                                 ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining,
-                                 ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState
-                             });
+    if (endpoint->node()->reachable()) {
+        powerCluster->readAttributes({
+                                     ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining,
+                                     ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState
+                                 });
+    }
+
+    connect(endpoint->node(), &ZigbeeNode::reachableChanged, powerCluster, [powerCluster](bool reachable){
+        if (reachable) {
+            powerCluster->readAttributes({
+                                         ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining,
+                                         ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState
+                                     });
+        }
+    });
 }
 
 void ZigbeeIntegrationPlugin::connectToThermostatCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
