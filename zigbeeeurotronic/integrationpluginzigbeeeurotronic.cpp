@@ -110,6 +110,30 @@ void IntegrationPluginZigbeeEurotronic::setupThing(ThingSetupInfo *info)
 
 void IntegrationPluginZigbeeEurotronic::executeAction(ThingActionInfo *info)
 {
+    m_actionQueue.enqueue(info);
+    connect(info, &ThingActionInfo::finished, this, [=](){
+        m_actionQueue.removeAll(info);
+        if (m_pendingAction == info) {
+            m_pendingAction = nullptr;
+            sendNextAction();
+        }
+    });
+    sendNextAction();
+}
+
+void IntegrationPluginZigbeeEurotronic::sendNextAction()
+{
+    if (m_actionQueue.isEmpty()) {
+        return;
+    }
+
+    if (m_pendingAction) {
+        qCDebug(dcZigbeeEurotronic()) << "An action is already pending... enqueueing action.";
+        return;
+    }
+
+    ThingActionInfo *info = m_actionQueue.dequeue();
+
     if (!hardwareManager()->zigbeeResource()->available()) {
         info->finish(Thing::ThingErrorHardwareNotAvailable);
         return;
