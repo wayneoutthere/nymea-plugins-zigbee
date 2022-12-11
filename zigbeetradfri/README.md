@@ -8,12 +8,12 @@ This plugin allows to interact with IKEA TRÅDFRI ZigBee devices using a native 
 * TRADFRI bulb E27 WS clear 806lm (color temperature light)
 * [Wireless dimmer](https://www.ikea.com/us/en/p/tradfri-wireless-dimmer-white-10408598/)*
 * [Shortcut Button](https://www.ikea.com/us/en/p/tradfri-shortcut-button-white-20356382/)*
-* [Remote control](https://www.ikea.com/us/en/p/tradfri-remote-control-00443130/)**
+* [Remote control](https://zigbee.blakadder.com/Ikea_E1810.html)**May be discontinued.**
 * [Symfonisk sound remote](https://www.ikea.com/us/en/p/symfonisk-sound-remote-white-20370482/)
 * [Motion sensor](https://www.ikea.com/us/en/p/tradfri-wireless-motion-sensor-white-60377655/)
-* [Signal repeater](https://www.ikea.com/us/en/p/tradfri-signal-repeater-30400407/)
+* [Signal repeater](https://www.ikea.com/us/en/p/tradfri-signal-repeater-30400407/) -**DISCONTINUED**
 * [Control outlet](https://www.ikea.com/us/en/p/tradfri-wireless-control-outlet-30356169/)
-* [Starkvind air purifier](https://www.ikea.com/de/de/new/neu-starkvind-luftreiniger-pub4c72a520)
+* [Starkvind air purifier](https://www.ikea.com/de/de/new/neu-starkvind-luftreiniger-pub4c72a520), [USA English page](https://www.ikea.com/us/en/p/starkvind-air-purifier-black-smart-40501967/)
  
 (*) Known working device firmware version: `2.2.008`
 (**) Known working device firmware version: `2.3.014`
