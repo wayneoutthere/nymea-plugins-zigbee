@@ -1,7 +1,7 @@
 ﻿/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 *
 *
-* Copyright 2013 - 2020, nymea GmbH
+* Copyright 2013 - 2022, nymea GmbH
 * Contact: contact@nymea.io
 
 * This file is part of nymea.
@@ -32,9 +32,12 @@
 #include "integrationpluginzigbeelumi.h"
 #include "plugininfo.h"
 
+#include <math.h>
+
 #include <zigbeenodeendpoint.h>
 #include <hardware/zigbee/zigbeehardwareresource.h>
 
+#include <zcl/general/zigbeeclusterbasic.h>
 #include <zcl/general/zigbeeclusteronoff.h>
 #include <zcl/general/zigbeeclustermultistateinput.h>
 #include <zcl/general/zigbeeclusteranalogoutput.h>
@@ -47,6 +50,7 @@
 #include <zcl/security/zigbeeclusteriaszone.h>
 
 #include <QDebug>
+#include <QDataStream>
 
 IntegrationPluginZigbeeLumi::IntegrationPluginZigbeeLumi():
     ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor, dcZigbeeLumi())
@@ -75,7 +79,7 @@ bool IntegrationPluginZigbeeLumi::handleNode(ZigbeeNode *node, const QUuid &/*ne
 {
     // Note: Lumi / Xiaomi / Aquara devices are not in the specs, some older models do not
     // send the node descriptor or use a inconsistent manufacturer code. We use the model identifier
-    // for verification since they seem to start always with lumi.        
+    // for verification since they seem to start always with lumi.
     foreach (ZigbeeNodeEndpoint *endpoint, node->endpoints()) {
         // Get the model identifier if present from the first endpoint. Also this is out of spec
         if (!endpoint->hasInputCluster(ZigbeeClusterLibrary::ClusterIdBasic)) {
@@ -318,21 +322,134 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
     }
 
     if (thing->thingClassId() == lumiVibrationSensorThingClassId) {
+
+        connect(thing, &Thing::settingChanged, this, [thing, endpoint](const ParamTypeId &paramTypeId, const QVariant &value){
+            qCDebug(dcZigbeeLumi()) << thing->thingClass().displayName() << "settings changed" << thing->thingClass().settingsTypes().findById(paramTypeId).displayName() << value;
+            if (paramTypeId == lumiVibrationSensorSettingsSensitivityParamTypeId) {
+                QString sensitivity = value.toString();
+                quint8 sensitivityValue = 0x0b;
+                if (sensitivity == "high") {
+                    sensitivityValue = 0x01;
+                } else if (sensitivity == "medium") {
+                    sensitivityValue = 0x0b;
+                } else {
+                    sensitivityValue = 0x15;
+                }
+
+                ZigbeeClusterBasic *basicCluster = endpoint->inputCluster<ZigbeeClusterBasic>(ZigbeeClusterLibrary::ClusterIdBasic);
+                if (!basicCluster) {
+                    qCWarning(dcZigbeeLumi()) << "Failed to update sensitivity. The basic cluster could not be found.";
+                    return;
+                }
+
+                ZigbeeClusterLibrary::WriteAttributeRecord record;
+                record.attributeId = 0xFF0D;
+                record.dataType = Zigbee::Uint8;
+                record.data = QByteArray(1, sensitivityValue);
+                ZigbeeClusterReply *reply = basicCluster->writeAttributes({record}, 0x115f);
+                connect(reply, &ZigbeeClusterReply::finished, thing, [sensitivityValue, sensitivity, reply](){
+                    if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
+                        qCWarning(dcZigbeeLumi()) << "Error setting sensitivity to" << sensitivity << sensitivityValue << reply->error();
+                        return;
+                    }
+                });
+            }
+        });
+
         connect(endpoint, &ZigbeeNodeEndpoint::clusterAttributeChanged, this, [this, thing](ZigbeeCluster *cluster, const ZigbeeClusterAttribute &attribute){
             if (cluster->clusterId() == ZigbeeClusterLibrary::ClusterIdDoorLock) {
-                // Note: shoehow the vibration sensor is using the door lock cluster, with undocumented attribitues.
-                // This device is completly out of spec, so we just recognize the vibration trough tests and it looks like
-                // attribute id 85 is the indicator for vibration. The payload contains an unsigned int, but not sure what it indicates yet
-
-                if (attribute.id() == 85) {
-                    bool valueOk = false;
+                // Note: the vibration sensor is using the door lock cluster, with undocumented attribitues.
+                // The data interpretation has been stolen from: https://github.com/Koenkk/zigbee-herdsman-converters/blob/master/converters/fromZigbee.js
+                bool valueOk = false;
+                switch (attribute.id()) {
+                case 0x0055: { // motion type
                     quint16 value = attribute.dataType().toUInt16(&valueOk);
                     if (!valueOk) {
                         qCWarning(dcZigbeeLumi()) << thing << "failed to convert attribute data to uint16." << attribute;
-                    } else {
-                        qCDebug(dcZigbeeLumi()) << thing << "vibration attribute changed" << value;
-                        emitEvent(Event(lumiVibrationSensorVibrationDetectedEventTypeId, thing->id()));
+                        return;
                     }
+
+                    switch (value) {
+                    case 0x01:
+                        qCDebug(dcZigbeeLumi()) << thing << "vibration detected";
+                        emit emitEvent(Event(lumiVibrationSensorVibrationDetectedEventTypeId, thing->id()));
+                        break;
+                    case 0x02:
+                        qCDebug(dcZigbeeLumi()) << thing << "tilt detected";
+                        emit emitEvent(Event(lumiVibrationSensorTiltDetectedEventTypeId, thing->id()));
+                        break;
+                    case 0x03:
+                        qCDebug(dcZigbeeLumi()) << thing << "drop detected";
+                        emit emitEvent(Event(lumiVibrationSensorDropDetectedEventTypeId, thing->id()));
+                        break;
+                    default:
+                        qCDebug(dcZigbeeLumi()) << thing << "unhandled movement type" << value;
+                        break;
+                    }
+
+                    break;
+                }
+                case 0x0503: { // angle
+                    quint16 value = attribute.dataType().toUInt16(&valueOk);
+                    if (!valueOk) {
+                        qCWarning(dcZigbeeLumi()) << thing << "failed to convert attribute data to uint16." << attribute;
+                        return;
+                    }
+
+                    // Not sure which angle this is...maybe from the tilte
+                    qCDebug(dcZigbeeLumi()) << thing << "angle" << value;
+                    break;
+                }
+                case 0x0505: { // strength
+                    quint16 value = attribute.dataType().toUInt16(&valueOk);
+                    if (!valueOk) {
+                        qCWarning(dcZigbeeLumi()) << thing << "failed to convert attribute data to uint16." << attribute;
+                        return;
+                    }
+
+                    // So far not seen
+                    qCDebug(dcZigbeeLumi()) << thing << "strength" << value;
+                    break;
+                }
+                case 0x0508: { // rotation
+                    if (attribute.dataType().dataLength() != 6) {
+                        qCWarning(dcZigbeeLumi()) << thing << "received rotation data but with invalid size" << attribute.dataType().dataLength() << attribute.dataType().data().toHex();
+                        return;
+                    }
+
+                    QDataStream stream(attribute.dataType().data());
+                    stream.setByteOrder(QDataStream::LittleEndian);
+                    qint16 x, y, z;
+                    stream >> x >> y >> z;
+
+                    int xSquare = x * x;
+                    int ySquare = y * y;
+                    int zSquare = y * y;
+                    int angleX = qRound(atan(x / sqrt(ySquare + zSquare)) * 180 / M_PI);
+                    int angleY = qRound(atan(y / sqrt(xSquare + zSquare)) * 180 / M_PI);
+                    int angleZ = qRound(atan(z / sqrt(xSquare + ySquare)) * 180 / M_PI);
+
+                    double r = sqrt(xSquare + ySquare + zSquare);
+                    int absoluteX = qRound((acos(x / r)) * 180 / M_PI);
+                    int absoluteY = qRound((acos(y / r)) * 180 / M_PI);
+
+                    qCDebug(dcZigbeeLumi()) << thing << "angles:" << attribute.dataType().data().toHex();
+                    qCDebug(dcZigbeeLumi()) << "x" << x << angleX;
+                    qCDebug(dcZigbeeLumi()) << "y" << y << angleY;
+                    qCDebug(dcZigbeeLumi()) << "z" << z << angleZ;
+                    qCDebug(dcZigbeeLumi()) << "abs x" << absoluteX;
+                    qCDebug(dcZigbeeLumi()) << "abs y" << absoluteY;
+
+                    thing->setStateValue(lumiVibrationSensorAngleXStateTypeId, angleX);
+                    thing->setStateValue(lumiVibrationSensorAngleYStateTypeId, angleY);
+                    thing->setStateValue(lumiVibrationSensorAngleZStateTypeId, angleZ);
+                    thing->setStateValue(lumiVibrationSensorAngleAbsoluteXStateTypeId, absoluteX);
+                    thing->setStateValue(lumiVibrationSensorAngleAbsoluteYStateTypeId, absoluteY);
+                    break;
+                }
+                default:
+                    qCDebug(dcZigbeeLumi()) << thing << "unknown attribute change:" << attribute.id() << attribute.dataType().data().toHex();
+                    break;
                 }
             }
         });
@@ -371,7 +488,7 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
                 case 2:
                     thing->emitEvent("pressed", {Param(lumiLongpressButtonSensorPressedEventButtonNameParamTypeId, "2")});
                     break;
-                // 0xff would be released, but nymeas longpressbutton interface doesn't use that
+                    // 0xff would be released, but nymeas longpressbutton interface doesn't use that
                 }
             }
         });
