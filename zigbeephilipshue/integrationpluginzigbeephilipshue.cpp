@@ -489,6 +489,13 @@ void IntegrationPluginZigbeePhilipsHue::executeAction(ThingActionInfo *info)
             || info->thing()->thingClassId() == colorTemperatureLightThingClassId
             || info->thing()->thingClassId() == colorLightThingClassId) {
         endpoint = node->getEndpoint(11);
+    } else if (info->thing()->thingClassId() == dimmerSwitchThingClassId
+               || info->thing()->thingClassId() == motionSensorThingClassId) {
+        endpoint = node->getEndpoint(2);
+    } else if (info->thing()->thingClassId() == smartButtonThingClassId
+               || info->thing()->thingClassId() == dimmerSwitch2ThingClassId
+               || info->thing()->thingClassId() == wallSwitchModuleThingClassId){
+        endpoint = node->getEndpoint(1);
     } else {
         info->finish(Thing::ThingErrorUnsupportedFeature);
         return;
