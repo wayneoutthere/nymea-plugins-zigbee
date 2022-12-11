@@ -1,3 +1,34 @@
+nymea-plugins-zigbee (1.6.0) jammy; urgency=medium
+
+  [ Michael Zanetti ]
+  * Eurotronic, Tradfri: Add childlock interface
+  * Tuya: Add microwave presence sensor
+
+  [ Simon Stürz ]
+  * Lumi: update vibration sensor events, add axis angles and absolute
+    angles
+
+  [ Michael Zanetti ]
+  * Eurotronic: Queue actions
+
+  [ Jenkins ]
+  * Hue: Update README.md
+  * Tradfri: Updated some links
+
+  [ Michael Zanetti ]
+  * Hue: Wall switch module: Bind to coordinator address instead of
+    group 0
+  * Develco: Fix setup for smoke sensors with older firmware
+  * Tuya: Add vibration sensor
+  * Tuya: Add luminance motion sensor
+  * Generic: Add support for spec compliant ZigBee remotes (OnOff and
+    LevelControl)
+  * Eurotronic: Remove OTA feature for the Spirit
+  * PhilipsHue: Fix performUpdate action for non light devices
+  * Don't bind OnOff cluster to group 0 by default
+
+ -- jenkins <developer@nymea.io>  Sun, 11 Dec 2022 12:22:04 +0100
+
 nymea-plugins-zigbee (1.5.1) jammy; urgency=medium
 
   [ Michael Zanetti ]
