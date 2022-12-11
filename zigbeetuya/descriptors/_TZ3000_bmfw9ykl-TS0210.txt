@@ -1,0 +1,15 @@
+I | Zigbee: → ZigbeeNode(0xcbdb, A4:C1:38:3D:09:14:24:B6, _TZ3000_bmfw9ykl (0x1141), TS0210, End device, RxOn:false)
+I | Zigbee: ZigbeeNodeEndpoint(0x01, Zigbee::ZigbeeProfileHomeAutomation, Zigbee::HomeAutomationDeviceIasZone)
+I | Zigbee: Manufacturer: “_TZ3000_bmfw9ykl”
+I | Zigbee: Model “TS0210”
+I | Zigbee: Input clusters ( 3 )
+I | Zigbee: - ZigbeeCluster(0x0500, IasZone, Server)
+I | Zigbee: - ZigbeeClusterAttribute(0x0013, ZigbeeDataType(Unsigned 8-bit integer, 0x0a))
+I | Zigbee: - ZigbeeClusterAttribute(0x0000, ZigbeeDataType(16-bit bitmap, 0x00 0x00))
+I | Zigbee: - ZigbeeCluster(0x0001, PowerConfiguration, Server)
+I | Zigbee: - ZigbeeCluster(0x0000, Basic, Server)
+I | Zigbee: - ZigbeeClusterAttribute(0x0005, ZigbeeDataType(Character string, TS0210))
+I | Zigbee: - ZigbeeClusterAttribute(0x0004, ZigbeeDataType(Character string, _TZ3000_bmfw9ykl))
+I | Zigbee: Output clusters ( 2 )
+I | Zigbee: - ZigbeeCluster(0x0019, OtaUpgrade, Client)
+I | Zigbee: - ZigbeeCluster(0x000a, Time, Client)
