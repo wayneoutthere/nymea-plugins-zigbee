@@ -296,6 +296,103 @@
                             "suggestLogging": true
                         }
                     ]
+                },
+                {
+                    "id": "43844f3d-c620-44ab-b1fa-741b79dfc289",
+                    "name": "motionSensor",
+                    "displayName": "Motion sensor",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "presencesensor", "lightsensor", "wirelessconnectable", "battery" ],
+                    "paramTypes": [
+                        {
+                            "id": "7be45632-ded8-44d3-886e-343f03312c10",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "817cba21-dd37-4d9e-acb0-ae66ac77e4d6",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "settingsTypes": [
+                        {
+                            "id": "ba641d79-4ceb-4b3e-b116-9f440298ccb1",
+                            "name": "sensitivity",
+                            "displayName": "Sensitvity",
+                            "type": "uint",
+                            "defaultValue": 2,
+                            "minValue": 1,
+                            "maxValue": 3
+                        },
+                        {
+                            "id": "9494a9ea-9afe-4114-88f9-a00bc493fa1f",
+                            "name": "timeout",
+                            "displayName": "Timeout",
+                            "type": "uint",
+                            "unit": "Seconds",
+                            "allowedValues": [10, 30, 60, 120],
+                            "defaultValue": 30
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "8b16ee46-0132-409a-857e-863d20e68a77",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "12334fb5-5ea4-44d3-8c60-f187097702db",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "cached": false
+                        },
+                        {
+                            "id": "b84574b4-43c9-49c4-a05a-92265bb044d7",
+                            "name": "isPresent",
+                            "displayName": "Presence",
+                            "type": "bool",
+                            "defaultValue": false,
+                            "cached": false
+                        },
+                        {
+                            "id": "25568c64-b904-4099-8d5c-452c3130e130",
+                            "name": "lightIntensity",
+                            "displayName": "Light intensity",
+                            "type": "double",
+                            "unit": "Lux",
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "763dabb7-f1fb-4202-a31a-7af9f63f09e1",
+                            "name": "batteryLevel",
+                            "displayName": "Battery level",
+                            "type": "int",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": "100"
+                        },
+                        {
+                            "id": "323d801e-a563-4680-8e58-f96e148c2ad1",
+                            "name": "batteryCritical",
+                            "displayName": "Battery level critical",
+                            "type": "bool",
+                            "defaultValue": false
+                        }
+                    ]
                 }
             ]
         }

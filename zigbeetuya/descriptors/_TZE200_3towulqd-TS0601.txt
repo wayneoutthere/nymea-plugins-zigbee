@@ -1,0 +1,14 @@
+I | Zigbee: → ZigbeeNode(0xe1e5, A4:C1:38:89:B5:EA:3D:31, _TZE200_3towulqd (0x1141), TS0601, End device, RxOn:false)
+I | Zigbee: ZigbeeNodeEndpoint(0x01, Zigbee::ZigbeeProfileHomeAutomation, Zigbee::HomeAutomationDeviceIasZone)
+I | Zigbee: Manufacturer: “_TZE200_3towulqd”
+I | Zigbee: Model “TS0601”
+I | Zigbee: Input clusters ( 4 )
+I | Zigbee: - ZigbeeCluster(0x0500, IasZone, Server)
+I | Zigbee: - ZigbeeCluster(0xef00, Unknown, Server)
+I | Zigbee: - ZigbeeCluster(0x0001, PowerConfiguration, Server)
+I | Zigbee: - ZigbeeCluster(0x0000, Basic, Server)
+I | Zigbee: - ZigbeeClusterAttribute(0x0005, ZigbeeDataType(Character string, TS0601))
+I | Zigbee: - ZigbeeClusterAttribute(0x0004, ZigbeeDataType(Character string, _TZE200_3towulqd))
+I | Zigbee: Output clusters ( 2 )
+I | Zigbee: - ZigbeeCluster(0x0019, OtaUpgrade, Client)
+I | Zigbee: - ZigbeeCluster(0x000a, Time, Client)
