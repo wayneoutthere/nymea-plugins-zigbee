@@ -1,3 +1,13 @@
+nymea-plugins-zigbee (1.6.1) jammy; urgency=medium
+
+  [ Michael Zanetti ]
+  * Eurotronic, Tradfri: Add childlock interface
+  * Tuya: Add vibration sensor
+  * Tuya: Add luminance motion sensor
+  * Eurotronic: Remove OTA feature for the Spirit
+
+ -- jenkins <developer@nymea.io>  Fri, 23 Dec 2022 11:32:32 +0100
+
 nymea-plugins-zigbee (1.6.0) jammy; urgency=medium
 
   [ Michael Zanetti ]
