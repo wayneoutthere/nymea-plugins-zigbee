@@ -69,13 +69,13 @@ public:
     virtual void thingRemoved(Thing *thing) override;
 
 protected:
-    bool manageNode(Thing *thing);
+    ZigbeeNode *manageNode(Thing *thing);
     Thing *thingForNode(ZigbeeNode *node);
     ZigbeeNode *nodeForThing(Thing *thing);
 
     virtual void createThing(const ThingClassId &thingClassId, ZigbeeNode *node, const ParamList &additionalParams = ParamList());
 
-    void bindCluster(ZigbeeNodeEndpoint *endpoint, quint16 clusterId);
+    void bindCluster(ZigbeeNodeEndpoint *endpoint, ZigbeeClusterLibrary::ClusterId clusterId, int retries = 3);
     void bindPowerConfigurationCluster(ZigbeeNodeEndpoint *endpoint);
     void bindThermostatCluster(ZigbeeNodeEndpoint *endpoint);
     void bindOnOffCluster(ZigbeeNodeEndpoint *endpoint, int retries = 3);
@@ -102,10 +102,10 @@ protected:
     void configureOccupancySensingInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
     void configureFanControlInputClusterAttributeReporting(ZigbeeNodeEndpoint *endpoint);
 
-    void connectToPowerConfigurationInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
+    void connectToPowerConfigurationInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, qreal maxVoltage = 0, qreal minVoltage = 0);
     void connectToThermostatCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToOnOffInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName = "power");
-    void connectToOnOffOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
+    void connectToOnOffOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &onButtonName = "ON", const QString &offButtonName = "OFF", const QString &toggleButtonName = "TOGGLE");
     void connectToLevelControlInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &stateName);
     void connectToLevelControlOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);
     void connectToColorControlInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint);

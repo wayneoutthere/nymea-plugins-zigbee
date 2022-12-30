@@ -4,7 +4,7 @@ Priority: options
 Maintainer: nymea GmbH <developer@nymea.io>
 Build-depends: debhelper (>= 0.0.0),
                libnymea-dev (>= 0.26~),
-               libnymea-zigbee-dev (>= 0.1.5~),
+               libnymea-zigbee-dev (>= 1.7~),
                nymea-dev-tools:native,
                pkg-config,
                qtbase5-dev,
@@ -68,6 +68,15 @@ Depends: ${shlibs:Depends},
 Description: nymea integration plugin for ZigBee based lumi/aqara/xiaomi devices
  This package contains the nymea integration plugin for ZigBee based devices made
  by Lumi, often also brandet as Aqara or Xiami Mii.
+
+
+Package: nymea-plugin-zigbee-osram
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+Description: nymea integration plugin for ZigBee based Osram Lightify devices
+ This package contains the nymea integration plugin for ZigBee based devices made
+ by Osram, marketed under the Lightfy brand.
 
 
 Package: nymea-plugin-zigbee-philipshue

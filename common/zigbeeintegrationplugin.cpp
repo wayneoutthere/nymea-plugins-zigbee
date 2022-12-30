@@ -98,7 +98,7 @@ void ZigbeeIntegrationPlugin::thingRemoved(Thing *thing)
     }
 }
 
-bool ZigbeeIntegrationPlugin::manageNode(Thing *thing)
+ZigbeeNode* ZigbeeIntegrationPlugin::manageNode(Thing *thing)
 {
     QUuid networkUuid = thing->paramValue(thing->thingClass().paramTypes().findByName("networkUuid").id()).toUuid();
     ZigbeeAddress zigbeeAddress = ZigbeeAddress(thing->paramValue(thing->thingClass().paramTypes().findByName("ieeeAddress").id()).toString());
@@ -109,7 +109,7 @@ bool ZigbeeIntegrationPlugin::manageNode(Thing *thing)
     }
 
     if (!node) {
-        return false;
+        return nullptr;
     }
 
     m_thingNodes.insert(thing, node);
@@ -138,7 +138,7 @@ bool ZigbeeIntegrationPlugin::manageNode(Thing *thing)
         }
     });
 
-    return true;
+    return node;
 }
 
 Thing *ZigbeeIntegrationPlugin::thingForNode(ZigbeeNode *node)
@@ -166,14 +166,18 @@ void ZigbeeIntegrationPlugin::createThing(const ThingClassId &thingClassId, Zigb
     emit autoThingsAppeared({descriptor});
 }
 
-void ZigbeeIntegrationPlugin::bindCluster(ZigbeeNodeEndpoint *endpoint, quint16 clusterId)
+void ZigbeeIntegrationPlugin::bindCluster(ZigbeeNodeEndpoint *endpoint, ZigbeeClusterLibrary::ClusterId clusterId, int retries)
 {
     ZigbeeNode *node = endpoint->node();
     ZigbeeDeviceObjectReply *bindClusterReply = node->deviceObject()->requestBindIeeeAddress(endpoint->endpointId(), clusterId,
                                                                                            hardwareManager()->zigbeeResource()->coordinatorAddress(node->networkUuid()), 0x01);
     connect(bindClusterReply, &ZigbeeDeviceObjectReply::finished, node, [=](){
         if (bindClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
-            qCWarning(m_dc) << "Failed to cluster" << clusterId << bindClusterReply->error();
+            qCWarning(m_dc).nospace().noquote() << "Failed to bind " << clusterId << " on EP " << endpoint->endpointId() << ": " << bindClusterReply->error();
+            if (retries > 0) {
+                qCWarning(m_dc) << "Retrying...";
+                bindCluster(endpoint, clusterId, retries - 1);
+            }
         }
     });
 }
@@ -208,7 +212,7 @@ void ZigbeeIntegrationPlugin::bindThermostatCluster(ZigbeeNodeEndpoint *endpoint
         ZigbeeClusterReply *reportingReply = endpoint->getInputCluster(ZigbeeClusterLibrary::ClusterIdThermostat)->configureReporting({batteryPercentageConfig});
         connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
             if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
-                qCWarning(m_dc) << "Failed to configure thermostat configuration cluster attribute reporting" << reportingReply->error();
+                qCWarning(m_dc) << "Failed to configure thermostat configuration cluster attribute reporting for ep" << endpoint->endpointId() << reportingReply->error();
             }
         });
     });
@@ -220,7 +224,7 @@ void ZigbeeIntegrationPlugin::bindOnOffCluster(ZigbeeNodeEndpoint *endpoint, int
                                                                                            hardwareManager()->zigbeeResource()->coordinatorAddress(endpoint->node()->networkUuid()), 0x01);
     connect(bindOnOffClusterReply, &ZigbeeDeviceObjectReply::finished, endpoint, [=](){
         if (bindOnOffClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
-            qCWarning(m_dc) << "Failed to bind OnOff cluster" << bindOnOffClusterReply->error();
+            qCWarning(m_dc) << "Failed to bind OnOff cluster for ep" << endpoint->endpointId() << bindOnOffClusterReply->error();
             if (retries > 0) {
                 bindOnOffCluster(endpoint, retries - 1);
             }
@@ -235,7 +239,7 @@ void ZigbeeIntegrationPlugin::bindLevelControlCluster(ZigbeeNodeEndpoint *endpoi
                                                                                            hardwareManager()->zigbeeResource()->coordinatorAddress(endpoint->node()->networkUuid()), 0x01);
     connect(bindLevelControlInputClusterReply, &ZigbeeDeviceObjectReply::finished, endpoint, [=](){
         if (bindLevelControlInputClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
-            qCWarning(m_dc) << "Failed to bind Level Control input cluster" << bindLevelControlInputClusterReply->error();
+            qCWarning(m_dc) << "Failed to bind Level Control input cluster for ep" << endpoint->endpointId() << bindLevelControlInputClusterReply->error();
         }
     });
 }
@@ -247,7 +251,7 @@ void ZigbeeIntegrationPlugin::bindColorControlCluster(ZigbeeNodeEndpoint *endpoi
                                                                                            hardwareManager()->zigbeeResource()->coordinatorAddress(endpoint->node()->networkUuid()), 0x01);
     connect(bindColorControlInputClusterReply, &ZigbeeDeviceObjectReply::finished, endpoint, [=](){
         if (bindColorControlInputClusterReply->error() != ZigbeeDeviceObjectReply::ErrorNoError) {
-            qCWarning(m_dc) << "Failed to bind Color Control input cluster" << bindColorControlInputClusterReply->error();
+            qCWarning(m_dc) << "Failed to bind Color Control input cluster for ep" << endpoint->endpointId() << bindColorControlInputClusterReply->error();
         }
     });
 }
@@ -430,6 +434,13 @@ void ZigbeeIntegrationPlugin::configurePowerConfigurationInputClusterAttributeRe
     batteryPercentageConfig.maxReportingInterval = 120;
     batteryPercentageConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
 
+    ZigbeeClusterLibrary::AttributeReportingConfiguration batteryVoltageConfig;
+    batteryVoltageConfig.attributeId = ZigbeeClusterPowerConfiguration::AttributeBatteryVoltage;
+    batteryVoltageConfig.dataType = Zigbee::Uint8;
+    batteryVoltageConfig.minReportingInterval = 60;
+    batteryVoltageConfig.maxReportingInterval = 120;
+    batteryVoltageConfig.reportableChange = ZigbeeDataType(static_cast<quint8>(1)).data();
+
     ZigbeeClusterLibrary::AttributeReportingConfiguration batteryAlarmStateConfig;
     batteryAlarmStateConfig.attributeId = ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState;
     batteryAlarmStateConfig.dataType = Zigbee::Uint8;
@@ -442,7 +453,7 @@ void ZigbeeIntegrationPlugin::configurePowerConfigurationInputClusterAttributeRe
         qCWarning(m_dc) << "No power configuation cluster found. Cannot configure attribute reporting for"<< endpoint;
         return;
     }
-    ZigbeeClusterReply *reportingReply = powerConfigurationCluster->configureReporting({batteryPercentageConfig, batteryAlarmStateConfig});
+    ZigbeeClusterReply *reportingReply = powerConfigurationCluster->configureReporting({batteryPercentageConfig, batteryVoltageConfig, batteryAlarmStateConfig});
     connect(reportingReply, &ZigbeeClusterReply::finished, this, [=](){
         if (reportingReply->error() != ZigbeeClusterReply::ErrorNoError) {
             qCWarning(m_dc) << "Failed to configure power configuration cluster attribute reporting" << reportingReply->error();
@@ -699,7 +710,7 @@ void ZigbeeIntegrationPlugin::configureFanControlInputClusterAttributeReporting(
     });
 }
 
-void ZigbeeIntegrationPlugin::connectToPowerConfigurationInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+void ZigbeeIntegrationPlugin::connectToPowerConfigurationInputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, qreal maxVoltage, qreal minVoltage)
 {
     ZigbeeClusterPowerConfiguration *powerCluster = endpoint->inputCluster<ZigbeeClusterPowerConfiguration>(ZigbeeClusterLibrary::ClusterIdPowerConfiguration);
     if (!powerCluster) {
@@ -707,8 +718,16 @@ void ZigbeeIntegrationPlugin::connectToPowerConfigurationInputCluster(Thing *thi
         return;
     }
 
-    if (thing->thingClass().hasStateType("batteryLevel") && powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining)) {
-        thing->setStateValue("batteryLevel", powerCluster->batteryPercentage());
+    if (thing->thingClass().hasStateType("batteryLevel")) {
+        if (powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining)) {
+            thing->setStateValue("batteryLevel", powerCluster->batteryPercentage());
+        } else if (powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryVoltage) && minVoltage != 0 && maxVoltage != 0) {
+            // FIXME: This is just a linear transition, which works for CR2450 batteries. If this is used for other types
+            // of batteries, this needs to be verified and adjusted as some batteries, if not most, would rather use a logarithmic curve.
+            double ratio = (powerCluster->batteryVoltage() - minVoltage) / (maxVoltage - minVoltage);
+            int percentage = qMin(100.0, qMax(0.0, ratio * 100));
+            thing->setStateValue("batteryLevel", percentage);
+        }
     }
     if (powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState)) {
         thing->setStateValue("batteryCritical", powerCluster->batteryAlarmState() > 0);
@@ -727,20 +746,34 @@ void ZigbeeIntegrationPlugin::connectToPowerConfigurationInputCluster(Thing *thi
     connect(powerCluster, &ZigbeeClusterPowerConfiguration::batteryAlarmStateChanged, thing, [=](ZigbeeClusterPowerConfiguration::BatteryAlarmMask alarmState){
         thing->setStateValue("batteryCritical", alarmState > 0);
     });
+    connect(powerCluster, &ZigbeeClusterPowerConfiguration::batteryVoltageChanged, thing, [=](double voltage){
+        // FIXME: This is just a linear transition, which works for CR2450 batteries. If this is used for other types
+        // of batteries, this needs to be verified and adjusted as some batteries, if not most, would rather use a logarithmic curve.
+        double ratio = (voltage - minVoltage) / (maxVoltage - minVoltage);
+        int percentage = qMin(100.0, qMax(0.0, ratio * 100));
+        if (!powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining)) {
+            thing->setStateValue("batteryLevel", percentage);
+        }
+        if (!powerCluster->hasAttribute(ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState)) {
+            thing->setStateValue("batteryCritical", (percentage < 10.0));
+        }
+    });
 
     if (endpoint->node()->reachable()) {
         powerCluster->readAttributes({
-                                     ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining,
-                                     ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState
-                                 });
+                                         ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining,
+                                         ZigbeeClusterPowerConfiguration::AttributeBatteryVoltage,
+                                         ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState
+                                     });
     }
 
     connect(endpoint->node(), &ZigbeeNode::reachableChanged, powerCluster, [powerCluster](bool reachable){
         if (reachable) {
             powerCluster->readAttributes({
-                                         ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining,
-                                         ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState
-                                     });
+                                             ZigbeeClusterPowerConfiguration::AttributeBatteryPercentageRemaining,
+                                             ZigbeeClusterPowerConfiguration::AttributeBatteryVoltage,
+                                             ZigbeeClusterPowerConfiguration::AttributeBatteryAlarmState
+                                         });
         }
     });
 }
@@ -799,25 +832,25 @@ void ZigbeeIntegrationPlugin::connectToOnOffInputCluster(Thing *thing, ZigbeeNod
     });
 }
 
-void ZigbeeIntegrationPlugin::connectToOnOffOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint)
+void ZigbeeIntegrationPlugin::connectToOnOffOutputCluster(Thing *thing, ZigbeeNodeEndpoint *endpoint, const QString &onButtonName, const QString &offButtonName, const QString &toggleButtonName)
 {
     ZigbeeClusterOnOff *onOffCluster = endpoint->outputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
     if (!onOffCluster) {
         qCWarning(m_dc) << "Could not find on/off output cluster on" << thing << endpoint;
     } else {
-        connect(onOffCluster, &ZigbeeClusterOnOff::commandSent, thing, [=](ZigbeeClusterOnOff::Command command, const QByteArray &/*payload*/, quint8 /*transactionSequenceNumber*/){
+        connect(onOffCluster, &ZigbeeClusterOnOff::commandReceived, thing, [=](ZigbeeClusterOnOff::Command command, const QByteArray &/*payload*/, quint8 /*transactionSequenceNumber*/){
             qCDebug(m_dc) << thing << "button pressed" << command;
             EventType eventType = thing->thingClass().eventTypes().findByName("pressed");
             ParamType buttonNameParamType = eventType.paramTypes().findByName("buttonName");
             if (command == ZigbeeClusterOnOff::CommandOn) {
                 qCDebug(m_dc) << thing << "pressed ON";
-                emit emitEvent(Event(eventType.id(), thing->id(), ParamList() << Param(buttonNameParamType.id(), "ON")));
+                emit emitEvent(Event(eventType.id(), thing->id(), ParamList() << Param(buttonNameParamType.id(), onButtonName)));
             } else if (command == ZigbeeClusterOnOff::CommandOff) {
                 qCDebug(m_dc) << thing << "pressed OFF";
-                emit emitEvent(Event(eventType.id(), thing->id(), ParamList() << Param(buttonNameParamType.id(), "OFF")));
+                emit emitEvent(Event(eventType.id(), thing->id(), ParamList() << Param(buttonNameParamType.id(), offButtonName)));
             } else if (command == ZigbeeClusterOnOff::CommandToggle) {
                 qCDebug(m_dc) << thing << "pressed TOGGLE";
-                emit emitEvent(Event(eventType.id(), thing->id(), ParamList() << Param(buttonNameParamType.id(), "TOGGLE")));
+                emit emitEvent(Event(eventType.id(), thing->id(), ParamList() << Param(buttonNameParamType.id(), toggleButtonName)));
             }
         });
     }
@@ -845,9 +878,13 @@ void ZigbeeIntegrationPlugin::connectToLevelControlOutputCluster(Thing *thing, Z
 {
     ZigbeeClusterLevelControl *levelCluster = endpoint->outputCluster<ZigbeeClusterLevelControl>(ZigbeeClusterLibrary::ClusterIdLevelControl);
     if (!levelCluster) {
-        qCWarning(m_dc) << "Could not find level control output cluster on" << thing << endpoint;
+        qCWarning(m_dc) << "Could not find level control output cluster on" << thing << "EP" << endpoint->endpointId();
     } else {
-        connect(levelCluster, &ZigbeeClusterLevelControl::commandMoveSent, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::MoveMode moveMode, quint8 rate, quint8 transactionSeqenceNumber){
+        connect(levelCluster, &ZigbeeClusterLevelControl::commandReceived, thing, [=](ZigbeeClusterLevelControl::Command command, const QByteArray &parameter, quint8 transactionSequenceNumber){
+            qCDebug(m_dc) << "Level control command received" << command << parameter << transactionSequenceNumber;
+        });
+
+        connect(levelCluster, &ZigbeeClusterLevelControl::commandMoveReceived, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::MoveMode moveMode, quint8 rate, quint8 transactionSeqenceNumber){
             qCDebug(m_dc) << thing << "move command received" << withOnOff << moveMode << rate << transactionSeqenceNumber;
             EventType eventType = thing->thingClass().eventTypes().findByName("pressed");
             ParamType buttonNameParamType = eventType.paramTypes().findByName("buttonName");
@@ -864,7 +901,7 @@ void ZigbeeIntegrationPlugin::connectToLevelControlOutputCluster(Thing *thing, Z
                 break;
             }
         });
-        connect(levelCluster, &ZigbeeClusterLevelControl::commandStepSent, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::StepMode stepMode, quint8 stepSize, quint16 transitionTime, quint8 transactionSequenceNumber){
+        connect(levelCluster, &ZigbeeClusterLevelControl::commandStepReceived, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::StepMode stepMode, quint8 stepSize, quint16 transitionTime, quint8 transactionSequenceNumber){
             qCDebug(m_dc) << thing << "move command received" << withOnOff << stepMode << stepSize << transitionTime << transactionSequenceNumber;
             EventType eventType = thing->thingClass().eventTypes().findByName("pressed");
             ParamType buttonNameParamType = eventType.paramTypes().findByName("buttonName");
@@ -1537,7 +1574,7 @@ void ZigbeeIntegrationPlugin::setFirmwareIndexUrl(const QUrl &url)
 
 ZigbeeIntegrationPlugin::FirmwareIndexEntry ZigbeeIntegrationPlugin::checkFirmwareAvailability(const QList<FirmwareIndexEntry> &index, quint16 manufacturerCode, quint16 imageType, quint32 currentFileVersion, const QString &modelName) const
 {
-    qCDebug(m_dc) << "Requesting OTA for" << manufacturerCode << imageType << currentFileVersion;
+    qCDebug(m_dc) << "Requesting OTA for manufacturer code:" << manufacturerCode << "image type:" << imageType << "current file version:" << currentFileVersion << "model name:" << modelName;
     foreach (const FirmwareIndexEntry &image, index) {
         if (image.manufacturerCode == manufacturerCode
                 && image.imageType == imageType

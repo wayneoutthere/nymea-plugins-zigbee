@@ -1,0 +1,134 @@
+{
+    "name": "ZigbeeOsram",
+    "displayName": "Zigbee Osram",
+    "id": "8e77310f-0f58-4086-9806-2b7a56abd6f3",
+    "vendors": [
+        {
+            "name": "nymea",
+            "displayName": "nymea",
+            "id": "8bf1189c-0523-454f-a3b6-a9564c9f708f",
+            "thingClasses": [
+                {
+                    "name": "switchMini",
+                    "displayName": "Switch Mini",
+                    "id": "57a7c14f-55ea-4e12-ab60-71eab47eb671",
+                    "setupMethod": "JustAdd",
+                    "createMethods": [ "auto" ],
+                    "interfaces": [ "longpressmultibutton", "wirelessconnectable", "update", "battery" ],
+                    "paramTypes": [
+                        {
+                            "id": "ac6fafb1-63f0-4ae6-86ea-683cda7dc666",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE address",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "399d6665-d92e-4303-becd-e6642e3cfab0",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "1fb2ecf9-986b-427d-a6ec-91065339c530",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "ffff6f3b-e54b-438b-ad78-18633f142bf7",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage"
+                        },
+                        {
+                            "id": "fe03b180-2db6-4db3-93df-289f05344106",
+                            "name": "batteryLevel",
+                            "displayName": "Battery level",
+                            "type": "int",
+                            "unit": "Percentage",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "defaultValue": 100
+                        },
+                        {
+                            "id": "00ccebb0-9045-4a7d-a3b5-78a7063e7ca7",
+                            "name": "batteryCritical",
+                            "displayName": "Battery critical",
+                            "type": "bool",
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "4f250764-d301-4122-b932-488876086b92",
+                            "name": "currentVersion",
+                            "displayName": "Current version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "c89840eb-df24-4965-b2c1-692908008348",
+                            "name": "availableVersion",
+                            "displayName": "Available version",
+                            "type": "QString",
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "602c9a34-c72e-4d8b-986f-0935711f351a",
+                            "name": "updateStatus",
+                            "displayName": "Update status",
+                            "type": "QString",
+                            "possibleValues": ["idle", "available", "updating"],
+                            "defaultValue": "idle"
+                        }
+                    ],
+                    "eventTypes": [
+                        {
+                            "id": "bf7b6f5f-a469-4fc9-8ef2-dc6ca575749d",
+                            "name": "pressed",
+                            "displayName": "Button pressed",
+                            "paramTypes": [
+                                {
+                                    "id": "657b18ed-2fd2-462b-b8f8-65f46b2ce2b1",
+                                    "name": "buttonName",
+                                    "displayName": "Button name",
+                                    "type": "QString",
+                                    "allowedValues": ["UP", "DOWN", "TOGGLE"]
+                                }
+                            ]
+                        },
+                        {
+                            "id": "73aadafd-3c49-48e3-8270-1730c240ccb7",
+                            "name": "longPressed",
+                            "displayName": "Button longpressed",
+                            "paramTypes": [
+                                {
+                                    "id": "f8e434c1-f6bf-4967-b161-52fd217c7e05",
+                                    "name": "buttonName",
+                                    "displayName": "Button name",
+                                    "type": "QString",
+                                    "allowedValues": ["UP", "DOWN", "TOGGLE"]
+                                }
+                            ]
+                        }
+                    ],
+                    "actionTypes": [
+                        {
+                            "id": "8664db37-5d6c-48ad-a186-d3da846c3a4a",
+                            "name": "performUpdate",
+                            "displayName": "Start update"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

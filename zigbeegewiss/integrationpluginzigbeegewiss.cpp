@@ -212,7 +212,7 @@ void IntegrationPluginZigbeeGewiss::connectToOnOffOutputCluster(Thing *thing, Zi
 {
     ZigbeeClusterOnOff *onOffCluster = endpoint->outputCluster<ZigbeeClusterOnOff>(ZigbeeClusterLibrary::ClusterIdOnOff);
     if (onOffCluster) {
-        connect(onOffCluster, &ZigbeeClusterOnOff::commandSent, thing, [=](ZigbeeClusterOnOff::Command command, const QByteArray &parameters, quint8 transactionSequenceNumber){
+        connect(onOffCluster, &ZigbeeClusterOnOff::commandReceived, thing, [=](ZigbeeClusterOnOff::Command command, const QByteArray &parameters, quint8 transactionSequenceNumber){
             qCDebug(dcZigbeeGewiss()) << "Command received!" << command << parameters << transactionSequenceNumber;
             switch (command) {
             case ZigbeeClusterOnOff::CommandToggle:
