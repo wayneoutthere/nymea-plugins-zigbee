@@ -60,6 +60,9 @@ private slots:
     void pollEnergyMeters();
 
 private:
+    bool match(ZigbeeNode *node, const QString &modelName, const QStringList &manufacturerNames);
+
+private:
     PluginTimer *m_energyPollTimer = nullptr;
     quint16 m_seq = 0;
 };
