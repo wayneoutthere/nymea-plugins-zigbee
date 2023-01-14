@@ -65,7 +65,6 @@ bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &n
         return false;
     }
 
-    bool handled = false;
     // Not checking model name as Develco allows to override that via branding, we're determining the devices by their available endpoints
     if (node->hasEndpoint(IO_MODULE_EP_INPUT1) && node->hasEndpoint(IO_MODULE_EP_INPUT2) &&
             node->hasEndpoint(IO_MODULE_EP_INPUT3) && node->hasEndpoint(IO_MODULE_EP_INPUT4) &&
@@ -73,7 +72,7 @@ bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &n
         qCDebug(dcZigbeeDevelco()) << "Found IO module" << node << networkUuid.toString();
         initIoModule(node);
         createThing(ioModuleThingClassId, node);
-        handled = true;
+        return true;
 
     } else if (node->hasEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR)
                && node->getEndpoint(DEVELCO_EP_TEMPERATURE_SENSOR)->hasInputCluster(static_cast<ZigbeeClusterLibrary::ClusterId>(AIR_QUALITY_SENSOR_VOC_MEASUREMENT_CLUSTER_ID))) {
@@ -89,17 +88,18 @@ bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &n
         configureBattryVoltageReporting(node, endpoint);
         configureVocReporting(node, endpoint);
 
-        handled = true;
+        return true;
 
     } else if (node->hasEndpoint(DEVELCO_EP_IAS_ZONE)) {
-        qCDebug(dcZigbeeDevelco()) << "Found IAS Zone sensor" << node;
         ZigbeeNodeEndpoint *iasZoneEndpoint = node->getEndpoint(DEVELCO_EP_IAS_ZONE);
-
-        bindPowerConfigurationCluster(iasZoneEndpoint);
-        configurePowerConfigurationInputClusterAttributeReporting(iasZoneEndpoint);
 
         // We need to read the Type attribute to determine what this actually is...
         ZigbeeClusterIasZone *iasZoneCluster = iasZoneEndpoint->inputCluster<ZigbeeClusterIasZone>(ZigbeeClusterLibrary::ClusterIdIasZone);
+        if (!iasZoneCluster) {
+            return false;
+        }
+
+        qCDebug(dcZigbeeDevelco()) << "Found IAS Zone sensor" << node;
         ZigbeeClusterReply *reply = iasZoneCluster->readAttributes({ZigbeeClusterIasZone::AttributeZoneType});
         connect(reply, &ZigbeeClusterReply::finished, this, [=](){
             if (reply->error() != ZigbeeClusterReply::ErrorNoError) {
@@ -154,11 +154,11 @@ bool IntegrationPluginZigbeeDevelco::handleNode(ZigbeeNode *node, const QUuid &n
 
 
         });
+        return true;
 
-        handled = true;
     }
 
-    return handled;
+    return false;
 }
 
 void IntegrationPluginZigbeeDevelco::setupThing(ThingSetupInfo *info)
