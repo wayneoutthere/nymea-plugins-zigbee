@@ -504,7 +504,7 @@
                 {
                     "id": "bed2680c-ebce-49ab-86cc-7c3c69e34372",
                     "name": "airHousekeeper",
-                    "displayName": "",
+                    "displayName": "Smart air housekeeper",
                     "createMethods": [ "Auto" ],
                     "interfaces": [ "temperaturesensor", "humiditysensor", "vocsensor", "pm25sensor", "co2sensor", "wirelessconnectable", "battery" ],
                     "paramTypes": [
@@ -613,6 +613,90 @@
                         },
                         {
                             "id": "1cadb85c-3c1b-4cd4-8878-d32c71234758",
+                            "name": "batteryCritical",
+                            "displayName": "Battery level critical",
+                            "type": "bool",
+                            "defaultValue": false
+                        }
+                    ]
+                },
+                {
+                    "id": "258dd38e-72ba-4295-b04b-ea9ef8e3312b",
+                    "name": "smokeSensor",
+                    "displayName": "Photoelectric smoke sensor",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "firesensor", "wirelessconnectable", "battery" ],
+                    "paramTypes": [
+                        {
+                            "id": "d501bd6f-4255-44d4-9669-944132b7f47a",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "24dbb042-3a37-418a-b954-df4face1105d",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "f1a65b25-c0f9-4535-9f85-45b42d91cfa1",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "f0b38b1c-0f1d-4359-b732-06aae73b9edf",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "cached": false
+                        },
+                        {
+                            "id": "58b073a2-62a0-4754-9e57-4dac80095ed1",
+                            "name": "fireDetected",
+                            "displayName": "Fire detected",
+                            "type": "bool",
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "aaef289e-d1fc-4e44-8c1d-bbb6ad28ea33",
+                            "name": "smokeConcentration",
+                            "displayName": "Smoke concentration",
+                            "type": "double",
+                            "unit": "PartsPerMillion",
+                            "minValue": 0,
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "cca93a41-206c-41fa-809c-07f4f34b010f",
+                            "name": "tampered",
+                            "displayName": "Tampered",
+                            "type": "bool",
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "9abc0e1b-242a-4f4b-a656-26563c761ed9",
+                            "name": "batteryLevel",
+                            "displayName": "Battery level",
+                            "type": "int",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": "100"
+                        },
+                        {
+                            "id": "37bae504-1471-4689-b8fa-cf494a5522a8",
                             "name": "batteryCritical",
                             "displayName": "Battery level critical",
                             "type": "bool",
