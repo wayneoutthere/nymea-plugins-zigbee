@@ -169,6 +169,8 @@
                             "displayNameEvent": "Pressure changed",
                             "unit": "MilliBar",
                             "type": "double",
+                            "minValue": 0,
+                            "maxValue": 2000,
                             "defaultValue": 0.0
                         }
                     ],
