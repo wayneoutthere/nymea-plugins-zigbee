@@ -52,6 +52,9 @@
 #include <QDebug>
 #include <QDataStream>
 
+#define LUMI_CLUSTER_ID 0xfcc0
+#define MANUFACTURER_CODE_XIAOMI 0x115f
+
 IntegrationPluginZigbeeLumi::IntegrationPluginZigbeeLumi():
     ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor, dcZigbeeLumi())
 {
@@ -95,6 +98,9 @@ bool IntegrationPluginZigbeeLumi::handleNode(ZigbeeNode *node, const QUuid &/*ne
             } else {
                 thingClassId = xiaomiMotionSensorThingClassId;
             }
+
+        } else if (endpoint->modelIdentifier() == "lumi.motion.ac02") {
+            thingClassId = lumiMotionSensor2ThingClassId;
 
         } else if (endpoint->modelIdentifier() == "lumi.remote.b1acn01") {
             thingClassId = lumiLongpressButtonSensorThingClassId;
@@ -179,6 +185,11 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
     }
 
     if (thing->thingClassId() == lumiMotionSensorThingClassId) {
+        QTimer *presenceTimer = new QTimer(thing);
+        connect(presenceTimer, &QTimer::timeout, thing, [thing](){
+            thing->setStateValue(lumiMotionSensorIsPresentStateTypeId, false);
+        });
+
         ZigbeeClusterOccupancySensing *occupancyCluster = endpoint->inputCluster<ZigbeeClusterOccupancySensing>(ZigbeeClusterLibrary::ClusterIdOccupancySensing);
         if (occupancyCluster) {
             if (occupancyCluster->hasAttribute(ZigbeeClusterOccupancySensing::AttributeOccupancy)) {
@@ -186,30 +197,18 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
                 thing->setStateValue(lumiMotionSensorLastSeenTimeStateTypeId, QDateTime::currentMSecsSinceEpoch() / 1000);
             }
 
-            connect(occupancyCluster, &ZigbeeClusterOccupancySensing::occupancyChanged, thing, [this, thing](bool occupancy){
+            connect(occupancyCluster, &ZigbeeClusterOccupancySensing::occupancyChanged, thing, [thing, presenceTimer](bool occupancy){
                 qCDebug(dcZigbeeLumi()) << "occupancy changed" << occupancy;
                 // Only change the state if the it changed to true, it will be disabled by the timer
                 if (occupancy) {
                     thing->setStateValue(lumiMotionSensorIsPresentStateTypeId, occupancy);
-                    m_presenceTimer->start();
+                    int timeout = thing->setting(lumiMotionSensorSettingsTimeoutParamTypeId).toInt();
+                    presenceTimer->start(timeout * 1000);
                 }
 
                 thing->setStateValue(lumiMotionSensorLastSeenTimeStateTypeId, QDateTime::currentMSecsSinceEpoch() / 1000);
             });
 
-            if (!m_presenceTimer) {
-                m_presenceTimer = hardwareManager()->pluginTimerManager()->registerTimer(1);
-            }
-
-            connect(m_presenceTimer, &PluginTimer::timeout, thing, [thing](){
-                if (thing->stateValue(lumiMotionSensorIsPresentStateTypeId).toBool()) {
-                    int timeout = thing->setting(lumiMotionSensorSettingsTimeoutParamTypeId).toInt();
-                    QDateTime lastSeenTime = QDateTime::fromMSecsSinceEpoch(thing->stateValue(lumiMotionSensorLastSeenTimeStateTypeId).toULongLong() * 1000);
-                    if (lastSeenTime.addSecs(timeout) < QDateTime::currentDateTime()) {
-                        thing->setStateValue(lumiMotionSensorIsPresentStateTypeId, false);
-                    }
-                }
-            });
         } else {
             qCWarning(dcZigbeeLumi()) << "Occupancy cluster not found on" << thing->name();
         }
@@ -230,7 +229,50 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
         }
     }
 
+    if (thing->thingClassId() == lumiMotionSensor2ThingClassId) {
+        QTimer *presenceTimer = new QTimer(thing);
+        connect(presenceTimer, &QTimer::timeout, thing, [thing](){
+            thing->setStateValue(lumiMotionSensor2IsPresentStateTypeId, false);
+        });
+
+        // This one only sends an illuminage changed when a motion is detected.
+        ZigbeeCluster *lumiCluster = endpoint->getInputCluster(static_cast<ZigbeeClusterLibrary::ClusterId>(LUMI_CLUSTER_ID));
+        if (lumiCluster) {
+            connect(lumiCluster, &ZigbeeCluster::attributeChanged, thing, [thing, presenceTimer](const ZigbeeClusterAttribute &attribute){
+                switch (attribute.id()) {
+                case 0x0112: {
+                    quint32 lightIntensity = attribute.dataType().toUInt32();
+                    qCDebug(dcZigbeeLumi()) << thing << "Light intensity" << lightIntensity;
+                    thing->setStateValue(lumiMotionSensor2LightIntensityStateTypeId, lightIntensity);
+                    thing->setStateValue(lumiMotionSensor2IsPresentStateTypeId, true);
+                    thing->setStateValue(lumiMotionSensor2LastSeenTimeStateTypeId, QDateTime::currentMSecsSinceEpoch() / 1000);
+                    int timeout = thing->setting(lumiMotionSensor2SettingsTimeoutParamTypeId).toInt();
+                    presenceTimer->start(timeout * 1000);
+                    break;
+                }
+                default:
+                    qCDebug(dcZigbeeLumi()) << thing << "Unhandled attribute report:" << attribute;
+                }
+            });
+            connect(thing, &Thing::settingChanged, lumiCluster, [lumiCluster] (const ParamTypeId &settingTypeId, const QVariant &value){
+                if (settingTypeId == lumiMotionSensor2SettingsSensitivityParamTypeId) {
+                    ZigbeeDataType dt(value.toUInt(), Zigbee::Uint8);
+                    ZigbeeClusterLibrary::WriteAttributeRecord record;
+                    record.attributeId = 0x010c;
+                    record.dataType = dt.dataType();
+                    record.data = dt.data();
+                    lumiCluster->writeAttributes({record}, MANUFACTURER_CODE_XIAOMI);
+                }
+            });
+        }
+    }
+
     if (thing->thingClassId() == xiaomiMotionSensorThingClassId) {
+        QTimer *presenceTimer = new QTimer(thing);
+        connect(presenceTimer, &QTimer::timeout, thing, [thing](){
+            thing->setStateValue(xiaomiMotionSensorIsPresentStateTypeId, false);
+        });
+
         ZigbeeClusterOccupancySensing *occupancyCluster = endpoint->inputCluster<ZigbeeClusterOccupancySensing>(ZigbeeClusterLibrary::ClusterIdOccupancySensing);
         if (occupancyCluster) {
             if (occupancyCluster->hasAttribute(ZigbeeClusterOccupancySensing::AttributeOccupancy)) {
@@ -238,30 +280,18 @@ void IntegrationPluginZigbeeLumi::setupThing(ThingSetupInfo *info)
                 thing->setStateValue(xiaomiMotionSensorLastSeenTimeStateTypeId, QDateTime::currentMSecsSinceEpoch() / 1000);
             }
 
-            connect(occupancyCluster, &ZigbeeClusterOccupancySensing::occupancyChanged, thing, [this, thing](bool occupancy){
+            connect(occupancyCluster, &ZigbeeClusterOccupancySensing::occupancyChanged, thing, [thing, presenceTimer](bool occupancy){
                 qCDebug(dcZigbeeLumi()) << "occupancy changed" << occupancy;
                 // Only change the state if the it changed to true, it will be disabled by the timer
                 if (occupancy) {
                     thing->setStateValue(xiaomiMotionSensorIsPresentStateTypeId, occupancy);
-                    m_presenceTimer->start();
+                    int timeout = thing->setting(xiaomiMotionSensorSettingsTimeoutParamTypeId).toInt();
+                    presenceTimer->start(timeout * 1000);
                 }
 
                 thing->setStateValue(xiaomiMotionSensorLastSeenTimeStateTypeId, QDateTime::currentMSecsSinceEpoch() / 1000);
             });
 
-            if (!m_presenceTimer) {
-                m_presenceTimer = hardwareManager()->pluginTimerManager()->registerTimer(1);
-            }
-
-            connect(m_presenceTimer, &PluginTimer::timeout, thing, [thing](){
-                if (thing->stateValue(xiaomiMotionSensorIsPresentStateTypeId).toBool()) {
-                    int timeout = thing->setting(xiaomiMotionSensorSettingsTimeoutParamTypeId).toInt();
-                    QDateTime lastSeenTime = QDateTime::fromMSecsSinceEpoch(thing->stateValue(xiaomiMotionSensorLastSeenTimeStateTypeId).toULongLong() * 1000);
-                    if (lastSeenTime.addSecs(timeout) < QDateTime::currentDateTime()) {
-                        thing->setStateValue(xiaomiMotionSensorIsPresentStateTypeId, false);
-                    }
-                }
-            });
         } else {
             qCWarning(dcZigbeeLumi()) << "Occupancy cluster not found on" << thing->name();
         }

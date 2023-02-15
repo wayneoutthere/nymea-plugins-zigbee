@@ -59,7 +59,6 @@ public:
 private:
     QHash<QString, ThingClassId> m_knownLumiDevices;
 
-    PluginTimer *m_presenceTimer = nullptr;
 };
 
 #endif // INTEGRATIONPLUGINZIGBEELUMI_H
