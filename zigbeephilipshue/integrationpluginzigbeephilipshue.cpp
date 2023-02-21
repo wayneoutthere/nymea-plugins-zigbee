@@ -310,7 +310,7 @@ void IntegrationPluginZigbeePhilipsHue::setupThing(ThingSetupInfo *info)
             qCWarning(dcZigbeePhilipsHue()) << "Could not find on/off client cluster on" << thing << endpointHa;
         } else {
             // The smart button toggles between command(On) and commandOffWithEffect() for short presses...
-            connect(onOffCluster, &ZigbeeClusterOnOff::commandSent, thing, [=](ZigbeeClusterOnOff::Command command){
+            connect(onOffCluster, &ZigbeeClusterOnOff::commandReceived, thing, [=](ZigbeeClusterOnOff::Command command){
                 if (command == ZigbeeClusterOnOff::CommandOn) {
                     qCDebug(dcZigbeePhilipsHue()) << thing << "pressed";
                     emit emitEvent(Event(smartButtonPressedEventTypeId, thing->id()));
@@ -318,7 +318,7 @@ void IntegrationPluginZigbeePhilipsHue::setupThing(ThingSetupInfo *info)
                     qCWarning(dcZigbeePhilipsHue()) << thing << "unhandled command received" << command;
                 }
             });
-            connect(onOffCluster, &ZigbeeClusterOnOff::commandOffWithEffectSent, thing, [=](ZigbeeClusterOnOff::Effect effect, quint8 effectVariant){
+            connect(onOffCluster, &ZigbeeClusterOnOff::commandOffWithEffectReceived, thing, [=](ZigbeeClusterOnOff::Effect effect, quint8 effectVariant){
                 qCDebug(dcZigbeePhilipsHue()) << thing << "pressed" << effect << effectVariant;
                 emit emitEvent(Event(smartButtonPressedEventTypeId, thing->id()));
             });
@@ -328,7 +328,7 @@ void IntegrationPluginZigbeePhilipsHue::setupThing(ThingSetupInfo *info)
             if (!levelCluster) {
                 qCWarning(dcZigbeePhilipsHue()) << "Could not find level client cluster on" << thing << endpointHa;
             } else {
-                connect(levelCluster, &ZigbeeClusterLevelControl::commandStepSent, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::StepMode stepMode, quint8 stepSize, quint16 transitionTime){
+                connect(levelCluster, &ZigbeeClusterLevelControl::commandStepReceived, thing, [=](bool withOnOff, ZigbeeClusterLevelControl::StepMode stepMode, quint8 stepSize, quint16 transitionTime){
                     qCDebug(dcZigbeePhilipsHue()) << thing << "level button pressed" << withOnOff << stepMode << stepSize << transitionTime;
                     switch (stepMode) {
                     case ZigbeeClusterLevelControl::StepModeUp:

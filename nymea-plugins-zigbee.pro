@@ -7,6 +7,7 @@ PLUGIN_DIRS = \
     zigbeegewiss        \
     zigbeejung          \
     zigbeelumi          \
+    zigbeeosram         \
     zigbeephilipshue    \
     zigbeetradfri       \
     zigbeetuya          \

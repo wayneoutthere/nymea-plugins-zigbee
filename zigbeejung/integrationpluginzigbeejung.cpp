@@ -97,7 +97,7 @@ void IntegrationPluginZigbeeJung::setupThing(ThingSetupInfo *info)
             info->finish(Thing::ThingErrorHardwareNotAvailable);
             return;
         }
-        connect(onOffCluster, &ZigbeeClusterOnOff::commandSent, this, [=](ZigbeeClusterOnOff::Command command, const QByteArray &parameters){
+        connect(onOffCluster, &ZigbeeClusterOnOff::commandReceived, this, [=](ZigbeeClusterOnOff::Command command, const QByteArray &parameters){
             qCDebug(dcZigbeeJung()) << "OnOff command received:" << command << parameters;
             switch (command) {
             case ZigbeeClusterOnOff::CommandOn:
@@ -110,11 +110,11 @@ void IntegrationPluginZigbeeJung::setupThing(ThingSetupInfo *info)
                 qCWarning(dcZigbeeJung()) << "Unhandled command from Insta Remote:" << command << parameters.toHex();
             }
         });
-        connect(levelControlCluster, &ZigbeeClusterLevelControl::commandStepSent, this, [=](bool withOnOff, ZigbeeClusterLevelControl::StepMode stepMode, quint8 stepSize, quint16 transitionTime){
+        connect(levelControlCluster, &ZigbeeClusterLevelControl::commandStepReceived, this, [=](bool withOnOff, ZigbeeClusterLevelControl::StepMode stepMode, quint8 stepSize, quint16 transitionTime){
             qCDebug(dcZigbeeJung()) << "Level command received" << withOnOff << stepMode << stepSize << transitionTime;
             thing->emitEvent(instaPressedEventTypeId, {Param(instaPressedEventButtonNameParamTypeId, stepMode == ZigbeeClusterLevelControl::StepModeUp ? "+" : "-")});
         });
-        connect(scenesCluster, &ZigbeeClusterScenes::commandSent, this, [=](ZigbeeClusterScenes::Command command, quint16 groupId, quint8 sceneId){
+        connect(scenesCluster, &ZigbeeClusterScenes::commandReceived, this, [=](ZigbeeClusterScenes::Command command, quint16 groupId, quint8 sceneId){
             qCDebug(dcZigbeeJung()) << "Scenes command received:" << command << groupId << sceneId;
             thing->emitEvent(instaPressedEventTypeId, {Param(instaPressedEventButtonNameParamTypeId, QString::number(sceneId))});
         });

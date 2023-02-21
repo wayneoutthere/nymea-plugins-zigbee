@@ -1,0 +1,17 @@
+{
+    "title": "ZigBee Generic",
+    "tagline": "Connect and control ZigBee compliant devices which don't require manufacturer specific extras.",
+    "icon": "zigbee.svg",
+    "stability": "consumer",
+    "offline": true,
+    "technologies": [
+        "zigbee"
+    ],
+    "categories": [
+        "socket",
+        "heating",
+        "door",
+        "sensor",
+        "energy"
+    ]
+}
