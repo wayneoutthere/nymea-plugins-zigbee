@@ -507,6 +507,108 @@
                     ]
                 },
                 {
+                    "name": "lumiMotionSensor2",
+                    "displayName": "Motion sensor",
+                    "id": "6e9c7ced-cfc6-4ea3-9a68-b3820c9b0030",
+                    "setupMethod": "JustAdd",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "presencesensor", "lightsensor", "wirelessconnectable" ],
+                    "paramTypes": [
+                        {
+                            "id": "ce4aa2a2-61bd-407a-ba44-c5027ffb6811",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "c5d998f3-22f6-49f5-958c-5c7773660f3a",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "settingsTypes": [
+                        {
+                            "id": "da589199-b67c-45ce-9579-67796ddaa27c",
+                            "name": "timeout",
+                            "displayName": "Time period",
+                            "type": "uint",
+                            "unit": "Seconds",
+                            "defaultValue": 10,
+                            "minValue": 10
+                        },
+                        {
+                            "id": "98c22a00-6cfc-4a0b-824a-059b6012f52e",
+                            "name": "sensitivity",
+                            "displayName": "Sensitivity",
+                            "type": "uint",
+                            "minValue": 1,
+                            "maxValue": 2,
+                            "defaultValue": 3
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "e80bb10c-953b-4845-8c61-2f51e84f9cfe",
+                            "name": "connected",
+                            "displayName": "Available",
+                            "displayNameEvent": "Available changed",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "7e736041-29a7-4f7f-82b6-3e17d01b3943",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "displayNameEvent": "Signal strength changed",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage"
+                        },
+                        {
+                            "id": "2081fea2-8fac-4541-b414-3f5584aed67c",
+                            "name": "version",
+                            "displayName": "Version",
+                            "displayNameEvent": "Version changed",
+                            "type": "QString",
+                            "cached": true,
+                            "defaultValue": ""
+                        },
+                        {
+                            "id": "c70a2674-5b91-4a48-b696-ae9e80cc6e3a",
+                            "name": "isPresent",
+                            "displayName": "Presence",
+                            "displayNameEvent": "Presence changed",
+                            "type": "bool",
+                            "defaultValue": true,
+                            "ioType": "digitalInput"
+                        },
+                        {
+                            "id": "bdaab055-8a1d-42cd-95e4-d77ab065292a",
+                            "name": "lastSeenTime",
+                            "displayName": "Last seen time",
+                            "displayNameEvent": "Last seen time changed",
+                            "type": "int",
+                            "unit": "UnixTime",
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "bb34c29b-1519-453a-a19b-57d024977d49",
+                            "name": "lightIntensity",
+                            "displayName": "Light intensity",
+                            "displayNameEvent": "Light intensity changed",
+                            "type": "double",
+                            "unit": "Lux",
+                            "defaultValue": 0
+                        }
+                    ]
+                },
+                {
                     "name": "xiaomiMotionSensor",
                     "displayName": "Motion sensor",
                     "id": "73bfe746-4fc7-4a2a-a3c2-32dc44214170",
