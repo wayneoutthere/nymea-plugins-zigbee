@@ -998,11 +998,17 @@ void ZigbeeIntegrationPlugin::connectToTemperatureMeasurementInputCluster(Thing 
         qCWarning(m_dc) << "No temperature measurement cluster on" << thing->name() << endpoint;
         return;
     }
-
-    if (temperatureMeasurementCluster->hasAttribute(ZigbeeClusterTemperatureMeasurement::AttributeMaxMeasuredValue)) {
+    if (temperatureMeasurementCluster->hasAttribute(ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue)) {
         thing->setStateValue("temperature", temperatureMeasurementCluster->temperature());
     }
-    temperatureMeasurementCluster->readAttributes({ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue});
+    if (endpoint->node()->reachable()) {
+        temperatureMeasurementCluster->readAttributes({ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue});
+    }
+    connect(endpoint->node(), &ZigbeeNode::reachableChanged, temperatureMeasurementCluster, [temperatureMeasurementCluster](bool reachable){
+        if (reachable) {
+            temperatureMeasurementCluster->readAttributes({ZigbeeClusterTemperatureMeasurement::AttributeMeasuredValue});
+        }
+    });
     connect(temperatureMeasurementCluster, &ZigbeeClusterTemperatureMeasurement::temperatureChanged, thing, [=](double temperature) {
         qCDebug(m_dc) << "Temperature for" << thing->name() << "changed to:" << temperature;
         thing->setStateValue("temperature", temperature);

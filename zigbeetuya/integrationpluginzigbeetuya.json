@@ -393,6 +393,113 @@
                             "defaultValue": false
                         }
                     ]
+                },
+                {
+                    "id": "036d0b38-8d5b-497b-8534-9d1dd555c376",
+                    "name": "htlcdSensor",
+                    "displayName": "Temperature & humidity LCD sensor",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "temperaturesensor", "humiditysensor", "wirelessconnectable", "battery" ],
+                    "paramTypes": [
+                        {
+                            "id": "0f744edd-2f85-4295-b18a-3e93d234e102",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "bb2acd2c-a314-4d73-8651-ea450b90c137",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "settingsTypes": [
+                        {
+                            "id": "723d10db-7113-452b-b799-5b70c4b5b39b",
+                            "name": "unitDisplay",
+                            "displayName": "Unit display",
+                            "type": "QString",
+                            "allowedValues": ["C", "F"],
+                            "defaultValue": "C"
+                        },
+                        {
+                            "id": "e8197f9a-cca2-44d1-a51b-611c5b953025",
+                            "name": "temperatureCalibration",
+                            "displayName": "Temperature calibration",
+                            "type": "double",
+                            "minValue": -10,
+                            "maxValue": 10,
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "e26b6734-8c42-4218-ade7-6b422ce7bd91",
+                            "name": "humidityCalibration",
+                            "displayName": "Humidity calibration",
+                            "type": "int",
+                            "minValue": -30,
+                            "maxValue": 30,
+                            "defaultValue": 0
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "69bde74d-4ef5-49f0-958c-0609687883e8",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "dc4292ba-1d75-40dd-b55a-1e0d9aaf02ef",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "cached": false
+                        },
+                        {
+                            "id": "c7eef19a-d5c8-4f2c-8161-9545eb123ed6",
+                            "name": "temperature",
+                            "displayName": "Temperature",
+                            "type": "double",
+                            "unit": "DegreeCelsius",
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "3c256135-07ee-4e77-b3a5-91f05e977798",
+                            "name": "humidity",
+                            "displayName": "Humidity",
+                            "type": "double",
+                            "unit": "Percentage",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "45260385-cd14-4018-bf6e-d8df88a1b0b4",
+                            "name": "batteryLevel",
+                            "displayName": "Battery level",
+                            "type": "int",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": "100"
+                        },
+                        {
+                            "id": "72ce81f9-57c8-4b43-afa2-3ecee459c409",
+                            "name": "batteryCritical",
+                            "displayName": "Battery level critical",
+                            "type": "bool",
+                            "defaultValue": false
+                        }
+                    ]
                 }
             ]
         }

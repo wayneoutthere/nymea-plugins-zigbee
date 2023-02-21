@@ -70,6 +70,13 @@
 #define LUMINANCE_MOTION_SENSOR_DP_KEEP_TIME 10
 #define LUMINANCE_MOTION_SENSOR_DP_ILLUMINANCE 12
 
+#define HT_SENSOR_DP_TEMPERATURE 1
+#define HT_SENSOR_DP_HUMIDITY 2
+#define HT_SENSOR_DP_BATTERY 4
+#define HT_SENSOR_DP_TEMPERATURE_UNIT 9
+#define HT_SENSOR_DP_TEMPERATURE_CALIBRATION 23
+#define HT_SENSOR_DP_HUMIDITY_CALIBRATION 24
+
 IntegrationPluginZigbeeTuya::IntegrationPluginZigbeeTuya(): ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor, dcZigbeeTuya())
 {
 }
@@ -109,7 +116,12 @@ bool IntegrationPluginZigbeeTuya::handleNode(ZigbeeNode *node, const QUuid &/*ne
         return true;
     }
 
-    if (node->nodeDescriptor().manufacturerCode == 0x1141 && node->modelName() == "TS0210") {
+    if (match(node, "TS0210", {
+              "_TYZB01_3zv6oleo",
+              "_TYZB01_j9xxahcl",
+              "_TYZB01_kulduhbj",
+              "_TZ3000_bmfw9ykl",
+              "_TZ3000_fkxmyics"})) {
         ZigbeeNodeEndpoint *endpoint = node->getEndpoint(0x01);
         if (!endpoint) {
             qCWarning(dcZigbeeTuya()) << "Endpoint 1 not found on device....";
@@ -121,9 +133,13 @@ bool IntegrationPluginZigbeeTuya::handleNode(ZigbeeNode *node, const QUuid &/*ne
         return true;
     }
 
-    if ((node->manufacturerName() == "_TZE200_3towulqd" && node->modelName() == "TS0601")
-            ||(node->manufacturerName() == "_TZE200_1ibpyhdc" && node->modelName() == "TS0601")) {
+    if (match(node, "TS0601", {"_TZE200_3towulqd", "_TZE200_1ibpyhdc"})) {
         createThing(motionSensorThingClassId, node);
+        return true;
+    }
+
+    if (match(node, "TS0601", {"_TZE200_nnrfa68v", "_TZE200_qoy0ekbd", "_TZE200_znbl8dj5", "_TZE200_a8sdabtg"})) {
+        createThing(htlcdSensorThingClassId, node);
         return true;
     }
 
@@ -395,6 +411,96 @@ void IntegrationPluginZigbeeTuya::setupThing(ThingSetupInfo *info)
 
     }
 
+    if (info->thing()->thingClassId() == htlcdSensorThingClassId) {
+        ZigbeeNodeEndpoint *endpoint = node->getEndpoint(1);
+        if (!endpoint) {
+            qCWarning(dcZigbeeTuya()) << "Unable to find endpoint 1 on node" << node;
+            info->finish(Thing::ThingErrorHardwareNotAvailable, QT_TR_NOOP("Unable to find endpoint 1 on Zigbee node."));
+            return;
+        }
+        ZigbeeCluster *cluster = endpoint->getInputCluster(static_cast<ZigbeeClusterLibrary::ClusterId>(CLUSTER_ID_MANUFACTURER_SPECIFIC_TUYA));
+        if (!cluster) {
+            qCWarning(dcZigbeeTuya()) << "Unable to find Tuya manufacturer specific cliuster on endpoint 1 on node" << node;
+            info->finish(Thing::ThingErrorHardwareNotAvailable, QT_TR_NOOP("Unable to find Tuya cluster on Zigbee node."));
+            return;
+        }
+
+        if (node->reachable()) {
+            cluster->executeClusterCommand(COMMAND_ID_DATA_QUERY, QByteArray(), ZigbeeClusterLibrary::DirectionClientToServer, true);
+        }
+        connect(node, &ZigbeeNode::reachableChanged, thing, [=](bool reachable){
+            if (reachable) {
+                cluster->executeClusterCommand(COMMAND_ID_DATA_QUERY, QByteArray(), ZigbeeClusterLibrary::DirectionClientToServer, true);
+            }
+        });
+
+        connect(cluster, &ZigbeeCluster::dataIndication, thing, [thing](const ZigbeeClusterLibrary::Frame &frame){
+
+            if (frame.header.command == COMMAND_ID_DATA_REPORT || frame.header.command == COMMAND_ID_DATA_RESPONSE) {
+                DpValue dpValue = DpValue::fromData(frame.payload);
+
+                switch (dpValue.dp()) {
+                case HT_SENSOR_DP_TEMPERATURE:
+                    qCDebug(dcZigbeeTuya()) << "temperature changed:" << dpValue;
+                    thing->setStateValue(htlcdSensorTemperatureStateTypeId, dpValue.value().toInt() / 10.0);
+                    break;
+                case HT_SENSOR_DP_HUMIDITY:
+                    qCDebug(dcZigbeeTuya()) << "Humidity changed:" << dpValue;
+                    thing->setStateValue(htlcdSensorHumidityStateTypeId, dpValue.value().toInt());
+                    break;
+                case HT_SENSOR_DP_BATTERY:
+                    qCDebug(dcZigbeeTuya()) << "Battery changed:" << dpValue;
+                    thing->setStateValue(htlcdSensorBatteryLevelStateTypeId, dpValue.value().toInt());
+                    thing->setStateValue(htlcdSensorBatteryCriticalStateTypeId, dpValue.value().toInt() < 5);
+                    break;
+                case HT_SENSOR_DP_TEMPERATURE_UNIT: {
+                    qCDebug(dcZigbeeTuya()) << "Temp unit:" << dpValue;
+                    QHash<int, QString> map = {{0, "C"}, {1, "F"}};
+                    thing->setSettingValue(htlcdSensorSettingsUnitDisplayParamTypeId, map.value(dpValue.value().toInt()));
+                    break;
+                }
+                case HT_SENSOR_DP_TEMPERATURE_CALIBRATION:
+                    qCDebug(dcZigbeeTuya()) << "temp calib changed:" << dpValue;
+                    thing->setSettingValue(htlcdSensorSettingsTemperatureCalibrationParamTypeId, dpValue.value().toInt() / 10.0);
+                    break;
+                case HT_SENSOR_DP_HUMIDITY_CALIBRATION: {
+                    qCDebug(dcZigbeeTuya()) << "hum calib changed:" << dpValue;
+                    thing->setSettingValue(htlcdSensorSettingsHumidityCalibrationParamTypeId, dpValue.value().toInt());
+                    break;
+                }
+                default:
+                    qCWarning(dcZigbeeTuya()) << "Unhandled data point" << dpValue;
+                }
+
+            } else {
+                qCWarning(dcZigbeeTuya()) << "Unhandled HT LCD sensor cluster command:" << frame.header.command;
+            }
+
+            if (frame.header.command == COMMAND_ID_DATA_RESPONSE) {
+                qCDebug(dcZigbeeTuya()) << "Command response:" << frame.payload.toHex();
+            }
+
+        });
+
+        connect(thing, &Thing::settingChanged, cluster, [cluster, thing, this](const ParamTypeId &settingTypeId, const QVariant &value) {
+            DpValue dp;
+
+            if (settingTypeId == htlcdSensorSettingsUnitDisplayParamTypeId) {
+                QHash<int, QString> map = {{0, "C"}, {1, "F"}};
+                dp = DpValue(HT_SENSOR_DP_TEMPERATURE_UNIT, DpValue::TypeEnum, map.key(value.toString()), 1, m_seq++);
+            }
+            if (settingTypeId == htlcdSensorSettingsTemperatureCalibrationParamTypeId) {
+                dp = DpValue(HT_SENSOR_DP_TEMPERATURE_CALIBRATION, DpValue::TypeUInt32, qRound(value.toDouble() * 10), 4, m_seq++);
+            }
+            if (settingTypeId == htlcdSensorSettingsHumidityCalibrationParamTypeId) {
+                dp = DpValue(HT_SENSOR_DP_HUMIDITY_CALIBRATION, DpValue::TypeUInt32, value.toUInt(), 4, m_seq++);
+            }
+            qCDebug(dcZigbeeTuya()) << "setting" << thing->thingClass().settingsTypes().findById(settingTypeId).name() << dp << dp.toData().toHex();
+            cluster->executeClusterCommand(COMMAND_ID_DATA_REQUEST, dp.toData(), ZigbeeClusterLibrary::DirectionClientToServer, true);
+        });
+
+    }
+
     info->finish(Thing::ThingErrorNoError);
 }
 
@@ -458,5 +564,10 @@ void IntegrationPluginZigbeeTuya::pollEnergyMeters()
         ZigbeeClusterMetering *meteringCluster = endpoint->inputCluster<ZigbeeClusterMetering>(ZigbeeClusterLibrary::ClusterIdMetering);
         meteringCluster->readAttributes({ZigbeeClusterMetering::AttributeCurrentSummationDelivered});
     }
+}
+
+bool IntegrationPluginZigbeeTuya::match(ZigbeeNode *node, const QString &modelName, const QStringList &manufacturerNames)
+{
+    return node->modelName() == modelName && manufacturerNames.contains(node->manufacturerName());
 }
 
