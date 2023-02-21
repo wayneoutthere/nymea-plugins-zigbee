@@ -1,3 +1,17 @@
+nymea-plugins-zigbee (1.7.0) jammy; urgency=medium
+
+  [ Michael Zanetti ]
+  * Refresh battery level when a device reconnects
+  * New plugin: Osram lightify
+  * Tuya: Add the Temperature & Humidity LCD display sensor
+  * Tuya: Add air housekeeper
+  * Develco: Fix picking up a wrong device accidentally
+  * Tuya: Add photoelectric smoke sensor
+  * Lumi: Add min/max to weather sensor pressure state
+  * Lumi: Add lumi.motion.ac02
+
+ -- jenkins <developer@nymea.io>  Tue, 21 Feb 2023 17:44:37 +0100
+
 nymea-plugins-zigbee (1.6.3) jammy; urgency=medium
 
 
