@@ -77,6 +77,13 @@
 #define HT_SENSOR_DP_TEMPERATURE_CALIBRATION 23
 #define HT_SENSOR_DP_HUMIDITY_CALIBRATION 24
 
+#define SAH_DP_PM25 2
+#define SAH_DP_TEMPERATURE 18
+#define SAH_DP_HUMIDITY 19
+#define SAH_DP_FORMALDEHYD 20
+#define SAH_DP_VOC 21
+#define SAH_DP_CO2 22
+
 IntegrationPluginZigbeeTuya::IntegrationPluginZigbeeTuya(): ZigbeeIntegrationPlugin(ZigbeeHardwareResource::HandlerTypeVendor, dcZigbeeTuya())
 {
 }
@@ -140,6 +147,11 @@ bool IntegrationPluginZigbeeTuya::handleNode(ZigbeeNode *node, const QUuid &/*ne
 
     if (match(node, "TS0601", {"_TZE200_nnrfa68v", "_TZE200_qoy0ekbd", "_TZE200_znbl8dj5", "_TZE200_a8sdabtg"})) {
         createThing(htlcdSensorThingClassId, node);
+        return true;
+    }
+
+    if (match(node, "TS0601", {"_TZE200_dwcarsat"})) {
+        createThing(airHousekeeperThingClassId, node);
         return true;
     }
 
@@ -499,6 +511,74 @@ void IntegrationPluginZigbeeTuya::setupThing(ThingSetupInfo *info)
             cluster->executeClusterCommand(COMMAND_ID_DATA_REQUEST, dp.toData(), ZigbeeClusterLibrary::DirectionClientToServer, true);
         });
 
+    }
+
+    if (info->thing()->thingClassId() == airHousekeeperThingClassId) {
+        ZigbeeNodeEndpoint *endpoint = node->getEndpoint(1);
+        if (!endpoint) {
+            qCWarning(dcZigbeeTuya()) << "Unable to find endpoint 1 on node" << node;
+            info->finish(Thing::ThingErrorHardwareNotAvailable, QT_TR_NOOP("Unable to find endpoint 1 on Zigbee node."));
+            return;
+        }
+        ZigbeeCluster *cluster = endpoint->getInputCluster(static_cast<ZigbeeClusterLibrary::ClusterId>(CLUSTER_ID_MANUFACTURER_SPECIFIC_TUYA));
+        if (!cluster) {
+            qCWarning(dcZigbeeTuya()) << "Unable to find Tuya manufacturer specific cliuster on endpoint 1 on node" << node;
+            info->finish(Thing::ThingErrorHardwareNotAvailable, QT_TR_NOOP("Unable to find Tuya cluster on Zigbee node."));
+            return;
+        }
+
+        if (node->reachable()) {
+            cluster->executeClusterCommand(COMMAND_ID_DATA_QUERY, QByteArray(), ZigbeeClusterLibrary::DirectionClientToServer, true);
+        }
+        connect(node, &ZigbeeNode::reachableChanged, thing, [=](bool reachable){
+            if (reachable) {
+                cluster->executeClusterCommand(COMMAND_ID_DATA_QUERY, QByteArray(), ZigbeeClusterLibrary::DirectionClientToServer, true);
+            }
+        });
+
+        connect(cluster, &ZigbeeCluster::dataIndication, thing, [thing](const ZigbeeClusterLibrary::Frame &frame){
+
+            if (frame.header.command == COMMAND_ID_DATA_REPORT || frame.header.command == COMMAND_ID_DATA_RESPONSE) {
+                DpValue dpValue = DpValue::fromData(frame.payload);
+
+                switch (dpValue.dp()) {
+                case SAH_DP_CO2:
+                    qCDebug(dcZigbeeTuya()) << "CO2 changed:" << dpValue;
+                    thing->setStateValue(airHousekeeperCo2StateTypeId, dpValue.value().toInt() / 10.0);
+                    break;
+                case SAH_DP_TEMPERATURE:
+                    qCDebug(dcZigbeeTuya()) << "Temperature changed:" << dpValue;
+                    thing->setStateValue(airHousekeeperTemperatureStateTypeId, dpValue.value().toInt() / 10.0);
+                    break;
+                case SAH_DP_HUMIDITY:
+                    qCDebug(dcZigbeeTuya()) << "Humidity changed:" << dpValue;
+                    thing->setStateValue(airHousekeeperHumidityStateTypeId, dpValue.value().toInt() / 10.0);
+                    break;
+                case SAH_DP_PM25:
+                    qCDebug(dcZigbeeTuya()) << "PM2.5 changed:" << dpValue;
+                    thing->setStateValue(airHousekeeperPm25StateTypeId, dpValue.value().toInt());
+                    break;
+                case SAH_DP_FORMALDEHYD:
+                    qCDebug(dcZigbeeTuya()) << "Temperature changed:" << dpValue;
+                    thing->setStateValue(airHousekeeperFormaldehydStateTypeId, dpValue.value().toInt());
+                    break;
+                case SAH_DP_VOC:
+                    qCDebug(dcZigbeeTuya()) << "VOC changed:" << dpValue;
+                    thing->setStateValue(airHousekeeperVocStateTypeId, dpValue.value().toInt());
+                    break;
+                default:
+                    qCWarning(dcZigbeeTuya()) << "Unhandled data point" << dpValue;
+                }
+
+            } else {
+                qCWarning(dcZigbeeTuya()) << "Unhandled smart air housekeeper command:" << frame.header.command;
+            }
+
+            if (frame.header.command == COMMAND_ID_DATA_RESPONSE) {
+                qCDebug(dcZigbeeTuya()) << "Command response:" << frame.payload.toHex();
+            }
+
+        });
     }
 
     info->finish(Thing::ThingErrorNoError);

@@ -500,6 +500,125 @@
                             "defaultValue": false
                         }
                     ]
+                },
+                {
+                    "id": "bed2680c-ebce-49ab-86cc-7c3c69e34372",
+                    "name": "airHousekeeper",
+                    "displayName": "",
+                    "createMethods": [ "Auto" ],
+                    "interfaces": [ "temperaturesensor", "humiditysensor", "vocsensor", "pm25sensor", "co2sensor", "wirelessconnectable", "battery" ],
+                    "paramTypes": [
+                        {
+                            "id": "1cf14256-d095-4e0a-9b7d-2ffebdf9f4ba",
+                            "name": "ieeeAddress",
+                            "displayName": "IEEE adress",
+                            "type": "QString",
+                            "defaultValue": "00:00:00:00:00:00:00:00"
+                        },
+                        {
+                            "id": "5b2261a0-aedd-4b4d-bc15-860c424f187b",
+                            "name": "networkUuid",
+                            "displayName": "Zigbee network UUID",
+                            "type": "QString",
+                            "defaultValue": ""
+                        }
+                    ],
+                    "stateTypes": [
+                        {
+                            "id": "984b266b-e8b9-4566-a6ef-cc2aaf41333e",
+                            "name": "connected",
+                            "displayName": "Connected",
+                            "type": "bool",
+                            "cached": false,
+                            "defaultValue": false
+                        },
+                        {
+                            "id": "cf87d713-bdb6-4768-ad48-92b1ce5835ce",
+                            "name": "signalStrength",
+                            "displayName": "Signal strength",
+                            "defaultValue": 0,
+                            "maxValue": 100,
+                            "minValue": 0,
+                            "type": "uint",
+                            "unit": "Percentage",
+                            "cached": false
+                        },
+                        {
+                            "id": "2cb06847-a98e-4440-ab5a-990a4073f7e6",
+                            "name": "temperature",
+                            "displayName": "Temperature",
+                            "type": "double",
+                            "unit": "DegreeCelsius",
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "021ad175-3e09-4f9c-a457-231b71681699",
+                            "name": "humidity",
+                            "displayName": "Humidity",
+                            "type": "double",
+                            "unit": "Percentage",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "0e5d6b08-d415-43e2-9314-e97e526e105d",
+                            "name": "voc",
+                            "displayName": "VOC",
+                            "type": "uint",
+                            "unit": "PartsPerBillion",
+                            "minValue": 0,
+                            "maxValue": 65353,
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "1f9460ba-8495-4a00-a3ac-de4efcb40c1c",
+                            "name": "pm25",
+                            "displayName": "PM2.5",
+                            "type": "double",
+                            "unit": "MicroGrammPerCubicalMeter",
+                            "minValue": 0,
+                            "maxValue": 500,
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "f0621e7f-46b0-40a6-8bce-54164e8518ae",
+                            "name": "co2",
+                            "displayName": "CO2",
+                            "type": "double",
+                            "unit": "PartsPerMillion",
+                            "minValue": 0,
+                            "maxValue": 500,
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "2a8353ca-b1aa-4d7b-8951-e24febe87bbc",
+                            "name": "formaldehyd",
+                            "displayName": "Formaldehyd",
+                            "type": "double",
+                            "unit": "MicroGrammPerCubicalMeter",
+                            "minValue": 0,
+                            "maxValue": 500,
+                            "defaultValue": 0
+                        },
+                        {
+                            "id": "24c68257-5e33-493f-acee-6c3cdce1bbf1",
+                            "name": "batteryLevel",
+                            "displayName": "Battery level",
+                            "type": "int",
+                            "minValue": 0,
+                            "maxValue": 100,
+                            "unit": "Percentage",
+                            "defaultValue": "100"
+                        },
+                        {
+                            "id": "1cadb85c-3c1b-4cd4-8878-d32c71234758",
+                            "name": "batteryCritical",
+                            "displayName": "Battery level critical",
+                            "type": "bool",
+                            "defaultValue": false
+                        }
+                    ]
                 }
             ]
         }
