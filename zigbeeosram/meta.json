@@ -1,6 +1,6 @@
 {
-    "title": "ZigBee Generic",
-    "tagline": "Connect and control ZigBee compliant devices which don't require manufacturer specific extras.",
+    "title": "ZigBee Osram",
+    "tagline": "Connect and control ZigBee Osram devices.",
     "icon": "zigbee.svg",
     "stability": "consumer",
     "offline": true,
